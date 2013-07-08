@@ -10,14 +10,15 @@ SRC.include([
   'CMSIS/src/core_cm0.c',
   'CMSIS/src/system_LPC11xx.c',
   'Target/cr_startup_lpc11.c',
-  'main.c',
+  'main.cc',
+  'Firmware/Log.cc',
 ])
 
 OBJ = SRC.ext('o').pathmap("#{OBJ_DIR}/%p")
 DEPS = OBJ.ext('depend')
 
 LDFLAGS << "-lgcc"
-CFLAGS << '-funsigned-char'
+CFLAGS << '-funsigned-char' << '-Wno-deprecated-register'
 
 LINKER_SCRIPT = 'Target/link.ld'
 GDB_SCRIPT = 'Target/startup.gdb'
