@@ -1,6 +1,7 @@
 #!/bin/bash
 
-PLATFORM="x86"
+PLATFORM="arm"
+TARGET_TRIPLET=arm-none-eabi
 
 # Find base dir
 pushd `dirname $0` > /dev/null
@@ -12,9 +13,9 @@ TOOLCHAIN_DIR=$BASEDIR/$PLATFORM.toolchain
 TEMP_DIR=
 trap on_exit EXIT
 
-LLVM_REVERSION=180190
-CLANG_REVERSION=180187
-COMPILER_RT_REVERSION=180184
+LLVM_REVERSION=185322
+CLANG_REVERSION=185323
+COMPILER_RT_REVERSION=185852
 CURL_OPTIONS="-L -f -#"
 TOOLCHAIN_VERSION=$(git rev-list -1 HEAD -- "$BASEDIR")
 TOOLCHAIN_URL=
@@ -70,26 +71,30 @@ function download_binutils {
 }
 
 function download_llvm {
+	log "Download llvm"
 	pushd "$TEMP_DIR"
 	svn co "http://llvm.org/svn/llvm-project/llvm/trunk"@"$LLVM_REVERSION" llvm > /dev/null || exit 1
 	popd
 }
 
 function download_clang {
+	log "Download clang"
 	pushd "$TEMP_DIR/llvm"
 	pushd "tools"
 	svn co "http://llvm.org/svn/llvm-project/cfe/trunk"@"$CLANG_REVERSION" clang > /dev/null || exit 1
 	popd
-	#pushd "projects"
-	#svn co -r COMPILER_RT_REVERSION http://llvm.org/svn/llvm-project/compiler-rt/trunk compiler-rt || exit 1
-	#popd
+	# pushd "projects"
+	# svn co http://llvm.org/svn/llvm-project/compiler-rt/trunk@"$COMPILER_RT_REVERSION" compiler-rt || exit 1
+	# popd
 	popd
 }
 
 function download_gdb {
-	pushd "$TEMP_DIR"
-	wget "http://ftp.gnu.org/gnu/gdb/gdb-$GDB_VERSION.tar.bz2"
-	popd
+	log "Download gdb"
+	curl $CURL_OPTIONS -o "$TEMP_DIR/gdb.tar.gz" "http://ftp.gnu.org/gnu/gdb/gdb-$GDB_VERSION.tar.bz2"
+	mkdir "$TEMP_DIR/gdb"
+	tar xf "$TEMP_DIR/gdb.tar.gz" -C "$TEMP_DIR/gdb" --strip=1 || exit 1
+	rm "$TEMP_DIR/binutils.tar.gz"
 }
 
 function patch_llvm_clang {
@@ -105,7 +110,7 @@ function patch_llvm_clang {
 function compile_binutils {
 	pushd "$TEMP_DIR/binutils"
 	# We don't want to prefix the comipler, as it will be contained in a platform dir
-	./configure --prefix="$TOOLCHAIN_DIR" --target=i386-unkown-elf --with-build-sysroot="$TOOLCHAIN_DIR" --program-prefix= --without-doc --disable-werror || exit 1
+	./configure --prefix="$TOOLCHAIN_DIR" --target="$TARGET_TRIPLET" --with-build-sysroot="$TOOLCHAIN_DIR" --without-doc --disable-werror || exit 1
  	make -j$MAKE_JOBS || exit 1
  	make install || exit 1
 }
@@ -114,7 +119,7 @@ function compile_llvm_clang {
 	log "Compile LLVM/CLANG"
 	mkdir "$TEMP_DIR/llvm-build"
 	pushd "$TEMP_DIR/llvm-build"
-	../llvm/configure --target=i386-unkown-theos --prefix="$TOOLCHAIN_DIR" --with-build-sysroot="$TOOLCHAIN_DIR" --program-prefix= --disable-docs --enable-shared --disable-static --enable-optimized --disable-assertions --disable-debug-runtime --disable-expensive-checks --enable-bindings=none --enable-targets=x86 || exit 1
+	../llvm/configure --target="$TARGET_TRIPLET" --prefix="$TOOLCHAIN_DIR" --with-build-sysroot="$TOOLCHAIN_DIR" --disable-docs --enable-shared --disable-static --enable-optimized --disable-assertions --disable-debug-runtime --disable-expensive-checks --enable-bindings=none --enable-targets=arm || exit 1
  	make -j$MAKE_JOBS || exit 1
 	make install || exit 1
 	popd
@@ -123,7 +128,7 @@ function compile_llvm_clang {
 function compile_gdb {
 	log "Compile GDB"
 	pushd "$TEMP_DIR/gdb"
-	./configure --target=arm-none-eabi --prefix="$TOOLCHAIN_DIR"  --with-python || exit 1
+	./configure --target="$TARGET_TRIPLET" --prefix="$TOOLCHAIN_DIR" --with-python || exit 1
 	make -j$MAKE_JOBS || exit 1
 	make install || exit 1
 	popd
@@ -162,16 +167,16 @@ if [[ $TOOLCHAIN_PRECOMPILED -eq 1 ]]; then
 	install_precompiled_toolchain
 else
 	log "No precompiled version avaiable. Compile the toolchain..."
-	#download_binutils
+	download_binutils
 	download_gdb
-	#download_llvm
-	#download_clang
+	download_llvm
+	download_clang
 
 	#patch_llvm_clang
-	compile_gdb
 
-	#compile_binutils
-	#compile_llvm_clang
+	compile_binutils
+	compile_llvm_clang
+	compile_gdb
 
 	upload_toolchain
 fi
