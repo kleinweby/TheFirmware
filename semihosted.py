@@ -1,44 +1,30 @@
 import gdb
 
-class PrintfBreakpoint(gdb.Breakpoint):
-	def __init__(self, spec, formatVariable):
-		super(PrintfBreakpoint, self).__init__(spec, gdb.BP_BREAKPOINT, 0, True)
+class StringBreakpoint(gdb.Breakpoint):
+	def __init__(self, spec, var):
+		super(StringBreakpoint, self).__init__(spec, gdb.BP_BREAKPOINT, 0, True)
 
-		self.formatVariable = formatVariable
+		self.var = var
 
 	def stop(self):
-		format = gdb.parse_and_eval(self.formatVariable)
+		s = gdb.parse_and_eval(self.var)
 
-		print(self.formatString(format))
+		sys.stdout.write(s.string())
 
 		return False
 
-	def formatString(self, formatValue):
-		format = formatValue.string()
-		address = formatValue.address + 1
+class CharBreakpoint(gdb.Breakpoint):
+	def __init__(self, spec, var):
+		super(CharBreakpoint, self).__init__(spec, gdb.BP_BREAKPOINT, 0, True)
 
-		s = ""
+		self.var = var
 
-		iterator = iter(format)
+	def stop(self):
+		s = gdb.parse_and_eval(self.var)
 
-		try:
-			for c in iterator:
-				if c == '%':
-					c = iterator.next()
+		sys.stdout.write(unichr(s))
 
-					if c == '%':
-						string += '%'
-					elif c == 's':
-						s += str(address.dereference())
-						address += 1
-					elif c == 'i':
-						s += str(int(address.cast(gdb.lookup_type("int").pointer()).dereference()))
-						address += 1
-				else:
-					s += c
-		except StopIteration, e:
-			print ("prematur end")
+		return False
 
-		return s
-
-PrintfBreakpoint("printf", "format")
+StringBreakpoint("TheFirmware::Log::printString", "string")
+CharBreakpoint("TheFirmware::Log::printChar", "c")

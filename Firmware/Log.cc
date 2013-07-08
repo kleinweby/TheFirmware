@@ -111,19 +111,19 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 	// Print level
 	switch(logLevel) {
 		case kLogLevelError:
-			printString("\033[1;31m[E]\033[0m");
+			printString("\033[1;31m[E]\033[0m ");
 			break;
 		case kLogLevelWarn:
-			printString("\033[1;33m[W]\033[0m");
+			printString("\033[1;33m[W]\033[0m ");
 			break;
 		case kLogLevelInfo:
-			printString("\033[0;34m[I]\033[0m");
+			printString("\033[0;34m[I]\033[0m ");
 			break;
 		case kLogLevelVerbose:
-			printString("\033[0;32m[V]\033[0m");
+			printString("\033[0;32m[V]\033[0m ");
 			break;
 		case kLogLevelDebug:
-			printString("\033[0;32m[D]\033[0m");
+			printString("\033[0;32m[D]\033[0m ");
 			break;
 	}
 

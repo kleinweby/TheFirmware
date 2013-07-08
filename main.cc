@@ -4,5 +4,9 @@
 using namespace TheFirmware::Log;
 
 extern "C" int main() {
-	LogInfo("Hallo");
+	LogInfo("Starting up");
+	LogDebug("Debugging");
+	LogVerbose("Verbosing");
+	LogWarn("Woops, this may be not so good");
+	LogError("Yieks!");
 }
