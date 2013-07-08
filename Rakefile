@@ -9,17 +9,19 @@ SRC=FileList[]
 SRC.include([
   'CMSIS/src/core_cm0.c',
   'CMSIS/src/system_LPC11xx.c',
-  'Startup/cr_startup_lpc11.c',
-  'main.c',
+  'Target/cr_startup_lpc11.c',
+  'main.cc',
+  'Firmware/Log.cc',
 ])
 
 OBJ = SRC.ext('o').pathmap("#{OBJ_DIR}/%p")
 DEPS = OBJ.ext('depend')
 
 LDFLAGS << "-lgcc"
-CFLAGS << '-funsigned-char'
+CFLAGS << '-funsigned-char' << '-Wno-deprecated-register'
 
-LINKER_SCRIPT = 'Startup/link.ld'
+LINKER_SCRIPT = 'Target/link.ld'
+GDB_SCRIPT = 'Target/startup.gdb'
 EXECUTABLE_NAME = 'firmware'
 
 CLEAN.include(OBJ_DIR)
@@ -36,7 +38,7 @@ task 'jlink' do |t|
 end
 
 task 'debug' do |t|
-	sh "/Users/christian/Desktop/arm-root/bin/arm-none-eabi-gdb --init-eval-command='target remote localhost:2331' --command=Startup/startup.gdb #{EXECUTABLE_NAME}.elf"
+	sh "/Users/christian/Desktop/arm-root/bin/arm-none-eabi-gdb --init-eval-command='target remote localhost:2331' --command=#{GDB_SCRIPT} #{EXECUTABLE_NAME}.elf"
 end
 
 DEPS.each{|file| Rake::MakefileLoader.new.load(file) if File.file?(file)}
