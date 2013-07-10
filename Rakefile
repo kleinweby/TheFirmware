@@ -37,8 +37,9 @@ task 'jlink' do |t|
 	sh "/Applications/JLink/JLinkGDBServer.command -if SWD -device LPC11C24 -vd"
 end
 
-task 'debug' do |t|
-	sh "/Users/christian/Desktop/arm-root/bin/arm-none-eabi-gdb --init-eval-command='target remote localhost:2331' --command=#{GDB_SCRIPT} #{EXECUTABLE_NAME}.elf"
+task 'debug'  => ["#{EXECUTABLE_NAME}.elf", GDB_SCRIPT] do |t|
+	trap('INT') {}
+	sh "#{GDB} --init-eval-command='target remote localhost:2331' --command=#{GDB_SCRIPT} #{EXECUTABLE_NAME}.elf"
 end
 
 DEPS.each{|file| Rake::MakefileLoader.new.load(file) if File.file?(file)}
