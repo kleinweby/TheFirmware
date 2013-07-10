@@ -24,6 +24,7 @@
 
 #include "Log.h"
 #include "Firmware/IO/GDBSemihostedOStream.h"
+#include "Firmware/Runtime.h"
 
 #include <stdint.h>
 
@@ -101,6 +102,8 @@ void printNumber(uint32_t number, uint8_t base, uint32_t minLength, bool useWhit
 
 void Logv(LogLevel logLevel, const char* format, va_list args)
 {
+	assert(format != NULL);
+	
 	// Print level
 	switch(logLevel) {
 		case kLogLevelError:

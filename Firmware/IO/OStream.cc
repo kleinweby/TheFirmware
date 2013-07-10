@@ -24,11 +24,15 @@
 
 #include "OStream.h"
 
+#include "Firmware/Runtime.h"
+
 namespace TheFirmware {
 namespace IO {
 
 // Default implementation
 void OStream::put(const char* s) {
+	assert(s != NULL);
+	
 	for (; *s != '\0'; ++s) {
 		this->put(*s);
 	}
