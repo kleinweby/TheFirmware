@@ -1,5 +1,5 @@
 ---
-ler: clang
+compiler: clang
 language: cpp
 env:
   global:
