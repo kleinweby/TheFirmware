@@ -11,13 +11,13 @@ SRC.include([
   'CMSIS/src/system_LPC11xx.c',
   'Target/cr_startup_lpc11.c',
   'main.cc',
-  'Firmware/Log.cc',
 ])
 
 FIRMWARE_SRC = FileList[
 	'Firmware/IO/OStream.cc',
 	'Firmware/IO/GDBSemihostedOStream.cc',
 	'Firmware/Runtime.cc',
+  'Firmware/Log.cc',
 ]
 
 SRC.include(FIRMWARE_SRC)
