@@ -33,17 +33,29 @@ static char numberDefinitions[] = "0123456789ABCDEF";
 static const char *trueString = "true";
 static const char *falseString = "false";
 
-/// Stub used to tell the host to print a string
-void printString(const char* string) {
+static char buffer[255];
+static uint8_t bufferIdx;
+
+void flushString(const char* string) {
 	#pragma unused(string)
 	__asm volatile ("nop");
 }
 
-/// Stub used to tell the host to print a char
 void printChar(char c) {
-	#pragma unused(c)
-	__asm volatile ("nop");
+	buffer[bufferIdx++] = c;
+
+	if (bufferIdx == 254 || c == '\n') {
+		buffer[bufferIdx] = '\0';
+		flushString(buffer);
+		bufferIdx = 0;
+	}
 }
+
+void printString(const char* string) {
+	for (; *string != '\0'; ++string)
+		printChar(*string);
+}
+
 
 /// Checks if a given char is a digit
 bool isDigit(char c) {

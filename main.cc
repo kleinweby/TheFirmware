@@ -8,5 +8,6 @@ extern "C" int main() {
 	LogDebug("Debugging");
 	LogVerbose("Verbosing");
 	LogWarn("Woops, this may be not so good");
+	while (1)
 	LogError("Yieks!");
 }
