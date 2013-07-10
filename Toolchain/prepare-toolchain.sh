@@ -53,9 +53,12 @@ function detect_host {
 
 function download_precompiled_toolchain {
 	log "Checking for precompiled toolchain..."
-	curl $CURL_OPTIONS -o "$TEMP_DIR/toolchain.tar.xz" "$TOOLCHAIN_URL"
+	curl -s --head "$TOOLCHAIN_URL" | head -n 1 | grep "HTTP/1.[01] [23].." > /dev/null
 	if [[ $? -eq 0 ]]; then
 		TOOLCHAIN_PRECOMPILED=1
+
+		log "Download precompiled toolchain"
+		curl $CURL_OPTIONS -o "$TEMP_DIR/toolchain.tar.xz" "$TOOLCHAIN_URL"
 	else
 		TOOLCHAIN_PRECOMPILED=0
 	fi
@@ -94,7 +97,7 @@ function download_gdb {
 	curl $CURL_OPTIONS -o "$TEMP_DIR/gdb.tar.gz" "http://ftp.gnu.org/gnu/gdb/gdb-$GDB_VERSION.tar.bz2"
 	mkdir "$TEMP_DIR/gdb"
 	tar xf "$TEMP_DIR/gdb.tar.gz" -C "$TEMP_DIR/gdb" --strip=1 || exit 1
-	rm "$TEMP_DIR/binutils.tar.gz"
+	rm "$TEMP_DIR/gdb.tar.gz"
 }
 
 function patch_llvm_clang {
@@ -109,10 +112,10 @@ function patch_llvm_clang {
 
 function compile_binutils {
 	pushd "$TEMP_DIR/binutils"
-	# We don't want to prefix the comipler, as it will be contained in a platform dir
 	./configure --prefix="$TOOLCHAIN_DIR" --target="$TARGET_TRIPLET" --with-build-sysroot="$TOOLCHAIN_DIR" --without-doc --disable-werror || exit 1
  	make -j$MAKE_JOBS || exit 1
  	make install || exit 1
+ 	popd
 }
 
 function compile_llvm_clang {
