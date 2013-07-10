@@ -1,0 +1,20 @@
+---
+ler: clang
+language: cpp
+env:
+  global:
+  - ARTIFACTS_AWS_REGION=eu-west-1
+  - ARTIFACTS_S3_BUCKET=chrspeich-thefirmware
+  - secure: |-
+      f4M5JoGBHyHtWu/RnhGDJmgtStxBHURUbd/58plQ5qCHm4HGUgpapF/RazVH
+      4tKbAhnj+Efhnsw9XgqkdvaC4quMotgXzScp5MCfcGKuGU8YPL0xp/OE6oVM
+      e/RUZM1Sb5/nrvMoBldJl2rMyTY0ev58s8CWSK5LsPU17Tf2L/0=
+  - secure: |-
+      hpRlCyZMvafWoY46WEiJoMZ3aFiuzFESj8jBdg33zQES+55gHsk6tKHDHb9m
+      u1GfFTAecpiwVUiLONYTPvJyeENgm4gCwNBQr88fPd0qKT8Y/PZDCm6pYeaU
+      uDMw9yX04wrqOB1d/zxJ9GxLvcPAe7TpFE0rVL0xW61qXOF1jkQ=
+before_script:
+- sudo apt-get install qemu
+- gem install travis-artifacts
+- Toolchain/prepare-toolchain.sh
+script: ./build_and_test.sh
