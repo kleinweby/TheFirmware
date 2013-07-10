@@ -34,7 +34,9 @@ static char numberDefinitions[] = "0123456789ABCDEF";
 static const char *trueString = "true";
 static const char *falseString = "false";
 
-IO::GDBSemihostedOStream logStream;
+using LogStream = IO::GDBSemihostedOStream;
+
+LogStream logStream;
 
 /// Checks if a given char is a digit
 bool isDigit(char c) {
