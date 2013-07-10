@@ -24,6 +24,8 @@ BINUTILS_VERSION=2.23.2
 GDB_VERSION=7.6
 MAKE_JOBS=1
 HOST=
+ARM_GCC_TOOLCHAIN_VERSION="4_7-2013q2-20130614"
+ARM_GCC_BASE=
 
 function on_exit {
 	rm -rf "$TEMP_DIR"
@@ -40,9 +42,11 @@ function detect_host {
 	if [ -e /proc/cpuinfo ]; then 
 		MAKE_JOBS=$(grep -c ^processor /proc/cpuinfo)
 		TEMP_DIR=$(mktemp -d --tmpdir theos-toolchain-XXXXXX)
+		ARM_GCC_BASE="https://launchpad.net/gcc-arm-embedded/4.7/4.7-2013-q2-update/+download/gcc-arm-none-eabi-$ARM_GCC_TOOLCHAIN_VERSION-linux.tar.bz2"
 	elif [[ $HOST =~ darwin_* ]]; then
 		MAKE_JOBS=$(sysctl -n hw.ncpu)
 		TEMP_DIR=$(mktemp -d -t theos-toolchain)
+		ARM_GCC_BASE="https://launchpad.net/gcc-arm-embedded/4.7/4.7-2013-q2-update/+download/gcc-arm-none-eabi-$ARM_GCC_TOOLCHAIN_VERSION-mac.tar.bz2"
 	else
 		echo "Unsupported host $HOST"
 		exit 1
@@ -53,9 +57,12 @@ function detect_host {
 
 function download_precompiled_toolchain {
 	log "Checking for precompiled toolchain..."
-	curl $CURL_OPTIONS -o "$TEMP_DIR/toolchain.tar.xz" "$TOOLCHAIN_URL"
+	curl -s --head "$TOOLCHAIN_URL" | head -n 1 | grep "HTTP/1.[01] [23].." > /dev/null
 	if [[ $? -eq 0 ]]; then
 		TOOLCHAIN_PRECOMPILED=1
+
+		log "Download precompiled toolchain"
+		curl $CURL_OPTIONS -o "$TEMP_DIR/toolchain.tar.xz" "$TOOLCHAIN_URL"
 	else
 		TOOLCHAIN_PRECOMPILED=0
 	fi
@@ -89,12 +96,21 @@ function download_clang {
 	popd
 }
 
+function download_gcc_base_toolchain {
+	log "Download gcc base toolchain"
+	curl $CURL_OPTIONS -o "$TEMP_DIR/arm-gcc.tar.gz" "$ARM_GCC_BASE" || exit 1
+	log "Unpack"
+	mkdir "$BASEDIR/arm-gcc.toolchain"
+	tar xf "$TEMP_DIR/arm-gcc.tar.gz" -C "$BASEDIR/arm-gcc.toolchain" --strip=1 || exit 1
+	rm "$TEMP_DIR/arm-gcc.tar.gz"
+}
+
 function download_gdb {
 	log "Download gdb"
 	curl $CURL_OPTIONS -o "$TEMP_DIR/gdb.tar.gz" "http://ftp.gnu.org/gnu/gdb/gdb-$GDB_VERSION.tar.bz2"
 	mkdir "$TEMP_DIR/gdb"
 	tar xf "$TEMP_DIR/gdb.tar.gz" -C "$TEMP_DIR/gdb" --strip=1 || exit 1
-	rm "$TEMP_DIR/binutils.tar.gz"
+	rm "$TEMP_DIR/gdb.tar.gz"
 }
 
 function patch_llvm_clang {
@@ -109,10 +125,10 @@ function patch_llvm_clang {
 
 function compile_binutils {
 	pushd "$TEMP_DIR/binutils"
-	# We don't want to prefix the comipler, as it will be contained in a platform dir
 	./configure --prefix="$TOOLCHAIN_DIR" --target="$TARGET_TRIPLET" --with-build-sysroot="$TOOLCHAIN_DIR" --without-doc --disable-werror || exit 1
  	make -j$MAKE_JOBS || exit 1
  	make install || exit 1
+ 	popd
 }
 
 function compile_llvm_clang {
@@ -135,17 +151,21 @@ function compile_gdb {
 }
 
 function upload_toolchain {
-	log "Cache toolchain..."
+	which travis-artifacts > /dev/null
 
-	log "Compress toolchain archive"
-	pushd "$TOOLCHAIN_DIR"
-	tar c . | xz > "$TEMP_DIR/$PLATFORM-$TOOLCHAIN_VERSION.tar.xz"
-	popd
+	if [[ $? -eq 0 ]]; then 
+		log "Cache toolchain..."
 
-	log "Upload toolchain archive"
-	pushd "$TEMP_DIR"
-	travis-artifacts upload --target-path "toolchain/$HOST/" --path "$PLATFORM-$TOOLCHAIN_VERSION.tar.xz"
-	popd
+		log "Compress toolchain archive"
+		pushd "$TOOLCHAIN_DIR"
+		tar c . | xz > "$TEMP_DIR/$PLATFORM-$TOOLCHAIN_VERSION.tar.xz"
+		popd
+
+		log "Upload toolchain archive"
+		pushd "$TEMP_DIR"
+		travis-artifacts upload --target-path "toolchain/$HOST/" --path "$PLATFORM-$TOOLCHAIN_VERSION.tar.xz"
+		popd
+	fi
 }
 
 function install_precompiled_toolchain {
@@ -171,6 +191,7 @@ else
 	download_gdb
 	download_llvm
 	download_clang
+	download_gcc_base_toolchain
 
 	#patch_llvm_clang
 
