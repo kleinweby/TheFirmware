@@ -155,7 +155,7 @@ function compile_llvm_clang {
 function compile_gdb {
 	log "Compile GDB"
 	pushd "$TEMP_DIR/gdb"
-	./configure --target="$TARGET_TRIPLET" --prefix="$TOOLCHAIN_DIR" --with-python || exit 1
+	./configure --target="$TARGET_TRIPLET" --prefix="$TOOLCHAIN_DIR" --with-python --without-doc --disable-werror  || exit 1
 	make -j$MAKE_JOBS || exit 1
 	make install || exit 1
 	popd
