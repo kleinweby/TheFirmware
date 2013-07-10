@@ -27,6 +27,14 @@ HOST=
 ARM_GCC_TOOLCHAIN_VERSION="4_7-2013q2-20130614"
 ARM_GCC_BASE=
 
+function pushd {
+	command pushd $* > /dev/null || exit 1
+}
+
+function popd {
+	command popd $* > /dev/null || exit 1
+}
+
 function on_exit {
 	rm -rf "$TEMP_DIR"
 	log "On exit"
@@ -81,6 +89,9 @@ function download_llvm {
 	log "Download llvm"
 	pushd "$TEMP_DIR"
 	svn co "http://llvm.org/svn/llvm-project/llvm/trunk"@"$LLVM_REVERSION" llvm > /dev/null || exit 1
+	pushd "llvm/tools/"
+	svn co http://llvm.org/svn/llvm-project/lld/trunk lld > /dev/null || exit 1
+	popd
 	popd
 }
 

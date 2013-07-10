@@ -23,6 +23,7 @@
 //
 
 #include "Log.h"
+#include "Firmware/IO/GDBSemihostedOStream.h"
 
 #include <stdint.h>
 
@@ -33,29 +34,7 @@ static char numberDefinitions[] = "0123456789ABCDEF";
 static const char *trueString = "true";
 static const char *falseString = "false";
 
-static char buffer[255];
-static uint8_t bufferIdx;
-
-void flushString(const char* string) {
-	#pragma unused(string)
-	__asm volatile ("nop");
-}
-
-void printChar(char c) {
-	buffer[bufferIdx++] = c;
-
-	if (bufferIdx == 254 || c == '\n') {
-		buffer[bufferIdx] = '\0';
-		flushString(buffer);
-		bufferIdx = 0;
-	}
-}
-
-void printString(const char* string) {
-	for (; *string != '\0'; ++string)
-		printChar(*string);
-}
-
+IO::GDBSemihostedOStream logStream;
 
 /// Checks if a given char is a digit
 bool isDigit(char c) {
@@ -112,7 +91,7 @@ void printNumber(uint32_t number, uint8_t base, uint32_t minLength, bool useWhit
 	
 	// Now swap the thing around
 	for (uint8_t i = 0; i < usedLength; i++, tempString--) {
-		printChar(*tempString);
+		logStream.put(*tempString);
 	}
 
 	return;
@@ -123,19 +102,19 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 	// Print level
 	switch(logLevel) {
 		case kLogLevelError:
-			printString("\033[1;31m[E]\033[0m ");
+			logStream.put("\033[1;31m[E]\033[0m ");
 			break;
 		case kLogLevelWarn:
-			printString("\033[1;33m[W]\033[0m ");
+			logStream.put("\033[1;33m[W]\033[0m ");
 			break;
 		case kLogLevelInfo:
-			printString("\033[0;34m[I]\033[0m ");
+			logStream.put("\033[0;34m[I]\033[0m ");
 			break;
 		case kLogLevelVerbose:
-			printString("\033[0;32m[V]\033[0m ");
+			logStream.put("\033[0;32m[V]\033[0m ");
 			break;
 		case kLogLevelDebug:
-			printString("\033[0;32m[D]\033[0m ");
+			logStream.put("\033[0;32m[D]\033[0m ");
 			break;
 	}
 
@@ -146,7 +125,7 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 			format++;
 			
 			if (*format == '%') {
-				printChar('%');
+				logStream.put('%');
 			}
 			// It is in deed an format
 			else {
@@ -186,13 +165,13 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 					case 'p':
 						minLength = 8;
 						useWhitespacePadding = false;
-						printChar('*');
+						logStream.put('*');
 					// Hex number
 					case 'X':
 					case 'x':
 					{
 						uint32_t val = va_arg(args, uint32_t);
-						printString("0x");
+						logStream.put("0x");
 						printNumber(val, 16, minLength, useWhitespacePadding);
 						break;
 					}
@@ -202,7 +181,7 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 					{
 						int32_t val = va_arg(args, int32_t);
 						if (val < 0) {
-							printChar('-');
+							logStream.put('-');
 							val = -val;
 						}
 						
@@ -222,10 +201,10 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 						uint32_t val = va_arg(args, uint32_t);
 						
 						if (val == true) {
-							printString(trueString);
+							logStream.put(trueString);
 						}
 						else {
-							printString(falseString);
+							logStream.put(falseString);
 						}
 						break;
 					}
@@ -234,7 +213,7 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 					{
 						char* str = va_arg(args, char*);
 
-						printString(str);
+						logStream.put(str);
 						break;
 					}
 					default:
@@ -244,13 +223,14 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 			}
 		}
 		else {
-			printChar(*format);
+			logStream.put(*format);
 		}
 		
 		format++;
 	}
 
-	printChar('\n');
+	logStream.put('\n');
+	logStream.flush();
 }
 
 } // namespace Log

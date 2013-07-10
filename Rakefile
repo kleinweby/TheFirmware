@@ -14,11 +14,19 @@ SRC.include([
   'Firmware/Log.cc',
 ])
 
+FIRMWARE_SRC = FileList[
+	'Firmware/IO/OStream.cc',
+	'Firmware/IO/GDBSemihostedOStream.cc',
+	'Firmware/Runtime.cc',
+]
+
+SRC.include(FIRMWARE_SRC)
+
 OBJ = SRC.ext('o').pathmap("#{OBJ_DIR}/%p")
 DEPS = OBJ.ext('depend')
 
 LDFLAGS << "-lgcc"
-CFLAGS << '-funsigned-char' << '-Wno-deprecated-register'
+CXXFLAGS << '-funsigned-char' << '-Wno-deprecated-register'
 
 LINKER_SCRIPT = 'Target/link.ld'
 GDB_SCRIPT = 'Target/startup.gdb'

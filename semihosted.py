@@ -13,4 +13,4 @@ class StringBreakpoint(gdb.Breakpoint):
 
 		return False
 
-StringBreakpoint("TheFirmware::Log::flushString", "string")
+StringBreakpoint("TheFirmware::IO::GDBSemihostedOStream::flushString", "s")

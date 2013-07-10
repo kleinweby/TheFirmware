@@ -24,8 +24,8 @@ rule '.o' => [
 ] do |t|
 	puts " [CXX]  #{t.source}"
 	FileUtils.mkdir_p(File.dirname(t.name))
-	sh "#{CC} -MM -MT #{t.name} -c -o #{t.name.ext('depend')} #{t.source} -std=c++11 -Wno-c++98-compat-pedantic -fno-exceptions -fno-rtti #{CFLAGS.join(' ')} #{DEFINES.join(' ')}"
-	sh "#{CC} -c -o #{t.name} #{t.source} -std=c++11 -Wno-c++98-compat-pedantic -fno-exceptions -fno-rtti #{CFLAGS.join(' ')} #{DEFINES.join(' ')}"
+	sh "#{CC} -MM -MT #{t.name} -c -o #{t.name.ext('depend')} #{t.source} -std=c++11 -Wno-c++98-compat-pedantic -fno-exceptions -fno-rtti #{CXXFLAGS.join(' ')} #{DEFINES.join(' ')}"
+	sh "#{CC} -c -o #{t.name} #{t.source} -std=c++11 -Wno-c++98-compat-pedantic -fno-exceptions -fno-rtti #{CXXFLAGS.join(' ')} #{DEFINES.join(' ')}"
 end
 
 # Rule for cc -> E

@@ -1,9 +1,12 @@
 #include "LPC11xx.h"
 #include "Firmware/Log.h"
+#include "Firmware/Runtime.h"
 
 using namespace TheFirmware::Log;
 
 extern "C" int main() {
+	TheFirmware::Runtime::Init();
+	
 	LogInfo("Starting up");
 	LogDebug("Debugging");
 	LogVerbose("Verbosing");

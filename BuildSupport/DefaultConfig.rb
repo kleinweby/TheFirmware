@@ -3,8 +3,9 @@ ROOT="#{File.dirname(File.dirname(__FILE__))}"
 TOOLCHAIN="#{ROOT}/Toolchain/arm.toolchain"
 
 # -F should be relative to #{ROOT} ?!?
-CFLAGS  = [ "-I#{ROOT}/CMSIS/inc", '-integrated-as']
-LDFLAGS = [ "-nostdlib", '-mcpu=cortex-m0', '-mthumb']
+CFLAGS  = [ "-I#{ROOT}/CMSIS/inc", "-I#{ROOT}", '-integrated-as', '-mcpu=cortex-m0', '-mthumb', '-ggdb', '-fno-builtin', '-Wall', '-Werror']
+CXXFLAGS  = [ *CFLAGS, '-fno-exceptions']
+LDFLAGS = [ "-nostdlib", '-mcpu=cortex-m0', '-mthumb' ]
 DEFINES = [ "-D__USE_CMSIS=1" ]
 
 ENV['PATH'] = "#{TOOLCHAIN}/bin:#{File.dirname(TOOLCHAIN)}/arm-gcc.toolchain/bin:#{ENV['PATH']}"
@@ -18,5 +19,3 @@ GDB     = "arm-none-eabi-gdb"
 NASM    = 'nasm'
 
 OBJ_DIR = '.objs'
-
-CFLAGS << '-ggdb' << '-fno-builtin' << '-Wall' << '-mcpu=cortex-m0' << '-mthumb'
