@@ -24,6 +24,8 @@ BINUTILS_VERSION=2.23.2
 GDB_VERSION=7.6
 MAKE_JOBS=1
 HOST=
+ARM_GCC_TOOLCHAIN_VERSION="4_7-2013q2-20130614"
+ARM_GCC_BASE=
 
 function on_exit {
 	rm -rf "$TEMP_DIR"
@@ -40,9 +42,11 @@ function detect_host {
 	if [ -e /proc/cpuinfo ]; then 
 		MAKE_JOBS=$(grep -c ^processor /proc/cpuinfo)
 		TEMP_DIR=$(mktemp -d --tmpdir theos-toolchain-XXXXXX)
+		ARM_GCC_BASE="https://launchpad.net/gcc-arm-embedded/4.7/4.7-2013-q2-update/+download/gcc-arm-none-eabi-$ARM_GCC_TOOLCHAIN_VERSION-linux.tar.bz2"
 	elif [[ $HOST =~ darwin_* ]]; then
 		MAKE_JOBS=$(sysctl -n hw.ncpu)
 		TEMP_DIR=$(mktemp -d -t theos-toolchain)
+		ARM_GCC_BASE="https://launchpad.net/gcc-arm-embedded/4.7/4.7-2013-q2-update/+download/gcc-arm-none-eabi-$ARM_GCC_TOOLCHAIN_VERSION-mac.tar.bz2"
 	else
 		echo "Unsupported host $HOST"
 		exit 1
@@ -92,6 +96,15 @@ function download_clang {
 	popd
 }
 
+function download_gcc_base_toolchain {
+	log "Download gcc base toolchain"
+	curl $CURL_OPTIONS -o "$TEMP_DIR/arm-gcc.tar.gz" "$ARM_GCC_BASE" || exit 1
+	log "Unpack"
+	mkdir "$BASEDIR/arm-gcc.toolchain"
+	tar xf "$TEMP_DIR/arm-gcc.tar.gz" -C "$BASEDIR/arm-gcc.toolchain" --strip=1 || exit 1
+	rm "$TEMP_DIR/arm-gcc.tar.gz"
+}
+
 function download_gdb {
 	log "Download gdb"
 	curl $CURL_OPTIONS -o "$TEMP_DIR/gdb.tar.gz" "http://ftp.gnu.org/gnu/gdb/gdb-$GDB_VERSION.tar.bz2"
@@ -138,17 +151,21 @@ function compile_gdb {
 }
 
 function upload_toolchain {
-	log "Cache toolchain..."
+	which travis-artifacts > /dev/null
 
-	log "Compress toolchain archive"
-	pushd "$TOOLCHAIN_DIR"
-	tar c . | xz > "$TEMP_DIR/$PLATFORM-$TOOLCHAIN_VERSION.tar.xz"
-	popd
+	if [[ $? -eq 0 ]]; then 
+		log "Cache toolchain..."
 
-	log "Upload toolchain archive"
-	pushd "$TEMP_DIR"
-	travis-artifacts upload --target-path "toolchain/$HOST/" --path "$PLATFORM-$TOOLCHAIN_VERSION.tar.xz"
-	popd
+		log "Compress toolchain archive"
+		pushd "$TOOLCHAIN_DIR"
+		tar c . | xz > "$TEMP_DIR/$PLATFORM-$TOOLCHAIN_VERSION.tar.xz"
+		popd
+
+		log "Upload toolchain archive"
+		pushd "$TEMP_DIR"
+		travis-artifacts upload --target-path "toolchain/$HOST/" --path "$PLATFORM-$TOOLCHAIN_VERSION.tar.xz"
+		popd
+	fi
 }
 
 function install_precompiled_toolchain {
@@ -174,6 +191,7 @@ else
 	download_gdb
 	download_llvm
 	download_clang
+	download_gcc_base_toolchain
 
 	#patch_llvm_clang
 

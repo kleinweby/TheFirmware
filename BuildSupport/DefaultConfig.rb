@@ -7,7 +7,7 @@ CFLAGS  = [ "-I#{ROOT}/CMSIS/inc", '-integrated-as']
 LDFLAGS = [ "-nostdlib", '-mcpu=cortex-m0', '-mthumb']
 DEFINES = [ "-D__USE_CMSIS=1" ]
 
-ENV['PATH'] = "#{TOOLCHAIN}/bin:/Users/christian/Downloads/gcc-arm-none-eabi-4_7-2013q2/bin:#{ENV['PATH']}"
+ENV['PATH'] = "#{TOOLCHAIN}/bin:#{File.dirname(TOOLCHAIN)}/arm-gcc.toolchain/bin:#{ENV['PATH']}"
 
 CC      = "arm-none-eabi-clang"
 LD      = "arm-none-eabi-clang"
