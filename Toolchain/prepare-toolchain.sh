@@ -196,6 +196,7 @@ download_precompiled_toolchain
 if [[ $TOOLCHAIN_PRECOMPILED -eq 1 ]]; then
 	log "Found a precompiled version..."
 	install_precompiled_toolchain
+	download_gcc_base_toolchain
 else
 	log "No precompiled version avaiable. Compile the toolchain..."
 	download_binutils
