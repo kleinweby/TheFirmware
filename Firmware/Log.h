@@ -24,6 +24,7 @@
 #pragma once
 
 #include <stdarg.h>
+#include <stdint.h>
 
 namespace TheFirmware {
 /// Logging Utilities
@@ -31,7 +32,7 @@ namespace Log {
 
 /// Describes the servity of the log message
 /// Blub
-typedef enum {
+typedef enum : uint8_t {
 	kLogLevelDebug,
 	kLogLevelVerbose,
 	kLogLevelInfo,
