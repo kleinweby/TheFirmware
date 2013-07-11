@@ -23,7 +23,7 @@
 //
 
 #include "Log.h"
-#include "Firmware/IO/GDBSemihostedOStream.h"
+#include "Firmware/Target/LPC11xx/UART.h"
 #include "Firmware/Runtime.h"
 
 #include <stdint.h>
@@ -35,9 +35,9 @@ static char numberDefinitions[] = "0123456789ABCDEF";
 static const char *trueString = "true";
 static const char *falseString = "false";
 
-using LogStream = IO::GDBSemihostedOStream;
+using LogStream = LPC11xx::UART;
 
-LogStream logStream;
+LogStream logStream(38400);
 
 /// Checks if a given char is a digit
 bool isDigit(char c) {
@@ -234,7 +234,7 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 		format++;
 	}
 
-	logStream.put('\n');
+	logStream.put("\r\n");
 	logStream.flush();
 }
 

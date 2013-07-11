@@ -15,6 +15,7 @@ FIRMWARE_SRC = FileList[
 	'Firmware/Target/LPC11xx/CMSIS/src/core_cm0.c',
   'Firmware/Target/LPC11xx/CMSIS/src/system_LPC11xx.c',
   'Firmware/Target/LPC11xx/startup.c',
+  'Firmware/Target/LPC11xx/UART.cc',
 	# General
 	'Firmware/IO/OStream.cc',
 	'Firmware/IO/GDBSemihostedOStream.cc',

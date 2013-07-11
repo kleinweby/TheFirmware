@@ -22,31 +22,26 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once 
-
-#include "Firmware/IO/OStream.h"
+#pragma once
 
 #include <stdint.h>
 
-namespace TheFirmware {
-namespace IO {
+#include "Firmware/IO/OStream.h"
 
-class GDBSemihostedOStream : public OStream
-{
-	constexpr static uint8_t kBufferSize = 25;
-private:
-	/// Hold the current buffered data
-	char buffer[kBufferSize];
-	/// The index to the next char to write
-	uint8_t bufferIndex;
-	/// Calls the gdb to print the string
-	static void flushString(const char* s);
+namespace TheFirmware {
+namespace LPC11xx {
+
+class UART : public IO::OStream {
 public:
+	/// Initialize the UART hardware
+	///
+	/// @param baud The Baudrate
+	UART(uint32_t baud);
+
 	// Retain overloaded functions from put
 	using OStream::put;
 	virtual void put(char c);
-	virtual void flush();
 };
 
-} // namespace IO
+} // namespace LPC11xx
 } // namespace TheFirmware
