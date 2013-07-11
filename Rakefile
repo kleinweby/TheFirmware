@@ -7,13 +7,15 @@ require 'tempfile'
 SRC=FileList[]
 
 SRC.include([
-  'CMSIS/src/core_cm0.c',
-  'CMSIS/src/system_LPC11xx.c',
-  'Target/cr_startup_lpc11.c',
   'main.cc',
 ])
 
 FIRMWARE_SRC = FileList[
+	# Target
+	'Firmware/Target/LPC11xx/CMSIS/src/core_cm0.c',
+  'Firmware/Target/LPC11xx/CMSIS/src/system_LPC11xx.c',
+  'Firmware/Target/LPC11xx/startup.c',
+	# General
 	'Firmware/IO/OStream.cc',
 	'Firmware/IO/GDBSemihostedOStream.cc',
 	'Firmware/Runtime.cc',
@@ -26,9 +28,10 @@ OBJ = SRC.ext('o').pathmap("#{OBJ_DIR}/%p")
 DEPS = OBJ.ext('depend')
 
 LDFLAGS << "-lgcc"
+DEFINES << "-I#{ROOT}/Firmware/Target/LPC11xx/CMSIS/inc"
 CXXFLAGS << '-funsigned-char' << '-Wno-deprecated-register'
 
-LINKER_SCRIPT = 'Target/link.ld'
+LINKER_SCRIPT = 'Firmware/Target/LPC11xx/link.ld'
 GDB_SCRIPT = 'Target/startup.gdb'
 EXECUTABLE_NAME = 'firmware'
 

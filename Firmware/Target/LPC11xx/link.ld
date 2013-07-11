@@ -1,4 +1,4 @@
-INCLUDE "Target/lpc11C24_mem.ld"
+INCLUDE "Firmware/Target/LPC11xx/lpc11C24_mem.ld"
 
 ENTRY(ResetISR)
 
