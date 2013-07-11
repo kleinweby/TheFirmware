@@ -14,7 +14,7 @@ env:
       u1GfFTAecpiwVUiLONYTPvJyeENgm4gCwNBQr88fPd0qKT8Y/PZDCm6pYeaU
       uDMw9yX04wrqOB1d/zxJ9GxLvcPAe7TpFE0rVL0xW61qXOF1jkQ=
 before_script:
-- sudo apt-get install qemu
+- sudo apt-get install qemu libc6-dev-i386
 - gem install travis-artifacts
 - Toolchain/prepare-toolchain.sh
 script: ./build_and_test.sh
