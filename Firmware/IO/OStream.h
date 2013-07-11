@@ -34,10 +34,17 @@ public:
 	///
 	/// @param s String to put
 	virtual void put(const char* s);
+
 	/// Put a char into the stream
 	///
 	/// @param c Char to put
 	virtual void put(char c) = 0;
+
+	/// Forces all data that may be buffered
+	/// to flush
+	///
+	/// @note A stream is not required to use an internal buffer
+	virtual void flush() {};
 };
 
 }
