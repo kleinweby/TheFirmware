@@ -26,4 +26,19 @@
 
 namespace TheFirmware {
 
+Task* CurrentTask;
+
+TaskStack handle(TaskStack stack)
+{
+    return stack;
+}
+
+// Declare Function as naked, to omit default function pro-/epilog
+extern "C" void PendSV_Handler(void) __attribute__ ((naked));
+
+extern "C" void PendSV_Handler(void)
+{
+
+}
+
 } // namespace TheFirmware 
