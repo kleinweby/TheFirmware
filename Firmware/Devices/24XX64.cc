@@ -22,49 +22,47 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
-
-#include <stdint.h>
+#include "Firmware/Devices/24XX64.h"
+#include "Firmware/Runtime.h"
 
 namespace TheFirmware {
-namespace LPC11xx {
+namespace Devices {
 
-/// The I2C module overrides the I2C IRQ Handler
-extern "C" void I2C_IRQHandler(void);
+bool MCP24XX64::write(uint16_t address, uint8_t* buffer, uint16_t bufferLength)
+{
+	assert(bufferLength <= 31);
+	uint8_t writeBuffer[3 /* device addr & mem addr */ + 31 /* page size */];
 
-class I2C {
-	uint8_t* writeBuffer;
-	uint32_t writeIndex;
-	uint32_t writeLength;
-	uint8_t* readBuffer;
-	uint32_t readIndex;
-	uint32_t readLength;
-	bool done;
+	// Write address to read
+	writeBuffer[0] = MCP24XX64Address;
+	writeBuffer[1] = (address >> 8) & 0xFF;
+	writeBuffer[2] = (address >> 0) & 0xFF;
 
-	/// Called by the I2C interrupt to handle it
-	void isr();
+	// Data
+	for (uint8_t i = 3; i < bufferLength + 3; i++)
+		writeBuffer[i] = buffer[i - 3];
 
-	friend void I2C_IRQHandler(void);
-public:
+	I2C.send(writeBuffer, 3 + bufferLength, NULL, 0);
 
-	/// Enables the I2C hardware
-	///
-	/// @return true on success, false otherwise
-	bool enable();
+	return true;
+}
 
-	/// Disables the I2C hardware
-	///
-	void disable();
+bool MCP24XX64::read(uint16_t address, uint8_t* buffer, uint16_t bufferLength)
+{
+	uint8_t writeBuffer[4];
 
-	/// Send data over I2C
-	///
-	/// 
-	///
-	/// 
-	bool send(uint8_t* writeBuffer, uint32_t writeLength, uint8_t* readBuffer, uint32_t readLength);
-};
+	// Write address to read
+	writeBuffer[0] = MCP24XX64Address;
+	writeBuffer[1] = (address >> 8) & 0xFF;
+	writeBuffer[2] = (address >> 0) & 0xFF;
 
-extern I2C I2C;
+	// Read register
+	writeBuffer[3] = MCP24XX64Address | 0x1;
 
-} // namespace LPC11xx
-} // namespace TheFirmware
+	I2C.send(writeBuffer, 3 /* excluding the second address write */, buffer, bufferLength);
+
+	return true;
+}
+
+}
+}

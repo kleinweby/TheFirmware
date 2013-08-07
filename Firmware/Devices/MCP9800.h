@@ -24,47 +24,69 @@
 
 #pragma once
 
+#include "Firmware/I2C.h"
+
 #include <stdint.h>
+#include <stddef.h>
 
 namespace TheFirmware {
-namespace LPC11xx {
+namespace Devices {
 
-/// The I2C module overrides the I2C IRQ Handler
-extern "C" void I2C_IRQHandler(void);
+constexpr uint8_t MCP9800Address = 0x90;
 
-class I2C {
-	uint8_t* writeBuffer;
-	uint32_t writeIndex;
-	uint32_t writeLength;
-	uint8_t* readBuffer;
-	uint32_t readIndex;
-	uint32_t readLength;
-	bool done;
+class MCP9800 {
 
-	/// Called by the I2C interrupt to handle it
-	void isr();
+	/// Reads the config register from the device
+	uint8_t readConfigRegister();
 
-	friend void I2C_IRQHandler(void);
+	/// Writes the config register to the device
+	void writeConfigRegister(uint8_t config);
+
 public:
 
-	/// Enables the I2C hardware
+	/// Enables the MCP9800
 	///
-	/// @return true on success, false otherwise
-	bool enable();
+	/// @note When configured in one shot mode, you don't need to enable
+	///       the device before reading an current temperature
+	/// @return True if successfull
+	///
+	bool Enable();
 
-	/// Disables the I2C hardware
+	/// Shuts down the MCP9800
 	///
-	void disable();
+	/// @return True if successfull
+	///
+	bool Disable();
 
-	/// Send data over I2C
+	/// Returns the resolution set in bits
 	///
-	/// 
+	/// @return resolution
 	///
-	/// 
-	bool send(uint8_t* writeBuffer, uint32_t writeLength, uint8_t* readBuffer, uint32_t readLength);
+	uint8_t getResolution();
+
+	/// Set the resolution in bits
+	///
+	/// @param resolution Resolution, valid range: 9-12bit
+	///
+	void setResolution(uint8_t resolution);
+
+	/// Returns whetere the device is configure for one shot mode
+	///
+	/// @see setOneShot
+	///
+	bool getOneShot();
+
+	/// Configures the one shot mode
+	///
+	/// @param oneShot When oneShot is enabled, the device is put in shutdown
+	///                and upon readTemperature one conversation is done and returned.
+	void setOneShot(bool oneShot);
+
+	/// Reads the temperature from the devices
+	///
+	/// @note when in oneShot mode this methods waits for the conversion to be complete.
+	uint16_t readTemperature();
 };
 
-extern I2C I2C;
-
-} // namespace LPC11xx
+} // namespace Devices
 } // namespace TheFirmware

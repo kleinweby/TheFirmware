@@ -24,47 +24,13 @@
 
 #pragma once
 
-#include <stdint.h>
+#include "Firmware/Target/LPC11xx/I2C.h"
 
 namespace TheFirmware {
-namespace LPC11xx {
 
-/// The I2C module overrides the I2C IRQ Handler
-extern "C" void I2C_IRQHandler(void);
+namespace Target = LPC11xx;
 
-class I2C {
-	uint8_t* writeBuffer;
-	uint32_t writeIndex;
-	uint32_t writeLength;
-	uint8_t* readBuffer;
-	uint32_t readIndex;
-	uint32_t readLength;
-	bool done;
+// Import target dependent definitions
+using Target::I2C;
 
-	/// Called by the I2C interrupt to handle it
-	void isr();
-
-	friend void I2C_IRQHandler(void);
-public:
-
-	/// Enables the I2C hardware
-	///
-	/// @return true on success, false otherwise
-	bool enable();
-
-	/// Disables the I2C hardware
-	///
-	void disable();
-
-	/// Send data over I2C
-	///
-	/// 
-	///
-	/// 
-	bool send(uint8_t* writeBuffer, uint32_t writeLength, uint8_t* readBuffer, uint32_t readLength);
-};
-
-extern I2C I2C;
-
-} // namespace LPC11xx
 } // namespace TheFirmware

@@ -17,6 +17,9 @@ FIRMWARE_SRC = FileList[
   'Firmware/Target/LPC11xx/startup.c',
   'Firmware/Target/LPC11xx/UART.cc',
   'Firmware/Target/LPC11xx/I2C.cc',
+  # Devices
+  'Firmware/Devices/MCP9800.cc',
+  'Firmware/Devices/24XX64.cc',
 	# General
 	'Firmware/IO/OStream.cc',
 	'Firmware/IO/GDBSemihostedOStream.cc',
