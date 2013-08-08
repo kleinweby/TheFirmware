@@ -27,6 +27,7 @@
 #include <stdint.h>
 
 namespace TheFirmware {
+namespace Task {
 
 /// Pointer to the current task stack pointer
 /// The minimum task size is 16*4 (for r0-r15 32bit wide registers)
@@ -60,7 +61,7 @@ typedef enum : uint8_t {
 	kTaskStateWaiting = 2
 } TaskState;
 
-class Task {
+struct Task {
 	TaskStack stack;
 	TaskID id;
 	TaskState state;
@@ -72,7 +73,8 @@ class Task {
 	/// another task in a waiting queue
 	///
 	/// Is NULL when end of list is reached
-	//Task* next;
+public:
+	Task* next;
 
 public:
 
@@ -117,6 +119,7 @@ public:
 	}
 };
 
+void Init();
 
-
+} // namespace Task
 } // namespace TheFirmware 
