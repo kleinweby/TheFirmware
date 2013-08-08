@@ -113,6 +113,18 @@ bool MCP9800::getOneShot()
 
 void MCP9800::setOneShot(bool oneShot)
 {
+	// Enabling oneshot is a two way process
+	//
+	// First you need to shutdown the device
+	// then set the oneShot flag.
+	//
+	// Disabling does not depend on this specify ordering
+	//
+	if (oneShot)
+		this->Disable();
+	else
+		this->Enable();
+
 	uint8_t config = this->readConfigRegister();
 
 	if (oneShot)

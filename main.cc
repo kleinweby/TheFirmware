@@ -11,10 +11,43 @@ using namespace TheFirmware::LPC11xx;
 Devices::MCP9800 MCP9800;
 Devices::MCP24XX64 MCP24XX64;
 
+static LPC_GPIO_TypeDef (* const LPC_GPIO[4]) = { LPC_GPIO0, LPC_GPIO1, LPC_GPIO2, LPC_GPIO3 };
+
+void GPIOSetValue( uint32_t portNum, uint32_t bitPosi, uint32_t bitVal )
+{
+  LPC_GPIO[portNum]->MASKED_ACCESS[(1<<bitPosi)] = (bitVal<<bitPosi);
+}
+
+void GPIOSetDir( uint32_t portNum, uint32_t bitPosi, uint32_t dir )
+{
+  if(dir)
+	LPC_GPIO[portNum]->DIR |= 1<<bitPosi;
+  else
+	LPC_GPIO[portNum]->DIR &= ~(1<<bitPosi);
+}
+
 extern "C" int main() {
 	TheFirmware::Runtime::Init();
 
 	LogInfo("Starting up");
+
+
+	SystemCoreClockUpdate();
+	// LPC_SYSCON->SYSAHBCLKCTRL |= (1<<6);
+
+
+	LPC_IOCON->R_PIO1_2 |= 0x1;
+	LPC_IOCON->R_PIO1_1 |= 0x1;
+	LPC_IOCON->R_PIO1_0 |= 0x1;
+
+	GPIOSetDir(1,2,1);
+	GPIOSetDir(1,1,1);
+	GPIOSetDir(1,0,1);
+	// for (uint32_t i = 0; i < 10000000; i++) {};
+
+	GPIOSetValue(1,2,1);
+	GPIOSetValue(1,1,0);
+	GPIOSetValue(1,0,0);
 
 
 	if (!I2C.enable()) {
@@ -28,13 +61,12 @@ extern "C" int main() {
 	// }
 	// 
 
-	for (uint32_t i = 0; i < 10000000; i++) {};
-
 	char buffer[5] = {'x', 'x', 'x', 'x', '\0'};
 
 	MCP24XX64.read(0x0, (uint8_t*)buffer, 4);
 
 	MCP9800.setResolution(12);
+	MCP9800.setOneShot(true);
 
 	while (1) {
 
@@ -57,9 +89,10 @@ extern "C" int main() {
 	if ((temperature[1] & 0x10) != 0)
 		fraction += 625;
 
+	MCP9800.setOneShot(true);
 	LogInfo("Got %u.%04u", temperature[0], fraction);
 
-	for (uint32_t i = 0; i < 10000000; i++) {};
+	for (uint32_t i = 0; i < 20000000; i++) {};
 	}
 
 	while (1)
