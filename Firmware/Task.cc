@@ -30,9 +30,6 @@ using namespace TheFirmware::Log;
 namespace TheFirmware {
 namespace Task {
 
-/// TODO: which one is the right one?
-constexpr uint32_t kInterruptReturn = 0xFFFFFFFD;
-
 Task* CurrentTask;
 
 Task defaultTask;
@@ -51,7 +48,7 @@ TaskStack InitStack(void(*func)(void*),void *param, TaskStack stack)
 	*(stack--) = (uint32_t)func;             /* Entry point of task.                         */
 	*(stack)   = (uint32_t)0xFFFFFFFEL;
     stack      = stack - 5;
-	*(stack)   = (uint32_t)param;            /* r3: argument */
+	*(stack)   = (uint32_t)param;            /* r0: argument */
 	stack      = stack - 8;
   	
     return (stack);                   /* Returns location of new stack top. */
@@ -107,8 +104,6 @@ extern "C" void PendSV_Handler(void)
 	// Variable we input into an assembler block will be generated
 	// before the first instruction we specified.
 	//
-	// Therfore we need multiple assembler blocks to only let the compiler generate
-	// variables we need.
 
 	// Pointer to CurrentTask is in r0, so do NOT change it, as we're currently have no
 	// way of getting it later again. Clang seems to generate this from sp and that we change
@@ -118,94 +113,75 @@ extern "C" void PendSV_Handler(void)
 	//
 	__asm volatile (
 	 	// Get current and next task
-		"LDR     r1,  %[CurrentTask]      \n" // r1 = CurrentTask
-		"LDR     r2,  [r1, %[NextOffset]] \n" // r2 = CurrentTask->next
+		"LDR     r1,  %[CurrentTask]       \n" // r1 = CurrentTask
+		"LDR     r2,  [r1, %[NextOffset]]  \n" // r2 = CurrentTask->next
 
-		"CMP     r1,  r2                  \n"
-		"BEQ     exitPendSV              \n"
+		"CMP     r1,  r2                   \n"
+		"BEQ     exitPendSV                \n"
 
-		:
-		: [CurrentTask]"m" (CurrentTask), [NextOffset]"n" (__builtin_offsetof(Task, next))
-		:
-	);
+		//
+		// Save state
+		//
 
-	//
-	// Save state
-	//
-	__asm volatile (
 		// Get saved stack pointer
-		" MRS    r3,  PSP               \n" 
+		" MRS    r3,  PSP                  \n" 
   
 		// Make room to save the registers
-		" SUBS   r3,  #32               \n"
+		" SUBS   r3,  #32                  \n"
 
 		// Set task->stack
-    	" STR    r3,  [r1, %[StackOffset]]\n"
+    	" STR    r3,  [r1, %[StackOffset]] \n"
 
 		// Push r4-r7 to the stack
-		" STMIA  r3!, {r4-r7}        \n"
+		" STMIA  r3!, {r4-r7}              \n"
 
 		// Push r8-r11
-		" MOV    r4,  r8            \n"
-    	" MOV    r5,  r9            \n"
-    	" MOV    r6,  r10           \n"
-    	" MOV    r7,  r11           \n"
-    	" STMIA  r3!, {r4-r7}      \n" 
+		" MOV    r4,  r8                   \n"
+    	" MOV    r5,  r9                   \n"
+    	" MOV    r6,  r10                  \n"
+    	" MOV    r7,  r11                  \n"
+    	" STMIA  r3!, {r4-r7}              \n" 
 
-		:
-		: [StackOffset]"n" (__builtin_offsetof(Task, stack))
-		:
-	);
+		//
+		// Update CurrentTask
+		//
+		"STR     r2,  %[CurrentTask]       \n"
 
-	//
-	// Update CurrentTask
-	//
-	__asm volatile (
-		"STR     r2,  %[CurrentTask] \n"
+		//
+		// Restore state
+		//
 
-		:
-		: [CurrentTask]"m" (CurrentTask), [NextOffset]"n" (__builtin_offsetof(Task, next))
-		:
-	);
-
-	//
-	// Restore state
-	//
-	__asm volatile (
 		"LDR     r3,  [r2, %[StackOffset]] \n" // r3 = NextTask->stack
 
 		// Pop r8-r11
-		"ADDS    r3,  #16        \n" // Adjust stack
-    	"LDMIA   r3!, {r4-r7}      \n"
-    	"MOV     r8,  r4            \n"
-    	"MOV     r9,  r5            \n"
-    	"MOV     r10, r6           \n"
-    	"MOV     r11, r7           \n"
+		"ADDS    r3,  #16                  \n" // Adjust stack
+    	"LDMIA   r3!, {r4-r7}              \n"
+    	"MOV     r8,  r4                   \n"
+    	"MOV     r9,  r5                   \n"
+    	"MOV     r10, r6                   \n"
+    	"MOV     r11, r7                   \n"
 
     	// Pop r4-r7
-    	"SUBS    r3,  #32        \n" // Adjust stack
-    	"LDMIA   r3!, {r4-r7}      \n"
+    	"SUBS    r3,  #32                  \n" // Adjust stack
+    	"LDMIA   r3!, {r4-r7}              \n"
 
     	// Restore stack
-    	"ADDS    r3,  #16        \n"
+    	"ADDS    r3,  #16                  \n"
 
     	// Restore stack pointer
-    	"MSR     PSP, r3          \n"
+    	"MSR     PSP, r3                   \n"
 
-		:
-		: [StackOffset]"n" (__builtin_offsetof(Task, stack))
-		:
-	);
+		//
+		// Exit
+		// 
+		"exitPendSV:                       \n"
+    	"BX      lr                        \n"
 
-	// Own block to generate label before the syntheziation of IntReturn below
-	__asm volatile ( "exitPendSV:\n" );
-	__asm volatile (
-	// Epilog
-    	"BX      %[IntReturn]\n"
-
-    	: 
-    	: [IntReturn]"l" (kInterruptReturn)
     	:
+		: [CurrentTask]"m" (CurrentTask), 
+		  [NextOffset]"n" (__builtin_offsetof(Task, next)),
+		  [StackOffset]"n" (__builtin_offsetof(Task, stack))
+		:
 	);
 
 	// We'll never geht here
