@@ -25,6 +25,8 @@
 #include "Task.h"
 #include "Firmware/Log.h"
 
+#include <stddef.h>
+
 using namespace TheFirmware::Log;
 
 namespace TheFirmware {
@@ -44,7 +46,37 @@ Task* CurrentTask;
 //
 Task* RunningQueue;
 
+///
+/// These tasks are ready to run and wait to be scheduled
+///
+/// These tasks are in this queue mainly because higher
+/// priority tasks are currently running 
+///
+Task* ReadyQueue;
+
+// There is no global waiting queue, as we always have to chain
+// waiting task onto the unblocking event and therefore a waiting
+// queue would be pointless
+
+//
+// When the queues are changed we need to lock out other scheduling
+// operations.
+//
+// As the only thing that can preempt us, are irqs we just block and 
+// unblock them.
+//
+static inline void SchedulerLock()
+{
+	__asm volatile ("cpsid i");
+}
+
+static inline void SchedulerUnlock()
+{
+	__asm volatile ("cpsie i");
+}
+
 Task defaultTask;
+Task idleTask;
 
 Task task2;
 
@@ -75,8 +107,7 @@ void Blub(void* param)
 	while (1) {
 		LogDebug("Ya");
 
-		*((uint32_t volatile *)0xE000ED04) = 0x10000000; // trigger PendSV
-
+		TheFirmware::Task::ForceTaskSwitch();
 	}
 }
 
@@ -86,32 +117,282 @@ void Blub2(void* param)
 
 	LogInfo("Start %u", a);
 
-	while (1) {
+	for(int i =0; i < 100; i++) {
 		LogWarn("Gna");
 
-		*((uint32_t volatile *)0xE000ED04) = 0x10000000; // trigger PendSV
-
+		TheFirmware::Task::ForceTaskSwitch();
 	}
+
+	defaultTask.setPriority(1);
 }
 
 void Init()
 {
-	defaultTask.next = &task2;
-	defaultTask.stack = (TaskStack)0xA0A0A0A0;
-
-	task2.next = &task3;
-	task2.stack = InitStack(Blub, (void*)0xF1, task2Stack + 190);
-
-	task3.next = &defaultTask;
-	task3.stack = InitStack(Blub2, (void*)0xAB, task3Stack + 190);
+	//
+	// Now we convert our non task to the main task
+	//
+	defaultTask.next = &defaultTask; // No other tasks for now,
+	defaultTask.id = 1;
+	defaultTask.state = kTaskStateRunning;
+	defaultTask.priority = INT8_MAX; // Avoid loosing control during setup
 
 	CurrentTask = &defaultTask;
-	RunningQueue = &task2;
+	RunningQueue = &defaultTask;
+
+	// Now we make the initial task switch to get the system ready
+	__asm volatile (
+		// Move to psp
+		"MRS R1, MSP\n"
+		"MSR PSP, R1\n"
+		"MOVS R1, #2\n"
+		"MSR CONTROL, R1\n"
+
+		// trigger pendsv
+		"STR %0, [%1]"
+		:
+		: "r" (0x10000000), "r" (0xE000ED04)
+		: "r1"
+	);
+
+	task2.stack = InitStack(Blub, (void*)0xF1, task2Stack + 190);
+	task2.priority = 0;
+	task2.setState(kTaskStateReady);
+
+	task3.stack = InitStack(Blub2, (void*)0xAB, task3Stack + 190);
+	task3.priority = 0;
+	task3.setState(kTaskStateReady);
+}
+
+Task* GetCurrentTask()
+{
+	return CurrentTask;
+}
+
+void Task::moveToRunningQueue()
+{
+	// Remove us from ready queue if we were
+	if (this->state == kTaskStateReady) {
+		this->removeFromReadyQueue();
+	}
+
+	// We're running now
+	this->state = kTaskStateRunning;
+
+	// We oust the running tasks
+	// Note: check both, as one could be us. (If both are us, we don't care)
+	if (this->priority > CurrentTask->getPriority() ||
+		this->priority > RunningQueue->getPriority()) {
+		// 
+		// Every task in running queue has same priority as CurrentTask
+		// therefore we will be the only task running now
+		//
+		this->next = this;
+
+		// Everything in the running queue is a higher priority than
+		// any task in ready queue so, just put them in front
+		Task* t;
+		for (t = RunningQueue; t->next != RunningQueue; t = t->next) {
+			// We can set them as ready now
+			// Bypass setState here, as we've updates the queues
+			t->state = kTaskStateReady;
+		}
+		t->next = ReadyQueue;
+		ReadyQueue = RunningQueue;
+
+		//
+		// Now put us as ready queue and inform the system we need
+		// a task switch
+		//
+		RunningQueue = this;
+		SchedulerUnlock();
+		ForceTaskSwitch();
+	}
+	else {
+		// No we dont oust them, so just append us
+		Task* t;
+
+		// Append us to the running queue
+		// Be aware that running queue is actually a loop
+		for (t = RunningQueue; t->next != RunningQueue; t = t->next)
+			;
+		t->next = this;
+		this->next = RunningQueue;
+		this->state = kTaskStateRunning;
+		// No task switch needed
+	}
+}
+
+void Task::removeFromRunningQueue(bool nextStateReady)
+{
+	// Remove from running queue
+	Task* t;
+	for (t = RunningQueue; t->next != this; t = t->next)
+		;
+	t->next = t->next->next;
+
+	// Insert into ready queue
+	if (nextStateReady)
+		this->addToReadyQueue();
+	else {
+		this->state = kTaskStateWaiting;
+	}
+
+	// We're currently running
+	if (CurrentTask == this) {
+		// We're the only process running, we need to rebuild
+		// the RunningQueue
+		if (RunningQueue == this) {
+			RunningQueue = ReadyQueue;
+
+			// Disconnect where the priority drops
+			Task* t;
+			for (t = RunningQueue; t->next != NULL && RunningQueue->getPriority() == t->next->getPriority(); t = t->next) {
+				t->state = kTaskStateRunning;
+			}
+
+			// New head of ready queue
+			ReadyQueue = t->next;
+			// Close the running queue
+			t->next = RunningQueue;
+		}
+		SchedulerUnlock();
+		ForceTaskSwitch();
+	}
+}
+
+void Task::addToReadyQueue()
+{
+	if (ReadyQueue) {
+		Task* t;
+		for (t = ReadyQueue; t->next != NULL && t->next->getPriority() >= this->priority; t = t->next)
+			;
+
+		this->next = t->next;
+		t->next = this;
+	}
+	else 
+		ReadyQueue = this;
+	
+	this->state = kTaskStateReady;
+}
+
+void Task::removeFromReadyQueue()
+{
+	if (this == ReadyQueue) {
+		ReadyQueue = ReadyQueue->next;
+	}
+	else {
+		Task* t;
+		for (t = ReadyQueue; t->next != NULL && t->next != this; t = t->next)
+			;
+		t->next = t->next->next;
+	}
+}
+
+void Task::moveToReadyQueue()
+{
+	if (this->state == kTaskStateRunning)
+		this->removeFromRunningQueue(true);
+	else if (this->state == kTaskStateReady) {
+		this->removeFromReadyQueue();
+		this->addToReadyQueue();
+	}
+	else
+		this->addToReadyQueue();
+}
+
+void Task::moveToWaitingQueue()
+{
+	if (this->state == kTaskStateRunning)
+		this->removeFromRunningQueue(false);
+	else
+		this->removeFromReadyQueue();
+}
+
+void Task::setState(TaskState state)
+{
+	// Don't set state to running here
+	if (this->state == state || state == kTaskStateRunning)
+		return;
+
+	SchedulerLock();
+	// We do not actually set the state here, this is done in the move methods
+
+	// We are now blocked, so remove us from scheduling
+	if (state == kTaskStateWaiting) {
+		// We were running before
+		this->moveToWaitingQueue();
+	}
+	else if (state == kTaskStateReady) {
+		// Can we run now?
+		if (this->priority >= CurrentTask->getPriority())
+			this->moveToRunningQueue();
+		else
+			this->moveToReadyQueue();
+	}
+	SchedulerUnlock();
+}
+
+void Task::setPriority(TaskPriority priority)
+{
+	if (this->priority == priority)
+		return;
+
+	SchedulerLock();
+	TaskPriority oldPriority = this->priority;
+	this->priority = priority;
+
+	// When in waiting state, we don't need to adjust
+	// the queues
+	if (this->state == kTaskStateWaiting) {
+		SchedulerUnlock();
+		return;
+	}
+
+	// We've increased our priority
+	if (oldPriority < this->priority) {
+		// We're running and oust other running tasks
+		// or we now got a priority to allow us running
+		if (this->state == kTaskStateRunning ||
+			this->priority >= CurrentTask->getPriority()) {
+
+			this->moveToRunningQueue();
+		}
+		// Still don't have the priority to run,
+		// But we're ready so we need to sort the ready queue.
+		else if (this->state == kTaskStateReady) {
+			this->moveToReadyQueue();
+		}
+	}
+	// We've decreased our priority
+	else if (oldPriority > this->priority) {
+		// We're running and lost the ability to run
+		if (this->state == kTaskStateRunning &&
+			(this->priority < CurrentTask->getPriority() || 
+			 this->priority < RunningQueue->getPriority() ||
+			 this->priority < ReadyQueue->getPriority())) {
+
+			this->moveToReadyQueue();
+		}
+		// We're ready so just resort the ready queue
+		else if (this->state == kTaskStateReady) {
+			this->moveToReadyQueue();
+		}
+	}
+	SchedulerUnlock();
 }
 
 // Declare Function as naked, to omit default function pro-/epilog
 extern "C" void PendSV_Handler(void) __attribute__ ((naked, noreturn));
 
+///
+/// Handles the PendSV exception which is used to implement the actual
+/// task switch.
+///
+/// By reprioritiesing this exception to the lowest, it is always tailchained
+/// at the end of every irq chain and executes the switch only right before the
+/// return to Thread mode.
+///
 extern "C" void PendSV_Handler(void)
 {
 	// Variable we input into an assembler block will be generated

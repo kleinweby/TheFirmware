@@ -36,14 +36,12 @@ typedef uint32_t* TaskStack;
 typedef uint8_t TaskID;
 
 /// Task priority
-/// Lower number means _higher_ priority
-/// (As in unix)
 typedef int8_t TaskPriority;
 
 /// Priority of the idle (WFI) task
 /// Is is a task with the lowest priority
 /// another task with the same priority is not recommened
-static constexpr TaskPriority kIdleTaskPriority = INT8_MAX;
+static constexpr TaskPriority kIdleTaskPriority = INT8_MIN;
 
 typedef enum : uint8_t {
 	/// Unkown state should only happen before the task
@@ -52,16 +50,21 @@ typedef enum : uint8_t {
 	/// should be considered to be unusable.
 	kTaskStateUnkown = 0,
 
-	/// The task is ready to be run and will be run soon
-	///
-	/// @note the current task is also always ready
-	kTaskStateReady = 1, 
+	/// The task is currently running or will be run again soon
+	kTaskStateRunning = 1,
+
+	/// The task is ready to be run but wait for higher
+	/// priority tasks to finish
+	kTaskStateReady = 2, 
 
 	/// The task waits one some resource
-	kTaskStateWaiting = 2
+	kTaskStateWaiting = 3
 } TaskState;
 
 struct Task {
+// The following is private, but due to the use of offsetof we canot declare them
+// that way
+
 	TaskStack stack;
 	TaskID id;
 	TaskState state;
@@ -73,9 +76,18 @@ struct Task {
 	/// another task in a waiting queue
 	///
 	/// Is NULL when end of list is reached
-public:
 	Task* next;
 
+	void reschedule();
+
+	// Low Level Helper
+	void removeFromRunningQueue(bool nextStateReady);
+	void addToReadyQueue();
+	void removeFromReadyQueue();
+
+	void moveToRunningQueue();
+	void moveToReadyQueue();
+	void moveToWaitingQueue();
 public:
 
 	/// Returns the pointer to the current stack pointer
@@ -101,6 +113,13 @@ public:
 		return this->state;
 	}
 
+	/// Changes the state of the task
+	///
+	/// @praram state the new state
+	/// @note You cannot set the state to Running
+	///
+	void setState(TaskState state);
+
 	/// Priority of the task
 	TaskPriority getPriority() const
 	{
@@ -111,15 +130,28 @@ public:
 	///
 	/// @param priority Lower numer means higher priority
 	///
-	void setPriority(TaskPriority priority)
-	{
-		this->priority = priority;
-
-		/// TODO: need to inform scheduler here and rebuild queues
-	}
+	void setPriority(TaskPriority priority);
 };
 
+///
+/// Initialize the Tasks subsystem
+///
 void Init();
+
+///
+/// Returns the currently running task
+///
+Task* GetCurrentTask();
+
+///
+/// Forces a task switch if possible
+///
+static inline void ForceTaskSwitch()
+{
+	*((uint32_t volatile *)0xE000ED04) = 0x10000000; // trigger PendSV
+}
+
+extern Task defaultTask;
 
 } // namespace Task
 } // namespace TheFirmware 
