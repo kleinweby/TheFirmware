@@ -30,7 +30,19 @@ using namespace TheFirmware::Log;
 namespace TheFirmware {
 namespace Task {
 
+//
+// The Task currently running
+//
 Task* CurrentTask;
+
+//
+// The queue we're currently running
+//
+// Tasks in this queue are always the same priority
+// and tasks with lower priority that can be run are
+// in the ready queue
+//
+Task* RunningQueue;
 
 Task defaultTask;
 
@@ -94,6 +106,7 @@ void Init()
 	task3.stack = InitStack(Blub2, (void*)0xAB, task3Stack + 190);
 
 	CurrentTask = &defaultTask;
+	RunningQueue = &task2;
 }
 
 // Declare Function as naked, to omit default function pro-/epilog
@@ -112,11 +125,17 @@ extern "C" void PendSV_Handler(void)
 	// Load tasks into registers, check if switching needed
 	//
 	__asm volatile (
-	 	// Get current and next task
-		"LDR     r1,  %[CurrentTask]       \n" // r1 = CurrentTask
-		"LDR     r2,  [r1, %[NextOffset]]  \n" // r2 = CurrentTask->next
+		// Get pointers to those to variables.
+		// Sadly this will probbably a nop as clang puts
+		// those in r0, r1 already but we cannot reley on this :/
+	 	"MOVS    r0, %[CurrentTask]        \n" // r0 = &CurrentTask
+	 	"MOVS    r1, %[RunningQueue]       \n" // r1 = &RunningQueue
 
-		"CMP     r1,  r2                   \n"
+	 	// Get current and next task
+		"LDR     r2,  [r0]                 \n" // r2 = CurrentTask (= *r0)
+		"LDR     r3,  [r1]                 \n" // r3 = NextTask (= RunningQueue = *r1)
+
+		"CMP     r2,  r3                   \n"
 		"BEQ     exitPendSV                \n"
 
 		//
@@ -130,7 +149,7 @@ extern "C" void PendSV_Handler(void)
 		" SUBS   r3,  #32                  \n"
 
 		// Set task->stack
-    	" STR    r3,  [r1, %[StackOffset]] \n"
+    	" STR    r3,  [r2, %[StackOffset]] \n"
 
 		// Push r4-r7 to the stack
 		" STMIA  r3!, {r4-r7}              \n"
@@ -143,9 +162,12 @@ extern "C" void PendSV_Handler(void)
     	" STMIA  r3!, {r4-r7}              \n" 
 
 		//
-		// Update CurrentTask
+		// Update CurrentTask and Running Queue
 		//
-		"STR     r2,  %[CurrentTask]       \n"
+		"LDR     r2, [r1]                  \n" // r3 = NextTask (= RunningQueue = *r1) (again)
+		"STR     r2, [r0]                  \n" // Save NextTask as CurrentTask
+		"LDR     r3, [r2, %[NextOffset]]   \n" // Load CurrentTask->next which will become the RunningQueue Head
+		"STR     r3, [r1]                  \n" // Save new RunningQueue head
 
 		//
 		// Restore state
@@ -178,7 +200,8 @@ extern "C" void PendSV_Handler(void)
     	"BX      lr                        \n"
 
     	:
-		: [CurrentTask]"m" (CurrentTask), 
+		: [CurrentTask]"r" (&CurrentTask), 
+		  [RunningQueue]"r" (&RunningQueue),
 		  [NextOffset]"n" (__builtin_offsetof(Task, next)),
 		  [StackOffset]"n" (__builtin_offsetof(Task, stack))
 		:
