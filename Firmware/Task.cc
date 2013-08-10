@@ -58,23 +58,6 @@ Task* ReadyQueue;
 // waiting task onto the unblocking event and therefore a waiting
 // queue would be pointless
 
-//
-// When the queues are changed we need to lock out other scheduling
-// operations.
-//
-// As the only thing that can preempt us, are irqs we just block and 
-// unblock them.
-//
-static inline void SchedulerLock()
-{
-	__asm volatile ("cpsid i");
-}
-
-static inline void SchedulerUnlock()
-{
-	__asm volatile ("cpsie i");
-}
-
 Task defaultTask;
 Task idleTask;
 
@@ -475,6 +458,7 @@ extern "C" void PendSV_Handler(void)
 		// Exit
 		// 
 		"exitPendSV:                       \n"
+		"CPSIE   i                         \n" // Always enable interrupts
     	"BX      lr                        \n"
 
     	:

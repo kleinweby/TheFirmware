@@ -151,6 +151,31 @@ static inline void ForceTaskSwitch()
 	*((uint32_t volatile *)0xE000ED04) = 0x10000000; // trigger PendSV
 }
 
+///
+/// Locks access to the scheduler.
+///
+/// This mainly disables all irqs as these are the only chance
+/// that other scheduling operations could be run.
+///
+/// @note it does not intervine with ForceTaskSwitch() which will
+/// work regardlessly and clear the lock
+/// @warning Not a recursive lock
+///
+static inline void SchedulerLock()
+{
+	__asm volatile ("cpsid i");
+}
+
+///
+/// Unlocks the scheduler.
+///
+/// @see SchedulerLock()
+///
+static inline void SchedulerUnlock()
+{
+	__asm volatile ("cpsie i");
+}
+
 extern Task defaultTask;
 
 } // namespace Task
