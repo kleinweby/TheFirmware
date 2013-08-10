@@ -21,6 +21,7 @@ FIRMWARE_SRC = FileList[
 	'Firmware/IO/GDBSemihostedOStream.cc',
 	'Firmware/Runtime.cc',
 	'Firmware/Task.cc',
+	'Firmware/Waitable.cc',
   'Firmware/Log.cc',
 ]
 
