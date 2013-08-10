@@ -139,18 +139,15 @@ void Init()
 	CurrentTask = &defaultTask;
 	RunningQueue = &defaultTask;
 
-	// Now we make the initial task switch to get the system ready
+	// Now we switch the used stack from msp to psp
 	__asm volatile (
 		// Move to psp
 		"MRS R1, MSP\n"
 		"MSR PSP, R1\n"
 		"MOVS R1, #2\n"
 		"MSR CONTROL, R1\n"
-
-		// trigger pendsv
-		"STR %0, [%1]"
 		:
-		: "r" (0x10000000), "r" (0xE000ED04)
+		:
 		: "r1"
 	);
 
