@@ -30,35 +30,7 @@
 namespace TheFirmware {
 
 struct Waitee;
-
-///
-/// Waitable is the primitive that is used for tasks
-/// to block.
-/// It maintains a list of tasks waiting and offers
-/// methods to wait, wakeup. To implement waiting
-/// there is a Waitee which allows waiting queues and
-/// determining which waitable freed up
-///
-class Waitable {
-	/// The waitee chain that is waiting on us.
-	Waitee* waitee;
-
-	friend struct Waitee;
-public:
-	Waitable() : waitee(NULL) {};
-
-	/// Wakeup one task
-	///
-	/// @returns True if a task has been woken.
-	///
-	bool wakeup();
-
-	/// Wakeup all tasks
-	///
-	/// @returns True if one ore more tasks have been woken.
-	///
-	bool wakeupAll();
-};
+class Waitable;
 
 ///
 /// Let the current task wait on one waitable
@@ -75,5 +47,71 @@ void Wait(Waitable* waitable);
 /// @returns the index of the waitable that woke the task
 ///
 uint8_t WaitMultiple(uint8_t numberOfWaitables, ...);
+
+///
+/// Waitable is the primitive that is used for tasks
+/// to block.
+/// It maintains a list of tasks waiting and offers
+/// methods to wait, wakeup. To implement waiting
+/// there is a Waitee which allows waiting queues and
+/// determining which waitable freed up
+///
+class Waitable {
+	/// The waitee chain that is waiting on us.
+	Waitee* waitee;
+
+	///
+	/// Delegate methods to inform of waiting actions
+	/// Those are called with the SchedulerLock in place
+	///
+
+	/// 
+	/// Inform the waitable that we're about to wait
+	/// and give it appropiate chanes to respond to it.
+	///
+	/// It can also abort the waiting process prematurly
+	/// (e.g. a semaphore which has enough resources)
+	///
+	/// @return wheter the waiting should be continiued (true)
+	/// or aborted (false). If aborted WaitMultiple will report
+	/// this as success
+	///
+	virtual bool beginWaiting()
+	{
+		return true;
+	}
+
+	///
+	/// Informs the waitable that the wait is over, and
+	/// tells wheter the waitee was woken or the wait was
+	/// aborted (other waitable woke task)
+	///
+	/// @param abort True if the waiting on this waitable was
+	///              aborted.
+	/// @note is not called when beginWaiting returns false
+	///
+	virtual void endWaiting(bool abort) 
+	{
+		#pragma unused(abort)
+	}
+
+	friend struct Waitee;
+	friend void Wait(Waitable* waitable);
+	friend uint8_t WaitMultiple(uint8_t numberOfWaitables, ...);
+public:
+	Waitable() : waitee(NULL) {};
+
+	/// Wakeup one task
+	///
+	/// @returns True if a task has been woken.
+	///
+	bool wakeup();
+
+	/// Wakeup all tasks
+	///
+	/// @returns True if one ore more tasks have been woken.
+	///
+	bool wakeupAll();
+};
 
 } //namespace

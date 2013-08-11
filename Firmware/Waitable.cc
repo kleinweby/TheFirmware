@@ -139,8 +139,14 @@ void Wait(Waitable* waitable)
 	Waitee waitee;
 
 	Task::SchedulerLock();
+	// Waitable does not allow waiting now
+	if (!waitable->beginWaiting()) {
+		Task::SchedulerUnlock();
+		return;
+	}
 	waitee.init(waitable);
 	waitee.task->setState(Task::kTaskStateWaiting); // This releases the scheduler lock, as it will block us
+	waitable->endWaiting(false);
 }
 
 uint8_t WaitMultiple(uint8_t numberOfWaitables, ...)
@@ -151,8 +157,23 @@ uint8_t WaitMultiple(uint8_t numberOfWaitables, ...)
 	// Initialize waitees
 	va_list args;
 	va_start(args, numberOfWaitables);
-	for (uint8_t i = 0; i < numberOfWaitables; i++)
-		waitees[i].init(va_arg(args, Waitable*));
+	for (uint8_t i = 0; i < numberOfWaitables; i++) {
+		Waitable* waitable = va_arg(args, Waitable*);
+		// Waiting not allowed by this waitable, so clean up
+		if (!waitable->beginWaiting()) {
+			for (int8_t j = i - 1; j >= 0; i--) {
+				waitees[j].removeEarly();
+				waitees[j].waitable->endWaiting(true);
+			}
+
+			va_end(args);
+			Task::SchedulerUnlock();
+			return i;
+		}
+		else {
+			waitees[i].init(waitable);
+		}
+	}
 	va_end(args);
 
 	// Wait
@@ -165,10 +186,14 @@ uint8_t WaitMultiple(uint8_t numberOfWaitables, ...)
 	uint8_t wokenWaitee = UINT8_MAX;
 
 	for (uint8_t i = 0; i < numberOfWaitables; i++) {
-		if (waitees[i].wasWoken())
+		if (waitees[i].wasWoken()) {
 			wokenWaitee = i;
-		else
+			waitees[i].waitable->endWaiting(false);
+		}
+		else {
 			waitees[i].removeEarly();
+			waitees[i].waitable->endWaiting(true);
+		}
 	}
 
 	Task::SchedulerUnlock();
