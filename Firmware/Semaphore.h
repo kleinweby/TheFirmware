@@ -30,7 +30,7 @@
 
 namespace TheFirmware {
 
-struct Semaphore : protected Waitable {
+class Semaphore : protected Waitable {
 private:
 	int8_t count;
 
@@ -38,7 +38,9 @@ private:
 	virtual void endWaiting(bool abort);
 
 public:
-	void init(int8_t initialCount);
+	Semaphore(int8_t initialCount) : count(initialCount)
+	{
+	}
 
 	///
 	/// Wait on this semaphore, if needed

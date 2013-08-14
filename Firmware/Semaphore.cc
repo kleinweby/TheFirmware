@@ -47,11 +47,6 @@ void Semaphore::endWaiting(bool abort)
 		this->count++;
 }
 
-void Semaphore::init(int8_t initialCount)
-{
-	this->count = initialCount;
-}
-
 void Semaphore::signal()
 {
 	this->count++;

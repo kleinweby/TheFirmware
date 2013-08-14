@@ -21,7 +21,7 @@ Task task3;
 uint32_t task3Stack[200];
 
 Waitable w;
-TheFirmware::Semaphore s;
+TheFirmware::Semaphore s(0);
 
 TaskStack InitStack(void(*func)(void*),void *param, TaskStack stack)
 {
@@ -75,8 +75,6 @@ extern "C" int main() {
 	TheFirmware::Task::Init();
 
 	LogInfo("Starting up");
-
-	s.init(0);
 
 	task2.stack = InitStack(Blub, (void*)0xF1, task2Stack + 190);
 	task2.priority = 0;
