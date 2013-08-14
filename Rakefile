@@ -23,6 +23,7 @@ FIRMWARE_SRC = FileList[
 	'Firmware/Schedule/Task.cc',
 	'Firmware/Schedule/Waitable.cc',
 	'Firmware/Schedule/Semaphore.cc',
+	'Firmware/Schedule/Mutex.cc',
   'Firmware/Log.cc',
 ]
 
