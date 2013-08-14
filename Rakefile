@@ -37,6 +37,7 @@ CXXFLAGS << '-funsigned-char' << '-Wno-deprecated-register'
 LINKER_SCRIPT = 'Firmware/Target/LPC11xx/link.ld'
 GDB_SCRIPT = 'Target/startup.gdb'
 EXECUTABLE_NAME = 'firmware'
+JLINK_OPTIONS=ENV['JLINK_OPTIONS']
 
 CLEAN.include(OBJ_DIR)
 
@@ -48,7 +49,7 @@ file "#{EXECUTABLE_NAME}.elf" => [ *OBJ, LINKER_SCRIPT ]  do |t|
 end
 
 task 'jlink' do |t|
-	sh "/Applications/JLink/JLinkGDBServer.command -if SWD -device LPC11C24 -vd"
+	sh "/Applications/JLink/JLinkGDBServer.command -if SWD -device LPC11C24 -vd #{JLINK_OPTIONS}"
 end
 
 task 'debug'  => ["#{EXECUTABLE_NAME}.elf", GDB_SCRIPT] do |t|

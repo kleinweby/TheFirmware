@@ -59,55 +59,6 @@ Task* ReadyQueue;
 // queue would be pointless
 
 Task defaultTask;
-Task idleTask;
-
-Task task2;
-
-uint32_t task2Stack[200];
-
-Task task3;
-
-uint32_t task3Stack[200];
-
-TaskStack InitStack(void(*func)(void*),void *param, TaskStack stack)
-{
-    *(stack--) = (uint32_t)0x01000000L;      /* xPSR	        */
-	*(stack--) = (uint32_t)func;             /* Entry point of task.                         */
-	*(stack)   = (uint32_t)0xFFFFFFFEL;
-    stack      = stack - 5;
-	*(stack)   = (uint32_t)param;            /* r0: argument */
-	stack      = stack - 8;
-  	
-    return (stack);                   /* Returns location of new stack top. */
-}
-
-void Blub(void* param)
-{
-	uint32_t a = (uint32_t)param;
-
-	LogInfo("Start %u", a);
-
-	while (1) {
-		LogDebug("Ya");
-
-		TheFirmware::Task::ForceTaskSwitch();
-	}
-}
-
-void Blub2(void* param)
-{
-	uint32_t a = (uint32_t)param;
-
-	LogInfo("Start %u", a);
-
-	for(int i =0; i < 100; i++) {
-		LogWarn("Gna");
-
-		TheFirmware::Task::ForceTaskSwitch();
-	}
-
-	defaultTask.setPriority(1);
-}
 
 void Init()
 {
@@ -133,14 +84,6 @@ void Init()
 		:
 		: "r1"
 	);
-
-	task2.stack = InitStack(Blub, (void*)0xF1, task2Stack + 190);
-	task2.priority = 0;
-	task2.setState(kTaskStateReady);
-
-	task3.stack = InitStack(Blub2, (void*)0xAB, task3Stack + 190);
-	task3.priority = 0;
-	task3.setState(kTaskStateReady);
 }
 
 Task* GetCurrentTask()
@@ -188,7 +131,7 @@ void Task::moveToRunningQueue()
 		ForceTaskSwitch();
 	}
 	else {
-		// No we dont oust them, so just append us
+		// No we dont oust them, so just prepend us
 		Task* t;
 
 		// Append us to the running queue
@@ -197,6 +140,7 @@ void Task::moveToRunningQueue()
 			;
 		t->next = this;
 		this->next = RunningQueue;
+		RunningQueue = this; // Move us to front of queue, is required if running process is alone
 		this->state = kTaskStateRunning;
 		// No task switch needed
 	}
@@ -229,6 +173,8 @@ void Task::removeFromRunningQueue(bool nextStateReady)
 			for (t = RunningQueue; t->next != NULL && RunningQueue->getPriority() == t->next->getPriority(); t = t->next) {
 				t->state = kTaskStateRunning;
 			}
+
+			t->state = kTaskStateRunning;
 
 			// New head of ready queue
 			ReadyQueue = t->next;
@@ -292,7 +238,9 @@ void Task::moveToWaitingQueue()
 void Task::setState(TaskState state)
 {
 	// Don't set state to running here
-	if (this->state == state || state == kTaskStateRunning)
+	// And if we're running dont set it to ready
+	if (this->state == state || state == kTaskStateRunning ||
+		(this->state == kTaskStateRunning && state == kTaskStateReady))
 		return;
 
 	SchedulerLock();
