@@ -3,6 +3,7 @@
 #include "Firmware/Runtime.h"
 #include "Firmware/Task.h"
 #include "Firmware/Waitable.h"
+#include "Firmware/Semaphore.h"
 
 using namespace TheFirmware::Log;
 using namespace TheFirmware::Task;
@@ -20,7 +21,7 @@ Task task3;
 uint32_t task3Stack[200];
 
 Waitable w;
-Waitable w2;
+TheFirmware::Semaphore s;
 
 TaskStack InitStack(void(*func)(void*),void *param, TaskStack stack)
 {
@@ -44,8 +45,10 @@ void Blub(void* param)
 		LogWarn("Ya %i", i);
 		if (i % 3 == 0)
 			w.wakeup();
-		if (i % 5 == 0)
-			w2.wakeup();
+		if (i % 5 == 0) {
+			s.signal();
+			s.signal();
+		}
 
 		ForceTaskSwitch();
 	}
@@ -58,7 +61,7 @@ void Blub2(void* param)
 	LogInfo("Start %u", a);
 
 	for(int i =0; i < 100; i++) {
-		uint8_t j = WaitMultiple(2, &w, &w2);
+		uint8_t j = WaitMultiple(2, &w, &s);
 		LogDebug("Gna %i: %i", i, j);
 	}
 
@@ -72,6 +75,8 @@ extern "C" int main() {
 	TheFirmware::Task::Init();
 
 	LogInfo("Starting up");
+
+	s.init(0);
 
 	task2.stack = InitStack(Blub, (void*)0xF1, task2Stack + 190);
 	task2.priority = 0;

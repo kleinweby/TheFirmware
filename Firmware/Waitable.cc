@@ -161,7 +161,7 @@ uint8_t WaitMultiple(uint8_t numberOfWaitables, ...)
 		Waitable* waitable = va_arg(args, Waitable*);
 		// Waiting not allowed by this waitable, so clean up
 		if (!waitable->beginWaiting()) {
-			for (int8_t j = i - 1; j >= 0; i--) {
+			for (int8_t j = i - 1; j >= 0; j--) {
 				waitees[j].removeEarly();
 				waitees[j].waitable->endWaiting(true);
 			}

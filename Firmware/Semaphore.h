@@ -24,25 +24,34 @@
 
 #pragma once
 
+#include "Firmware/Waitable.h"
+
 #include <stdint.h>
 
 namespace TheFirmware {
 
-struct Semaphore {
+struct Semaphore : protected Waitable {
 private:
 	int8_t count;
+
+	virtual bool beginWaiting();
+	virtual void endWaiting(bool abort);
+
 public:
-	void Init(int8_t initialCount);
+	void init(int8_t initialCount);
 
 	///
 	/// Wait on this semaphore, if needed
 	///
-	void Wait();
+	void wait()
+	{
+		TheFirmware::Wait(this);
+	}
 
 	///
 	/// Signal the semaphore and wake a task
 	///
-	void Signal();
+	void signal();
 };
 
 }
