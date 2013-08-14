@@ -1,14 +1,12 @@
 #include "LPC11xx.h"
 #include "Firmware/Log.h"
 #include "Firmware/Runtime.h"
-#include "Firmware/Task.h"
-#include "Firmware/Waitable.h"
-#include "Firmware/Semaphore.h"
+#include "Firmware/Schedule/Task.h"
+#include "Firmware/Schedule/Waitable.h"
+#include "Firmware/Schedule/Semaphore.h"
 
 using namespace TheFirmware::Log;
-using namespace TheFirmware::Task;
-using TheFirmware::Waitable;
-using TheFirmware::Wait;
+using namespace TheFirmware::Schedule;
 
 Task idleTask;
 
@@ -21,7 +19,7 @@ Task task3;
 uint32_t task3Stack[200];
 
 Waitable w;
-TheFirmware::Semaphore s(0);
+Semaphore s(0);
 
 TaskStack InitStack(void(*func)(void*),void *param, TaskStack stack)
 {
@@ -72,7 +70,7 @@ void Blub2(void* param)
 extern "C" int main() {
 	TheFirmware::Runtime::Init();
 
-	TheFirmware::Task::Init();
+	TheFirmware::Schedule::Init();
 
 	LogInfo("Starting up");
 
@@ -85,10 +83,10 @@ extern "C" int main() {
 	task3.setState(kTaskStateReady);
 
 	//while(0) {
-		TheFirmware::Task::ForceTaskSwitch();
+		ForceTaskSwitch();
 		LogInfo("blub");
 
-		TheFirmware::Task::defaultTask.setPriority(-1);
+		defaultTask.setPriority(-1);
 		LogInfo("done");
 	//}
 }

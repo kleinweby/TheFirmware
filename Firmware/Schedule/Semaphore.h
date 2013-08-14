@@ -24,11 +24,12 @@
 
 #pragma once
 
-#include "Firmware/Waitable.h"
+#include "Firmware/Schedule/Waitable.h"
 
 #include <stdint.h>
 
 namespace TheFirmware {
+namespace Schedule {
 
 class Semaphore : protected Waitable {
 private:
@@ -47,7 +48,7 @@ public:
 	///
 	void wait()
 	{
-		TheFirmware::Wait(this);
+		Schedule::Wait(this);
 	}
 
 	///
@@ -56,4 +57,5 @@ public:
 	void signal();
 };
 
-}
+} // namespace Schedule
+} // namespace TheFirmware

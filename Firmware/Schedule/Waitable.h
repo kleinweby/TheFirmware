@@ -28,6 +28,7 @@
 #include <stdint.h>
 
 namespace TheFirmware {
+namespace Schedule {
 
 struct Waitee;
 class Waitable;
@@ -114,4 +115,5 @@ public:
 	bool wakeupAll();
 };
 
-} //namespace
+} //namespace Schedule
+} //namespace TheFirmware

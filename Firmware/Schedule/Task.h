@@ -27,7 +27,7 @@
 #include <stdint.h>
 
 namespace TheFirmware {
-namespace Task {
+namespace Schedule {
 
 /// Pointer to the current task stack pointer
 /// The minimum task size is 16*4 (for r0-r15 32bit wide registers)
@@ -178,5 +178,5 @@ static inline void SchedulerUnlock()
 
 extern Task defaultTask;
 
-} // namespace Task
+} // namespace Schedule
 } // namespace TheFirmware 

@@ -22,9 +22,10 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "Firmware/Semaphore.h"
+#include "Firmware/Schedule/Semaphore.h"
 
 namespace TheFirmware {
+namespace Schedule {
 
 bool Semaphore::beginWaiting()
 {
@@ -53,4 +54,5 @@ void Semaphore::signal()
 	this->wakeup();
 }
 
+} // namespace Schedule
 } // namespace TheFirmware

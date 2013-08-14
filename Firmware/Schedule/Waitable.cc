@@ -22,13 +22,14 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "Firmware/Waitable.h"
+#include "Firmware/Schedule/Waitable.h"
 
-#include "Firmware/Task.h"
+#include "Firmware/Schedule/Task.h"
 
 #include <stdarg.h>
 
 namespace TheFirmware {
+namespace Schedule {
 
 ///
 /// Struct that lays on the stack of the waiting tasks
@@ -38,7 +39,7 @@ namespace TheFirmware {
 ///
 struct Waitee {
 	/// The task that waits
-	Task::Task* task;
+	Task* task;
 	/// The waitable we're waiting on
 	Waitable* waitable;
 	/// The next waitee in this queue.
@@ -54,7 +55,7 @@ struct Waitee {
 	void init(Waitable* waitable)
 	{
 		this->waitable = waitable;
-		this->task = Task::GetCurrentTask();
+		this->task = GetCurrentTask();
 		this->next = NULL;
 
 		// Append into waitable chain
@@ -111,7 +112,7 @@ bool Waitable::wakeup()
 		return false;
 
 	// Wakeup the task
-	this->waitee->task->setState(Task::kTaskStateReady);
+	this->waitee->task->setState(kTaskStateReady);
 
 	// Mark that this waitee has been woken
 	this->waitee->task = NULL;
@@ -138,14 +139,14 @@ void Wait(Waitable* waitable)
 {
 	Waitee waitee;
 
-	Task::SchedulerLock();
+	SchedulerLock();
 	// Waitable does not allow waiting now
 	if (!waitable->beginWaiting()) {
-		Task::SchedulerUnlock();
+		SchedulerUnlock();
 		return;
 	}
 	waitee.init(waitable);
-	waitee.task->setState(Task::kTaskStateWaiting); // This releases the scheduler lock, as it will block us
+	waitee.task->setState(kTaskStateWaiting); // This releases the scheduler lock, as it will block us
 	waitable->endWaiting(false);
 }
 
@@ -153,7 +154,7 @@ uint8_t WaitMultiple(uint8_t numberOfWaitables, ...)
 {
 	Waitee waitees[numberOfWaitables];
 
-	Task::SchedulerLock();
+	SchedulerLock();
 	// Initialize waitees
 	va_list args;
 	va_start(args, numberOfWaitables);
@@ -167,7 +168,7 @@ uint8_t WaitMultiple(uint8_t numberOfWaitables, ...)
 			}
 
 			va_end(args);
-			Task::SchedulerUnlock();
+			SchedulerUnlock();
 			return i;
 		}
 		else {
@@ -177,10 +178,10 @@ uint8_t WaitMultiple(uint8_t numberOfWaitables, ...)
 	va_end(args);
 
 	// Wait
-	Task::GetCurrentTask()->setState(Task::kTaskStateWaiting);
+	GetCurrentTask()->setState(kTaskStateWaiting);
 	// As the task was probbably waiting we most ceartianly lost
 	// the lock here. So just reaquire it.
-	Task::SchedulerLock();
+	SchedulerLock();
 
 	// Find out which waitable woke us and remove the others
 	uint8_t wokenWaitee = UINT8_MAX;
@@ -196,10 +197,10 @@ uint8_t WaitMultiple(uint8_t numberOfWaitables, ...)
 		}
 	}
 
-	Task::SchedulerUnlock();
+	SchedulerUnlock();
 
 	return wokenWaitee;
 }
 
-
+} // namespace Schedule
 } // namespace TheFirmware

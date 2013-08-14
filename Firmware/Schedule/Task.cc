@@ -30,7 +30,7 @@
 using namespace TheFirmware::Log;
 
 namespace TheFirmware {
-namespace Task {
+namespace Schedule {
 
 //
 // The Task currently running
@@ -421,5 +421,5 @@ extern "C" void PendSV_Handler(void)
 	__builtin_unreachable();
 }
 
-} // namespace Task
+} // namespace Schedule
 } // namespace TheFirmware 
