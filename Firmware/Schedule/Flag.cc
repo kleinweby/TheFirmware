@@ -30,7 +30,7 @@ namespace Schedule {
 bool Flag::beginWaiting()
 {
 	// Only wait if flag is not set
-	if (flag)
+	if (!flag)
 		return true;
 	else
 		return false;
