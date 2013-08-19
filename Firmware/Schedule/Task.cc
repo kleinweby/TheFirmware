@@ -60,8 +60,20 @@ Task* ReadyQueue;
 
 Task defaultTask;
 
+// The id for the next new task
+TaskID NextTaskID = 0;
+
+// Idle task
+Task IdleTask;
+uint32_t IdleStack[16];
+void Idle() __attribute__ ((naked, noreturn));
+
 void Init()
 {
+	// Create idle task
+	IdleTask.Init(IdleStack, sizeof(IdleStack), Idle, 0);
+	IdleTask.setPriority(kIdleTaskPriority);
+
 	//
 	// Now we convert our non task to the main task
 	//
@@ -84,11 +96,45 @@ void Init()
 		:
 		: "r1"
 	);
+
+	// enable idle task
+	IdleTask.setState(kTaskStateReady);
 }
 
 Task* GetCurrentTask()
 {
 	return CurrentTask;
+}
+
+void Task::Init(TaskStack stack, size_t stackSize, TaskEntryPoint entryPoint, uint8_t numberOfArgs, ...)
+{
+	this->next = NULL;
+	this->state = kTaskStateWaiting;
+	this->priority = 0;
+	this->id = NextTaskID++;
+	this->stack = (TaskStack)((uint32_t)stack + stackSize - 4);
+
+	// Prepare stack
+
+	*this->stack-- = (uint32_t)0x01000000L; // PSR
+	*this->stack-- = (uint32_t)entryPoint;
+	*this->stack   = (uint32_t)0xFFFFFFFEL; // ?
+    this->stack -= 5; // ?
+
+    if (numberOfArgs > 0) {
+    	va_list args;
+    	va_start(args, numberOfArgs);
+
+    	// Only get the first argument for now
+    	*this->stack = va_arg(args, uint32_t);
+
+    	va_end(args);
+
+    	this->stack -= 8;
+    }
+    else {
+    	this->stack -= 8;
+    }
 }
 
 void Task::moveToRunningQueue()
@@ -418,6 +464,20 @@ extern "C" void PendSV_Handler(void)
 	);
 
 	// We'll never geht here
+	__builtin_unreachable();
+}
+
+//
+// Idle task
+//
+void Idle()
+{
+	__asm volatile(
+	"loop:      \n"
+		"WFI    \n"
+		"b loop \n"
+	);
+
 	__builtin_unreachable();
 }
 

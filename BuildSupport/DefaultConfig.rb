@@ -3,7 +3,7 @@ ROOT="#{File.dirname(File.dirname(__FILE__))}"
 TOOLCHAIN="#{ROOT}/Toolchain/arm.toolchain"
 
 # -F should be relative to #{ROOT} ?!?
-CFLAGS  = [ "-I#{ROOT}", '-integrated-as', '-mcpu=cortex-m0', '-mthumb', '-ggdb', '-fno-builtin', '-Wall', '-Werror']
+CFLAGS  = [ "-I#{ROOT}", '-mcpu=cortex-m0', '-mthumb', '-ggdb', '-fno-builtin', '-Wall', '-Werror']
 CXXFLAGS  = [ *CFLAGS, '-fno-exceptions']
 LDFLAGS = [ "-nostdlib", '-mcpu=cortex-m0', '-mthumb' ]
 DEFINES = [ "-D__USE_CMSIS=1" ]

@@ -88,5 +88,6 @@ extern "C" int main() {
 
 		defaultTask.setPriority(-1);
 		LogInfo("done");
+		defaultTask.setState(kTaskStateWaiting);
 	//}
 }

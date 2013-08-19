@@ -25,6 +25,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stddef.h>
 
 namespace TheFirmware {
 namespace Schedule {
@@ -37,6 +38,9 @@ typedef uint8_t TaskID;
 
 /// Task priority
 typedef int8_t TaskPriority;
+
+/// Function declaration of the task entry point
+typedef void(*TaskEntryPoint)();
 
 /// Priority of the idle (WFI) task
 /// Is is a task with the lowest priority
@@ -89,6 +93,22 @@ struct Task {
 	void moveToReadyQueue();
 	void moveToWaitingQueue();
 public:
+	// There is no constructor, as constructing task
+	// in an undefined order at boot may introduce strange problems
+	// use, the init method instead
+
+	///
+	/// Initializes the task and put it into waiting state
+	///
+	/// @param stack the bottom of the stack
+	/// @param stackSize size of the stack
+	/// @param entryPoint function to start executing
+	/// @param numberOfArgs the number of arguments to pass
+	/// @param ... arguments to pass
+	///            only arguments that can be treated like uint32_t are correctly
+	///            passed.
+	///
+	void Init(TaskStack stack, size_t stackSize, TaskEntryPoint entryPoint, uint8_t numberOfArgs, ...);
 
 	/// Returns the pointer to the current stack pointer
 	///
