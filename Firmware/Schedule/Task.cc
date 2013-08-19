@@ -68,6 +68,8 @@ Task IdleTask;
 uint32_t IdleStack[16];
 void Idle() __attribute__ ((naked, noreturn));
 
+uint32_t IsrStack[200];
+
 void Init()
 {
 	// Create idle task
@@ -95,6 +97,14 @@ void Init()
 		:
 		:
 		: "r1"
+	);
+
+	// Now create isr stack
+	__asm volatile (
+		"MSR MSP, %0 \n"
+		:
+		: "r"(&IsrStack[199])
+		:
 	);
 
 	// enable idle task
