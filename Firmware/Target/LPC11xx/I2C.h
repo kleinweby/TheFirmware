@@ -24,6 +24,8 @@
 
 #pragma once
 
+#include "Firmware/Schedule/Flag.h"
+
 #include <stdint.h>
 
 namespace TheFirmware {
@@ -39,7 +41,7 @@ class I2C {
 	uint8_t* readBuffer;
 	uint32_t readIndex;
 	uint32_t readLength;
-	bool done;
+	Schedule::Flag done;
 
 	/// Called by the I2C interrupt to handle it
 	void isr();

@@ -1,6 +1,7 @@
 #include "LPC11xx.h"
 #include "Firmware/Log.h"
 #include "Firmware/Runtime.h"
+#include "Firmware/Schedule/Task.h"
 #include "Firmware/Devices/MCP9800.h"
 #include "Firmware/Devices/24XX64.h"
 
@@ -28,6 +29,8 @@ void GPIOSetDir( uint32_t portNum, uint32_t bitPosi, uint32_t dir )
 
 extern "C" int main() {
 	TheFirmware::Runtime::Init();
+
+	TheFirmware::Schedule::Init();
 
 	LogInfo("Starting up");
 
@@ -61,9 +64,9 @@ extern "C" int main() {
 	// }
 	// 
 
-	char buffer[5] = {'x', 'x', 'x', 'x', '\0'};
+	// char buffer[5] = {'x', 'x', 'x', 'x', '\0'};
 
-	MCP24XX64.read(0x0, (uint8_t*)buffer, 4);
+	// MCP24XX64.read(0x0, (uint8_t*)buffer, 4);
 
 	MCP9800.setResolution(12);
 	MCP9800.setOneShot(true);

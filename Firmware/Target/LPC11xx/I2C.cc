@@ -100,7 +100,7 @@ void I2C::isr()
 		// Everythin was sent, nothing to read, so stop
 		else {
 			LPC_I2C->CONSET = kCONSET_STO;
-			this->done = true;
+			this->done.set();
 		}
 		LPC_I2C->CONCLR = kCONCLR_SIC;
 		break;
@@ -134,7 +134,7 @@ void I2C::isr()
 	
 	case 0x58:
 		this->readBuffer[this->readIndex++] = LPC_I2C->DAT;
-		done = true;
+		this->done.set();
 		LPC_I2C->CONSET = kCONSET_STO;
 		LPC_I2C->CONCLR = kCONCLR_SIC;
 		break;
@@ -146,14 +146,14 @@ void I2C::isr()
 		// Set stop flag
 		LPC_I2C->CONSET = kCONSET_STO;
 		LPC_I2C->CONCLR = kCONCLR_SIC;
-		this->done = true;
+		this->done.set();
 		LogInfo("Stop %x %x", this->writeBuffer[0], this->writeBuffer[1]);
 		break;
 	default:
 		LogError("Unhandled I2C state: %x %u", this->writeBuffer[0], state);
 		LPC_I2C->CONSET = kCONSET_STO;
 		LPC_I2C->CONCLR = kCONCLR_SIC;
-		this->done = true;
+		this->done.set();
 	}
 }
 
@@ -201,10 +201,10 @@ bool I2C::send(uint8_t* writeBuffer, uint32_t writeLength, uint8_t* readBuffer, 
 	this->readIndex = 0;
 	this->readLength = readLength;
 
+	this->done.clear();
 	// Issue start condition
 	LPC_I2C->CONSET = kCONSET_STA;
-	this->done = false;
-	while (!this->done) {};
+	this->done.wait();
 
 	return true;
 }
