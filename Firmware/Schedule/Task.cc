@@ -478,7 +478,7 @@ extern "C" void PendSV_Handler(void)
 	);
 
 	// We'll never geht here
-	__builtin_unreachable();
+	Unreachable();
 }
 
 //
@@ -492,7 +492,7 @@ void Idle()
 		"b loop \n"
 	);
 
-	__builtin_unreachable();
+	Unreachable();
 }
 
 } // namespace Schedule

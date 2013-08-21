@@ -61,3 +61,7 @@ void Init();
 /// @param ... message to display
 #define assert(expr,...) (__builtin_expect(!(expr), 0) ? TheFirmware::Runtime::AssertHandler(__FILE__, __FUNCTION__, __LINE__, #expr, ##__VA_ARGS__) : (void)0)
 
+/// Hint that the following code is never executed
+#define Unreachable() __builtin_unreachable()
+
+
