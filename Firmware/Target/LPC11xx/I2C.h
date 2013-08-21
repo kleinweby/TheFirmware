@@ -25,6 +25,7 @@
 #pragma once
 
 #include "Firmware/Schedule/Flag.h"
+#include "Firmware/Schedule/Mutex.h"
 
 #include <stdint.h>
 
@@ -42,6 +43,7 @@ class I2C {
 	uint32_t readIndex;
 	uint32_t readLength;
 	Schedule::Flag done;
+	Schedule::Mutex lock;
 
 	/// Called by the I2C interrupt to handle it
 	void isr();

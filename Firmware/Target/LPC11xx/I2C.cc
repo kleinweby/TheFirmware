@@ -159,6 +159,8 @@ void I2C::isr()
 
 bool I2C::enable()
 {
+	this->lock.lock();
+
 	// TODO: MEANING?
 	LPC_SYSCON->PRESETCTRL |= (0x1<<1);
 
@@ -184,6 +186,7 @@ bool I2C::enable()
  	// Enable hardware
 	LPC_I2C->CONSET = kCONSET_I2EN;
 
+	this->lock.unlock();
 	return true;
 }
 
@@ -193,6 +196,8 @@ void I2C::disable()
 
 bool I2C::send(uint8_t* writeBuffer, uint32_t writeLength, uint8_t* readBuffer, uint32_t readLength)
 {
+	this->lock.lock();
+
 	// Save buffers to access them in the isr
 	this->writeBuffer = writeBuffer;
 	this->writeIndex = 0;
@@ -206,6 +211,7 @@ bool I2C::send(uint8_t* writeBuffer, uint32_t writeLength, uint8_t* readBuffer, 
 	LPC_I2C->CONSET = kCONSET_STA;
 	this->done.wait();
 
+	this->lock.unlock();
 	return true;
 }
 
