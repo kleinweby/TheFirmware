@@ -31,8 +31,14 @@ namespace TheFirmware {
 namespace Schedule {
 
 /// Pointer to the current task stack pointer
-/// The minimum task size is 16*4 (for r0-r15 32bit wide registers)
 typedef uint32_t* TaskStack;
+
+/// The mimimum stack size needed per task
+/// PSR + 16 registers
+///
+/// @warning a stack smaller than this results in undefined behaiviour
+constexpr uint32_t kMinTaskStackSize = 17;
+
 /// Task identifier
 typedef uint8_t TaskID;
 

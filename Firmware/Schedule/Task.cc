@@ -24,6 +24,7 @@
 
 #include "Task.h"
 #include "Firmware/Log.h"
+#include "Firmware/Runtime.h"
 
 #include <stddef.h>
 
@@ -65,13 +66,16 @@ TaskID NextTaskID = 0;
 
 // Idle task
 Task IdleTask;
-uint32_t IdleStack[16];
-void Idle() __attribute__ ((naked, noreturn));
+uint32_t IdleStack[kMinTaskStackSize];
+void Idle();
 
 uint32_t IsrStack[200];
 
 void Init()
 {
+	(*((volatile uint32_t *)0xE000ED1C)) |=  0xFF000000;
+    (*((volatile uint32_t *)0xE000ED20)) |=  0xFFFF0000;
+
 	// Create idle task
 	IdleTask.Init(IdleStack, sizeof(IdleStack), Idle, 0);
 	IdleTask.setPriority(kIdleTaskPriority);
@@ -183,7 +187,6 @@ void Task::moveToRunningQueue()
 		// a task switch
 		//
 		RunningQueue = this;
-		SchedulerUnlock();
 		ForceTaskSwitch();
 	}
 	else {
@@ -237,7 +240,6 @@ void Task::removeFromRunningQueue(bool nextStateReady)
 			// Close the running queue
 			t->next = RunningQueue;
 		}
-		SchedulerUnlock();
 		ForceTaskSwitch();
 	}
 }
@@ -252,8 +254,10 @@ void Task::addToReadyQueue()
 		this->next = t->next;
 		t->next = this;
 	}
-	else 
+	else {
+		this->next = NULL;
 		ReadyQueue = this;
+	}
 	
 	this->state = kTaskStateReady;
 }
