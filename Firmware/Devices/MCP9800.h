@@ -35,6 +35,12 @@ namespace Devices {
 constexpr uint8_t MCP9800Address = 0x90;
 
 class MCP9800 {
+	struct {
+		bool oneShot;
+	};
+
+	/// Cached config register
+	uint8_t config;
 
 	/// Reads the config register from the device
 	uint8_t readConfigRegister();
@@ -43,6 +49,9 @@ class MCP9800 {
 	void writeConfigRegister(uint8_t config);
 
 public:
+	/// Initializes the MCP9800
+	///
+	void Init();
 
 	/// Enables the MCP9800
 	///
@@ -50,13 +59,13 @@ public:
 	///       the device before reading an current temperature
 	/// @return True if successfull
 	///
-	bool Enable();
+	bool enable();
 
 	/// Shuts down the MCP9800
 	///
 	/// @return True if successfull
 	///
-	bool Disable();
+	bool disable();
 
 	/// Returns the resolution set in bits
 	///

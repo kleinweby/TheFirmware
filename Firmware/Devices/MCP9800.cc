@@ -56,41 +56,38 @@ void MCP9800::writeConfigRegister(uint8_t config)
 	I2C.send(buffer, 3, NULL, 0);
 }
 
-bool MCP9800::Enable()
+void MCP9800::Init()
 {
-	uint8_t config = this->readConfigRegister();
+	this->config = this->readConfigRegister();
+}
 
+bool MCP9800::enable()
+{
 	// Clear the shutdown flag
-	config &= ~(1 << 0);
+	this->config &= ~(1 << 0);
 
-	this->writeConfigRegister(config);
+	this->writeConfigRegister(this->config);
 
 	return true;
 }
 
-bool MCP9800::Disable()
+bool MCP9800::disable()
 {
-	uint8_t config = this->readConfigRegister();
-
 	// Set the shutdown flag
-	config |= (1 << 0);
+	this->config |= (1 << 0);
 
-	this->writeConfigRegister(config);
+	this->writeConfigRegister(this->config);
 
 	return true;
 }
 
 uint8_t MCP9800::getResolution()
 {
-	uint8_t config = this->readConfigRegister();
-
-	return ((config >> 5) & 0x3) + 9;
+	return ((this->config >> 5) & 0x3) + 9;
 }
 
 void MCP9800::setResolution(uint8_t resolution)
 {
-	uint8_t config = this->readConfigRegister();
-
 	// Clip resolution to valid range
 	if (resolution < 9)
 		resolution = 9;
@@ -98,17 +95,15 @@ void MCP9800::setResolution(uint8_t resolution)
 		resolution = 12;
 
 	// Clear resolution
-	config &= ~(0x60);
-	config |= (resolution - 9) << 5;
+	this->config &= ~(0x60);
+	this->config |= (resolution - 9) << 5;
 
-	this->writeConfigRegister(config);
+	this->writeConfigRegister(this->config);
 }
 
 bool MCP9800::getOneShot()
 {
-	uint8_t config = this->readConfigRegister();
-
-	return (config & 0x80) == 0x80;
+	return (this->config & 0x80) == 0x80;
 }
 
 void MCP9800::setOneShot(bool oneShot)
@@ -121,24 +116,33 @@ void MCP9800::setOneShot(bool oneShot)
 	// Disabling does not depend on this specify ordering
 	//
 	if (oneShot)
-		this->Disable();
+		this->disable();
 	else
-		this->Enable();
+		this->enable();
 
-	uint8_t config = this->readConfigRegister();
-
-	if (oneShot)
-		config |= 0x80;
-	else
-		config &= ~0x80;
-
-	this->writeConfigRegister(config);
+	this->oneShot = oneShot;
 }
 
 uint16_t MCP9800::readTemperature()
 {
 	uint8_t buffer[3];
 	uint8_t temperature[2] = {0x00, 0x00};
+
+	// In one shot mode, request update from device
+	// don't update the config reg cache
+	if (oneShot) {
+		uint8_t config = this->config;
+
+		if (oneShot)
+			config |= 0x80;
+		else
+			config &= ~0x80;
+
+		this->writeConfigRegister(config);
+
+		// TODO: better waiting here
+		for (uint32_t i = 0; i < 200000; i++) {};
+	}
 
 	// Set register pointer to 0x0 (ambient temperature)
 	buffer[0] = MCP9800Address;

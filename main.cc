@@ -92,7 +92,7 @@ extern "C" int main() {
 	if ((temperature[1] & 0x10) != 0)
 		fraction += 625;
 
-	MCP9800.setOneShot(true);
+	// MCP9800.setOneShot(true);
 	LogInfo("Got %u.%04u", temperature[0], fraction);
 
 	for (uint32_t i = 0; i < 20000000; i++) {};
