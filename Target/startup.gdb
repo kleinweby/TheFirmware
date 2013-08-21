@@ -6,4 +6,4 @@ load
 source semihosted.py
 monitor reset
 break main
-continue
+break TheFirmware::Runtime::AssertHandler(char const*, char const*, unsigned int, char const*, char const*)
