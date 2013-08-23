@@ -22,49 +22,17 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-/// @file Runtime.h
-#pragma once
-
-#include "stdint.h"
-#include "stddef.h"
+#include "Firmware/Time/Delay.h"
 
 namespace TheFirmware {
-/// Defines Helper Functions to interact with the runtime
-namespace Runtime {
+namespace Time {
 
-/// Handles Assertions by stopping/restarting the cpu
-///
-/// @param function The function in with the assertion occoured (May be NULL)
-/// @param file The file in with the assertion occoured (May be NULL)
-/// @param line The line in which the asseriton occoured
-/// @param expr A symbolic string of the expression
-/// @param msg A additional message for this expression (May be NULL)
-void AssertHandler(const char* function, const char* file, uint32_t line, const char* expr, const char* msg);
-
-/// Adapter for assertions without message
-inline void AssertHandler(const char* function, const char* file, uint32_t line, const char* expr)
+void delay(uint32_t milis)
 {
-	AssertHandler(function, file, line, expr, NULL);
+	SysTickTimer timer(milis);
+
+	timer.wait();
 }
 
-/// Initializes the runtime
-///
-/// @note Calls global constructors
-void Init();
-
-} // namespace Runtime
+} // namespace Time
 } // namespace TheFirmware
-
-/// Assert a assumption in code
-///
-/// @param expr Expression to assert
-/// @param ... message to display
-#define assert(expr,...) (__builtin_expect(!(expr), 0) ? TheFirmware::Runtime::AssertHandler(__FILE__, __FUNCTION__, __LINE__, #expr, ##__VA_ARGS__) : (void)0)
-
-/// Hint that the following code is never executed
-#define Unreachable() __builtin_unreachable()
-
-/// Denotes a unimplemented code path
-#define Unimplemented() assert(false, "Unimplemented")
-
-

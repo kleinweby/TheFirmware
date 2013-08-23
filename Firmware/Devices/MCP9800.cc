@@ -23,6 +23,9 @@
 //
 
 #include "Firmware/Devices/MCP9800.h"
+#include "Firmware/Time/Delay.h"
+
+using TheFirmware::Time::delay;
 
 namespace TheFirmware {
 namespace Devices {
@@ -140,8 +143,20 @@ uint16_t MCP9800::readTemperature()
 
 		this->writeConfigRegister(config);
 
-		// TODO: better waiting here
-		for (uint32_t i = 0; i < 200000; i++) {};
+		switch(this->getResolution()) {
+			case 9:
+				delay(75);
+				break;
+			case 10:
+				delay(150);
+				break;
+			case 11:
+				delay(300);
+				break;
+			case 12:
+			default:
+				delay(600);
+		}
 	}
 
 	// Set register pointer to 0x0 (ambient temperature)

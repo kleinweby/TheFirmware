@@ -2,12 +2,15 @@
 #include "Firmware/Log.h"
 #include "Firmware/Runtime.h"
 #include "Firmware/Schedule/Task.h"
+#include "Firmware/Time/Systick.h"
+#include "Firmware/Time/Delay.h"
 #include "Firmware/Devices/MCP9800.h"
 #include "Firmware/Devices/24XX64.h"
 
 using namespace TheFirmware;
 using namespace TheFirmware::Log;
 using namespace TheFirmware::LPC11xx;
+using namespace TheFirmware::Time;
 
 Devices::MCP9800 MCP9800;
 Devices::MCP24XX64 MCP24XX64;
@@ -32,7 +35,7 @@ extern "C" int main() {
 
 	TheFirmware::Schedule::Init();
 
-	LogInfo("Starting up");
+	LogDebug("Starting up");
 
 
 	SystemCoreClockUpdate();
@@ -71,7 +74,13 @@ extern "C" int main() {
 	MCP9800.setResolution(12);
 	MCP9800.setOneShot(true);
 
+	I2C.disable();
+
 	while (1) {
+
+	if (!I2C.enable()) {
+		LogError("Could not enable I2C");
+	}
 
 	uint8_t temperature[2];
 	uint16_t tmp;
@@ -95,7 +104,11 @@ extern "C" int main() {
 	// MCP9800.setOneShot(true);
 	LogInfo("Got %u.%04u", temperature[0], fraction);
 
-	for (uint32_t i = 0; i < 20000000; i++) {};
+	LogDebug("Tick %i", CurrentSysTicks);
+
+	I2C.disable();
+
+	delay(60 * 1000);
 	}
 
 	while (1)
