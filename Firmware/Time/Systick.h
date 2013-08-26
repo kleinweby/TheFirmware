@@ -24,51 +24,14 @@
 
 #pragma once
 
-#include "Firmware/Schedule/Waitable.h"
+#include "Firmware/Time/Timer.h"
 
 #include <stdint.h>
 
 namespace TheFirmware {
 namespace Time {
 
-/// Current systicks since boot
-extern volatile uint32_t CurrentSysTicks;
-
-/// Describes how many miliseconds are represented by one systick
-constexpr uint32_t kMilisPerSysTick = 10;
-
-/// Enableds the systick subsystem
-void EnableSystick();
-
-/// Disables the systick
-void DisableSystick();
-
-class SysTickTimer : private Schedule::Waitable {
-	// Denotes the time until the timer fires
-	// relative to the previous timer in the chain
-	int32_t remainingMilis;
-
-	// timers are in a chain to simplify finding the
-	// next due time.
-	SysTickTimer* next;
-
-	friend void ArbitTimerQueue();
-public:
-	/// Creates a timer that fires in the given milis
-	SysTickTimer(uint32_t milis);
-
-	~SysTickTimer();
-
-	/// Has timer fired?
-	bool hasFired() {
-		return this->remainingMilis < 0;
-	}
-
-	/// Wait for the timer to fire
-	void wait() {
-		Schedule::Wait(this);
-	}
-};
+extern Timer* SysTickTimer;
 
 } // namespace Time
 } // namespace TheFirmware

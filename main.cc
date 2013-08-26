@@ -104,7 +104,7 @@ extern "C" int main() {
 	// MCP9800.setOneShot(true);
 	LogInfo("Got %u.%04u", temperature[0], fraction);
 
-	LogDebug("Tick %i", CurrentSysTicks);
+	//LogDebug("Tick %i", CurrentSysTicks);
 
 	I2C.disable();
 

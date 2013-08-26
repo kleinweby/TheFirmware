@@ -24,14 +24,18 @@
 
 #include "Firmware/Time/Delay.h"
 
+#include "Firmware/Log.h"
+
+using namespace TheFirmware::Log;
+
 namespace TheFirmware {
 namespace Time {
 
 void delay(uint32_t milis)
 {
-	SysTickTimer timer(milis);
+	WaitableTimeout timeout(milis, SysTickTimer);
 
-	timer.wait();
+	Schedule::Wait(timeout);
 }
 
 } // namespace Time

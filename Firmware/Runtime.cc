@@ -46,5 +46,11 @@ void Init()
 		(*func)();
 }
 
+void IntDefaultHandler(void)
+{
+	assert(false, "Unhandled interrupt");
+}
+
+
 } // namespace Runtime
 } // namespace TheFirmware

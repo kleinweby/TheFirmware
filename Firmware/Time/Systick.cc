@@ -23,106 +23,76 @@
 //
 
 #include "Firmware/Runtime.h"
+#include "Firmware/Log.h"
 #include "Firmware/Time/Systick.h"
 #include "Firmware/Schedule/Task.h"
 
 #include "LPC11xx.h"
 
+using namespace TheFirmware::Log;
+
 namespace TheFirmware {
 namespace Time {
 
-volatile uint32_t CurrentSysTicks = 0;
+namespace {
+	struct SysTickConf {
+		volatile uint32_t CTRL;
+		volatile uint32_t LOAD;
+		volatile uint32_t VAL;
+		volatile const  uint32_t CALIB;
+	};
 
-SysTickTimer* SystickTimerQueue = NULL;
+	enum {
+		kCtrlCount       = (1 << 16),
+		kCtrlClockSource = (1 << 2),
+		kCtrlTickInt     = (1 << 1),
+		kCtrlEnable      = (1 << 0),
+		kCalibNoRef      = (1 << 31),
+		kCalibSkew       = (1 << 30),
+		kCalibTenms      = (0xFFFFFF << 0),
+	};
 
-void ArbitTimerQueue()
-{
-	SystickTimerQueue->remainingMilis -= kMilisPerSysTick;
+	constexpr uint32_t kMaxLoadValue = 0xFFFFFF;
 
-	while (SystickTimerQueue && SystickTimerQueue->remainingMilis <= 0) {
-		SystickTimerQueue->remainingMilis = -1;
-		SystickTimerQueue->wakeup();
-		SystickTimerQueue = SystickTimerQueue->next;	
+	struct SysTickConf* SysTickConf = (struct SysTickConf*)(0xE000E000UL + 0x0010UL);
+}
+
+extern "C" void SysTick_Handler(void);
+
+class SysTickTimer : public Timer {
+protected:
+
+	void setFireTime(microtime_t time)
+	{
+		microtime_t maxPossibleValue = 1000 * kMaxLoadValue/(SystemCoreClock/2);
+
+		if (time > maxPossibleValue)
+			time = maxPossibleValue;
+
+		SysTickConf->LOAD = (SystemCoreClock/2)/1000 * time;
+		SysTickConf->VAL = 0;
+		SysTickConf->CTRL  = kCtrlTickInt | kCtrlEnable;
 	}
-}
 
-void EnableSystick()
-{
-    // 1 Tick = 10ms
-    SysTick_Config(SystemCoreClock/100);
+	microtime_t getFireTime()
+	{
+		return SysTickConf->LOAD * 1000 / (SystemCoreClock/2);
+	}
 
-	/* Enable the SysTick Counter */
-	SysTick->CTRL |= (0x1<<0);
-}
+	microtime_t getRemainingTime()
+	{
+		return SysTickConf->VAL * 1000 / (SystemCoreClock/2);
+	}
 
-void DisableSystick()
-{
-	Unimplemented();
-}
+	friend void SysTick_Handler();
+};
+
+class SysTickTimer _SysTickTimer;
+Timer* SysTickTimer = &_SysTickTimer;
 
 extern "C" void SysTick_Handler(void)
 {
-	CurrentSysTicks++;
-
-	if (SystickTimerQueue)
-		ArbitTimerQueue();
-
-	Schedule::ForceTaskSwitch();
-}
-
-SysTickTimer::SysTickTimer(uint32_t milis)
-{
-	Schedule::SchedulerLock();
-
-	// Queue is empty
-	if (!SystickTimerQueue) {
-		this->remainingMilis = milis;
-		this->next = NULL;
-		SystickTimerQueue = this;
-	}
-	// First timer is after this timer, prepend
-	else if (SystickTimerQueue->remainingMilis > milis) {
-		SystickTimerQueue->remainingMilis -= milis;
-		this->remainingMilis = milis;
-		this->next = SystickTimerQueue;
-		SystickTimerQueue = this;	
-	}
-	// Insert timer at appropiated place
-	else {
-		SysTickTimer* timer;
-
-		for (timer = SystickTimerQueue;
-			timer->next != NULL && timer->next->remainingMilis > milis;
-			milis -= timer->next->remainingMilis, timer = timer->next)
-			;
-
-		this->remainingMilis = milis;
-		this->next = timer->next;
-		timer->next = this;
-	}
-
-	Schedule::SchedulerUnlock();
-}
-
-SysTickTimer::~SysTickTimer()
-{
-	// We only need to remove from the queue when not already fired
-	if (this->remainingMilis > 0) {
-		Schedule::SchedulerLock();
-		if (SystickTimerQueue == this) {
-			SystickTimerQueue = SystickTimerQueue->next;
-		}
-		else {
-			SysTickTimer* timer;
-			
-			for (timer = SystickTimerQueue; timer->next != NULL && timer->next != this; timer = timer->next)
-				;
-
-			if (timer)
-				timer->next = timer->next->next;
-		}
-		Schedule::SchedulerUnlock();
-	}
+	_SysTickTimer.isr();
 }
 
 } // namespace Time

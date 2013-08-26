@@ -115,8 +115,6 @@ void Init()
 
 	// enable idle task
 	IdleTask.setState(kTaskStateReady);
-
-	Time::EnableSystick();
 }
 
 Task* GetCurrentTask()
