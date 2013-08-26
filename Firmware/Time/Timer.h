@@ -123,24 +123,11 @@ public:
 
 class WaitableTimeout : public Timeout, public Schedule::Waitable {
 private:
-	bool beginWaiting()
-	{
-		if (this->fired)
-			return false;
+	bool beginWaiting();
 
-		return true;
-	}
+	void endWaiting(bool abort);
 
-	void endWaiting(bool abort) 
-	{
-		if (!abort && this->repeat)
-			this->resetHasFired();		
-	}
-
-	void fire()
-	{
-		this->wakeupAll();
-	}
+	void fire();
 
 public:
 	using Timeout::Timeout;

@@ -170,5 +170,24 @@ void Timeout::_fire()
 	this->fire();
 }
 
+bool WaitableTimeout::beginWaiting()
+{
+	if (this->fired)
+		return false;
+
+	return true;
+}
+
+void WaitableTimeout::endWaiting(bool abort) 
+{
+	if (!abort && this->repeat)
+		this->resetHasFired();		
+}
+
+void WaitableTimeout::fire()
+{
+	this->wakeupAll();
+}
+
 } // namespace Time
 } // namespace TheFirmware
