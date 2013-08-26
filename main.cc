@@ -76,39 +76,41 @@ extern "C" int main() {
 
 	I2C.disable();
 
+	WaitableTimeout timeout(60 * 1000, SysTickTimer, true);
+
 	while (1) {
 
-	if (!I2C.enable()) {
-		LogError("Could not enable I2C");
-	}
+		if (!I2C.enable()) {
+			LogError("Could not enable I2C");
+		}
 
-	uint8_t temperature[2];
-	uint16_t tmp;
+		uint8_t temperature[2];
+		uint16_t tmp;
 
-	tmp = MCP9800.readTemperature();
+		tmp = MCP9800.readTemperature();
 
-	temperature[0] = (tmp >> 8) & 0xFF;
-	temperature[1] = (tmp >> 0) & 0xFF;
+		temperature[0] = (tmp >> 8) & 0xFF;
+		temperature[1] = (tmp >> 0) & 0xFF;
 
-	uint32_t fraction = 0;
+		uint32_t fraction = 0;
 
-	if ((temperature[1] & 0x80) != 0)
-		fraction += 5000;
-	if ((temperature[1] & 0x40) != 0)
-		fraction += 2500;
-	if ((temperature[1] & 0x20) != 0)
-		fraction += 1250;
-	if ((temperature[1] & 0x10) != 0)
-		fraction += 625;
+		if ((temperature[1] & 0x80) != 0)
+			fraction += 5000;
+		if ((temperature[1] & 0x40) != 0)
+			fraction += 2500;
+		if ((temperature[1] & 0x20) != 0)
+			fraction += 1250;
+		if ((temperature[1] & 0x10) != 0)
+			fraction += 625;
 
-	// MCP9800.setOneShot(true);
-	LogInfo("Got %u.%04u", temperature[0], fraction);
+		// MCP9800.setOneShot(true);
+		LogInfo("Got %u.%04u", temperature[0], fraction);
 
-	//LogDebug("Tick %i", CurrentSysTicks);
+		//LogDebug("Tick %i", CurrentSysTicks);
 
-	I2C.disable();
+		I2C.disable();
 
-	delay(60 * 1000);
+		Schedule::Wait(&timeout);
 	}
 
 	while (1)

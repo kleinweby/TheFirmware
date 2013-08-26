@@ -105,31 +105,45 @@ public:
 	/// Detachs the timeout from the timer
 	void detach();
 
+	/// Returns wheter the timeout has fired
+	bool getHasFired() const
+	{
+		return this->fired;
+	}
+
+	/// Resets the timouts fired flag
+	void resetHasFired()
+	{
+		this->fired = false;
+	}
+
 	// Called when the time is up
 	virtual void fire() = 0;
 };
 
-/// TODO: this currently breaks when the timeout is reached before it is
-/// waited upon
-class WaitableTimeout : public Timeout {
+class WaitableTimeout : public Timeout, public Schedule::Waitable {
 private:
-	Schedule::Waitable waitable;
+	bool beginWaiting()
+	{
+		if (this->fired)
+			return false;
+
+		return true;
+	}
+
+	void endWaiting(bool abort) 
+	{
+		if (!abort && this->repeat)
+			this->resetHasFired();		
+	}
 
 	void fire()
 	{
-		this->waitable.wakeupAll();
+		this->wakeupAll();
 	}
 
 public:
 	using Timeout::Timeout;
-
-	operator Schedule::Waitable*() {
-		return &this->waitable;
-	}
-
-	operator Schedule::Waitable&() {
-		return this->waitable;
-	}
 };
 
 } // namespace Time

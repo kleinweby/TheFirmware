@@ -35,7 +35,7 @@ void delay(uint32_t milis)
 {
 	WaitableTimeout timeout(milis, SysTickTimer);
 
-	Schedule::Wait(timeout);
+	Schedule::Wait(&timeout);
 }
 
 } // namespace Time
