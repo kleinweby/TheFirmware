@@ -31,7 +31,7 @@ FIRMWARE_SRC = FileList[
 	'Firmware/Schedule/Flag.cc',
 	'Firmware/Time/Systick.cc',
 	'Firmware/Time/Delay.cc',
-	'Firmware/TIme/Timer.cc',
+	'Firmware/Time/Timer.cc',
   'Firmware/Log.cc',
 ]
 
