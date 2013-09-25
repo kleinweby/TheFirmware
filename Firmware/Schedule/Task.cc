@@ -25,6 +25,8 @@
 #include "Task.h"
 #include "Firmware/Log.h"
 #include "Firmware/Runtime.h"
+#include "Firmware/Time/Systick.h"
+#include "LPC11xx.h"
 
 #include <stddef.h>
 

@@ -22,35 +22,16 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "Firmware/Runtime.h"
+#pragma once
+
+#include "Firmware/Time/Timer.h"
+
+#include <stdint.h>
 
 namespace TheFirmware {
-namespace Runtime {
+namespace Time {
 
-extern "C" void __cxa_pure_virtual() {
-	while(1) {}
-}
+extern Timer* SysTickTimer;
 
-void AssertHandler(const char* function, const char* file, uint32_t line, const char* expr, const char* msg)
-{
-	while (1) {}
-}
-
-typedef void (*func_ptr)(void);
- 
-extern "C" func_ptr __init_array_start[0], __init_array_end[0];
-
-void Init()
-{
-	for ( func_ptr* func = __init_array_start; func != __init_array_end; func++ )
-		(*func)();
-}
-
-void IntDefaultHandler(void)
-{
-	assert(false, "Unhandled interrupt");
-}
-
-
-} // namespace Runtime
+} // namespace Time
 } // namespace TheFirmware

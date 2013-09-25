@@ -22,35 +22,22 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "Firmware/Runtime.h"
+#include "Firmware/Time/Delay.h"
+#include "Firmware/Time/Systick.h"
+
+#include "Firmware/Log.h"
+
+using namespace TheFirmware::Log;
 
 namespace TheFirmware {
-namespace Runtime {
+namespace Time {
 
-extern "C" void __cxa_pure_virtual() {
-	while(1) {}
-}
-
-void AssertHandler(const char* function, const char* file, uint32_t line, const char* expr, const char* msg)
+void delay(millitime_t milis)
 {
-	while (1) {}
+	WaitableTimeout timeout(milis, SysTickTimer);
+
+	Schedule::Wait(&timeout);
 }
 
-typedef void (*func_ptr)(void);
- 
-extern "C" func_ptr __init_array_start[0], __init_array_end[0];
-
-void Init()
-{
-	for ( func_ptr* func = __init_array_start; func != __init_array_end; func++ )
-		(*func)();
-}
-
-void IntDefaultHandler(void)
-{
-	assert(false, "Unhandled interrupt");
-}
-
-
-} // namespace Runtime
+} // namespace Time
 } // namespace TheFirmware

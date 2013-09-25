@@ -192,6 +192,8 @@ bool I2C::enable()
 
 void I2C::disable()
 {
+	LPC_SYSCON->SYSAHBCLKCTRL &= ~(1<<5);
+	LPC_I2C->CONCLR = kCONCLR_I2ENC;
 }
 
 bool I2C::send(uint8_t* writeBuffer, uint32_t writeLength, uint8_t* readBuffer, uint32_t readLength)

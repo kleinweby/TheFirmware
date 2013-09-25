@@ -29,6 +29,9 @@ FIRMWARE_SRC = FileList[
 	'Firmware/Schedule/Semaphore.cc',
 	'Firmware/Schedule/Mutex.cc',
 	'Firmware/Schedule/Flag.cc',
+	'Firmware/Time/Systick.cc',
+	'Firmware/Time/Delay.cc',
+	'Firmware/Time/Timer.cc',
   'Firmware/Log.cc',
 ]
 
@@ -51,7 +54,7 @@ CLEAN.include(OBJ_DIR)
 task :default => [ "#{EXECUTABLE_NAME}.elf" ]
 
 file "#{EXECUTABLE_NAME}.elf" => [ *OBJ, LINKER_SCRIPT ]  do |t|
-	puts " [LD] #{t.name}"
+	puts " [LD]   #{t.name}"
 	sh "#{LD} -T#{LINKER_SCRIPT} -o #{t.name} #{OBJ.join(' ')} #{LDFLAGS.join(' ')}"
 end
 
