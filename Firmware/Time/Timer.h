@@ -31,9 +31,9 @@
 namespace TheFirmware {
 namespace Time {
 
-/// Time in microseconds
+/// Time in miliseconds
 /// overflows approx. every 24 days
-typedef int32_t microtime_t;
+typedef int32_t millitime_t;
 
 class Timeout;
 
@@ -48,13 +48,13 @@ protected:
 	/// @param time Miliseconds in with the timer should fire
 	/// @note the timer may not support the requested time, so
 	///       always check getFireTime() to know the actual value
-	virtual void setFireTime(microtime_t time) = 0;
+	virtual void setFireTime(millitime_t time) = 0;
 
 	/// Get the miliseconds which the timer was configured to
-	virtual microtime_t getFireTime() = 0;
+	virtual millitime_t getFireTime() = 0;
 
 	/// Get remaining time
-	virtual microtime_t getRemainingTime() = 0;
+	virtual millitime_t getRemainingTime() = 0;
 
 	/// Recalculate fire time
 	void recalculateFireTime();
@@ -71,15 +71,15 @@ protected:
 	Timer* timer;
 
 	// Remaining time until this timeout fires
-	microtime_t remainingTime;
+	millitime_t remainingTime;
 
 	// Reload time of this timout
-	microtime_t timeout;
+	millitime_t timeout;
 
 	struct {
-		bool attached;
-		bool fired;
-		bool repeat;
+		bool attached : 1;
+		bool fired    : 1;
+		bool repeat   : 1;
 	};
 
 	// like attach, but does you require to hold the scheduler lock
@@ -95,7 +95,7 @@ protected:
 	friend class Timer;
 public:
 	/// Creates and attaches a new timeout to the given timer
-	Timeout(microtime_t timeout, Timer* timer, bool repeating = false, bool attach = true);
+	Timeout(millitime_t timeout, Timer* timer, bool repeating = false, bool attach = true);
 
 	~Timeout();
 

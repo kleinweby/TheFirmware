@@ -62,9 +62,9 @@ extern "C" void SysTick_Handler(void);
 class SysTickTimer : public Timer {
 protected:
 
-	void setFireTime(microtime_t time)
+	void setFireTime(millitime_t time)
 	{
-		microtime_t maxPossibleValue = 1000 * kMaxLoadValue/(SystemCoreClock/2);
+		millitime_t maxPossibleValue = 1000 * kMaxLoadValue/(SystemCoreClock/2);
 
 		if (time > maxPossibleValue)
 			time = maxPossibleValue;
@@ -74,12 +74,12 @@ protected:
 		SysTickConf->CTRL  = kCtrlTickInt | kCtrlEnable;
 	}
 
-	microtime_t getFireTime()
+	millitime_t getFireTime()
 	{
 		return SysTickConf->LOAD * 1000 / (SystemCoreClock/2);
 	}
 
-	microtime_t getRemainingTime()
+	millitime_t getRemainingTime()
 	{
 		return SysTickConf->VAL * 1000 / (SystemCoreClock/2);
 	}

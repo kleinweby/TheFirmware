@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "Firmware/Time/Systick.h"
+#include "Firmware/Time/Timer.h"
 
 namespace TheFirmware {
 namespace Time {
@@ -33,7 +33,7 @@ namespace Time {
 ///
 /// @param milis to delay
 /// @note The resolution is limited to the systick resolution
-void delay(uint32_t milis);
+void delay(millitime_t milis);
 
 } // namespace Time
 } // namespace TheFirmware

@@ -23,6 +23,7 @@
 //
 
 #include "Firmware/Time/Delay.h"
+#include "Firmware/Time/Systick.h"
 
 #include "Firmware/Log.h"
 
@@ -31,7 +32,7 @@ using namespace TheFirmware::Log;
 namespace TheFirmware {
 namespace Time {
 
-void delay(uint32_t milis)
+void delay(millitime_t milis)
 {
 	WaitableTimeout timeout(milis, SysTickTimer);
 

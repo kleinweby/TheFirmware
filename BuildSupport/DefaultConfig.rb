@@ -4,7 +4,7 @@ TOOLCHAIN="#{ROOT}/Toolchain/arm.toolchain"
 
 # -F should be relative to #{ROOT} ?!?
 CFLAGS  = [ "-I#{ROOT}", '-mcpu=cortex-m0', '-mthumb', '-ggdb', '-fno-builtin', '-Wall', '-Werror']
-CXXFLAGS  = [ *CFLAGS, '-fno-exceptions']
+CXXFLAGS  = [ *CFLAGS, '-fno-exceptions', '-fno-rtti', '-fno-unwind-tables']
 LDFLAGS = [ "-nostdlib", '-mcpu=cortex-m0', '-mthumb' ]
 DEFINES = [ "-D__USE_CMSIS=1" ]
 

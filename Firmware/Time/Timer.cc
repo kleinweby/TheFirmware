@@ -52,7 +52,7 @@ void Timer::recalculateFireTime()
 		this->setFireTime(this->timeouts->remainingTime);
 }
 
-Timeout::Timeout(microtime_t timeout, Timer* timer, bool repeating, bool attach)
+Timeout::Timeout(millitime_t timeout, Timer* timer, bool repeating, bool attach)
 	: next(NULL), timer(timer), remainingTime(0), timeout(timeout), attached(false), fired(false), repeat(repeating)
 {
 	if (attach)
