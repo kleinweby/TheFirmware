@@ -86,24 +86,25 @@ public:
 	bool put(char c, bool force = false, Time::millitime_t timeout = -1)
 	{
 		bool overflow = false;
-		if (!this->canPut()) {
-			if (!force) {
-				if (timeout == 0)
-					return false;
-				// Wait forever
-				else if (timeout < 0) {
-					this->putSemaphore.wait();
-				}
-				else {
-					Time::WaitableTimeout timer(timeout, Time::SysTickTimer);
 
-					if (Schedule::WaitMultiple(2, &this->putSemaphore, &timer) == 1) {
-						return false;
-					}
-				}
-			}
-			else {
+		if (force)
+			timeout = 0;
+
+		if (timeout == 0 && !this->canPut()) {
+			if (force)
 				overflow = true;
+			else
+				return false;
+		}
+		// Wait forever
+		else if (timeout < 0) {
+			this->putSemaphore.wait();
+		}
+		else {
+			Time::WaitableTimeout timer(timeout, Time::SysTickTimer);
+
+			if (Schedule::WaitMultiple(2, &this->putSemaphore, &timer) == 1) {
+				return false;
 			}
 		}
 
