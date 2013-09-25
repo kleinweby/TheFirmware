@@ -247,7 +247,8 @@ void printf_va(const char* format, va_list args)
 					case 'x':
 					{
 						uint32_t val = va_arg(args, uint32_t);
-						stream.put("0x");
+						if (*format == 'x')
+							stream.put("0x");
 						printNumber(val, 16, minLength, useWhitespacePadding);
 						break;
 					}

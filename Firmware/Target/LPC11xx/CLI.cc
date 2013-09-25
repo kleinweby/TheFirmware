@@ -22,34 +22,54 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
+#include "Firmware/Console/CLI.h"
+#include "Firmware/Console/Console.h"
+
+#include "LPC11xx.h"
+
+using namespace TheFirmware::Console;
 
 namespace TheFirmware {
-namespace Console {
+namespace LPC11xx {
 
-/// Runs a given command
-///
-/// @param command Name of the command to run
-/// @param argc Number of command arguments
-/// @param argv Pointer to arguments
-void run(const char* command, int argc, char** argv);
+#define IAP_LOCATION 0x1fff1ff1
+typedef void (*IAP)(unsigned int [],unsigned int[]);
+IAP iap_entry = (IAP)IAP_LOCATION;
 
-struct CLICommand {
-	const char* name;
-	const struct {
-		void (*func) (int argc, char**argv);
-		const char* help;
-	} info;
-};
+		unsigned int command[5] = {0, 0, 0, 0, 0}; 
+		unsigned int result[5] = {0, 0, 0, 0, 0};
 
-#define REGISTER_COMMAND(_name, ...) REGISTER_COMMAND_EX(_name, _name, __VA_ARGS__)
+void mcu_info(int argc, char** argv)
+{
+	{
+		command[0] = 54;
 
-#define REGISTER_COMMAND_EX(_name, _c_name, ...) \
-	TheFirmware::Console::CLICommand CLICommandDef_##_c_name __attribute__ ((section (".CLICommands." #_c_name))) \
-		= { \
-			.name = #_name, \
-			.info = __VA_ARGS__ \
-		}
+		iap_entry(command, result);
 
-} // namespace Console
+		printf("  cpu id = %X\r\n", result[1]);
+	}
+
+	{
+		command[0] = 55;
+
+		iap_entry(command, result);
+
+		printf("  boot version = %d.%d\r\n", (result[1] >> 0) & 0xFF, (result[1] >> 8) & 0xFF);
+	}
+
+	{
+		command[0] = 58;
+
+		iap_entry(command, result);
+
+		printf("  uid = %X %X %X %X\r\n", result[1], result[2], result[3], result[4]);
+	}
+}
+
+REGISTER_COMMAND_EX(mcu-info, mcu_info, {
+	.func = mcu_info,
+	.help = "Show infos about the mcu"
+});
+
+} // namespace LPC11xx
 } // namespace TheFirmware
