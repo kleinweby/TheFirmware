@@ -103,13 +103,13 @@ int readline(char* buffer, size_t bufferSize)
 void task()
 {
 	while (1) {
-		char _buffer[80];
+		char _buffer[81];
 		char* buffer = _buffer;
 		size_t i = 0;
 
 		stream.put("> ");
 
-		i = readline(buffer, 80);
+		i = readline(buffer, 81);
 
 		if (i >= 80) {
 			printf("Line too long.\r\n");
