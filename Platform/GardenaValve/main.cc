@@ -6,6 +6,9 @@
 #include "Firmware/Time/Delay.h"
 #include "Firmware/Devices/MCP9800.h"
 #include "Firmware/Devices/24XX64.h"
+#include "Firmware/GPIO.h"
+#include "Firmware/Console/Console.h"
+#include "Firmware/Console/CLI.h"
 
 using namespace TheFirmware;
 using namespace TheFirmware::Console;
@@ -15,20 +18,11 @@ using namespace TheFirmware::Time;
 Devices::MCP9800 MCP9800;
 Devices::MCP24XX64 MCP24XX64;
 
-static LPC_GPIO_TypeDef (* const LPC_GPIO[4]) = { LPC_GPIO0, LPC_GPIO1, LPC_GPIO2, LPC_GPIO3 };
+GPIO greenLED(1, 2);
+GPIO yellowLED(1, 1);
+GPIO redLED(1, 0);
 
-void GPIOSetValue( uint32_t portNum, uint32_t bitPosi, uint32_t bitVal )
-{
-  LPC_GPIO[portNum]->MASKED_ACCESS[(1<<bitPosi)] = (bitVal<<bitPosi);
-}
-
-void GPIOSetDir( uint32_t portNum, uint32_t bitPosi, uint32_t dir )
-{
-  if(dir)
-	LPC_GPIO[portNum]->DIR |= 1<<bitPosi;
-  else
-	LPC_GPIO[portNum]->DIR &= ~(1<<bitPosi);
-}
+uint32_t temp[2];
 
 extern "C" int main() {
 	TheFirmware::Runtime::Init();
@@ -47,14 +41,14 @@ extern "C" int main() {
 	LPC_IOCON->R_PIO1_1 |= 0x1;
 	LPC_IOCON->R_PIO1_0 |= 0x1;
 
-	GPIOSetDir(1,2,1);
-	GPIOSetDir(1,1,1);
-	GPIOSetDir(1,0,1);
+	greenLED.setDirection(GPIODirectionOutput);
+	yellowLED.setDirection(GPIODirectionOutput);
+	redLED.setDirection(GPIODirectionOutput);
 	// for (uint32_t i = 0; i < 10000000; i++) {};
 
-	GPIOSetValue(1,2,1);
-	GPIOSetValue(1,1,0);
-	GPIOSetValue(1,0,0);
+	greenLED.set(true);
+	yellowLED.set(false);
+	redLED.set(false);
 
 
 	if (!I2C.enable()) {
@@ -105,15 +99,25 @@ extern "C" int main() {
 			fraction += 625;
 
 		// MCP9800.setOneShot(true);
-		LogInfo("Got %u.%04u", temperature[0], fraction);
-
-		//LogDebug("Tick %i", CurrentSysTicks);
+		temp[0] = temperature[0];
+		temp[1] = fraction;
 
 		I2C.disable();
 
 		Schedule::Wait(&timeout);
+		yellowLED.set(!yellowLED.get());
 	}
 
 	while (1)
 	{}
 }
+
+void temp_cmd(int argc, char** argv)
+{
+	printf("Temp: %u.%04u\r\n", temp[0], temp[1]);
+}
+
+REGISTER_COMMAND(temp, {
+	.func = temp_cmd,
+	.help = "Read the temperature"
+});

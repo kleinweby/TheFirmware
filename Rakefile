@@ -7,7 +7,8 @@ require 'tempfile'
 SRC=FileList[]
 
 SRC.include([
-  'main.cc',
+	'Platform/GardenaValve/main.cc',
+	'Platform/GardenaValve/Valve.cc',
 ])
 
 FIRMWARE_SRC = FileList[
