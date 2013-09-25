@@ -22,26 +22,73 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "OStream.h"
+#include "Firmware/Console/CLI.h"
+
+#include "Firmware/Console/Console.h"
 
 #include "Firmware/Runtime.h"
 
-namespace TheFirmware {
-namespace IO {
+#include "Firmware/Console/string.h"
+#include "Firmware/FirmwareInfo.h"
 
-// Default implementation
-void OStream::put(const char* s) {
-	assert(s != NULL);
-	
-	for (; *s != '\0'; ++s) {
-		this->put(*s);
+namespace TheFirmware {
+namespace Console {
+
+LINKER_SYMBOL(CLICommands, CLICommand*);
+LINKER_SYMBOL(CLICommandsLength, uint32_t);
+
+void run(const char* command, int argc, char** argv)
+{
+	uint32_t count = CLICommandsLength/sizeof(CLICommand);
+
+	if (command == NULL)
+		return;
+
+	for (uint32_t i = 0; i < count; i++) {
+		int result = strcmp(command, CLICommands[i].name);
+		
+		if (result == 0) {
+			CLICommands[i].info.func(argc, argv);
+			break;
+		}
+		else if (result < 0) {
+			printf("Command not found!\r\n");
+			break;
+		}
 	}
 }
 
-size_t OStream::readline(char* buffer, size_t length, Time::millitime_t timeout)
+void version(int argc, char** argv)
 {
-	return -1;
+	printf("TheOS %s\r\n\r\n", FirmwareVersion);
+
+	if (FirmwareGitVersion || FirmwareGitBranch) {
+		printf(" Build information:\r\n");
+		printf("  date: %s\r\n", FirmwareBuildDate);
+		printf("  rev: %s\r\n", FirmwareGitVersion);
+		printf("  branch: %s\r\n", FirmwareGitBranch);
+	}
 }
 
+REGISTER_COMMAND(version, {
+	.func = version,
+	.help = "Show version of TheFirmware"
+});
+
+void help(int argc, char** argv)
+{
+	uint32_t count = CLICommandsLength/sizeof(CLICommand);
+
+	printf("Avaiable commands:\r\n");
+	for (uint32_t i = 0; i < count; i++) {
+		printf("    %s - %s\r\n", CLICommands[i].name, CLICommands[i].info.help);
+	}
 }
-}
+
+REGISTER_COMMAND(help, {
+	.func = help,
+	.help = "Prints this help"
+});
+
+} // namespace Console
+} // namespace TheFirmware

@@ -22,26 +22,19 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "OStream.h"
+#pragma once
 
-#include "Firmware/Runtime.h"
+#include "Firmware/Console/Log.h"
 
 namespace TheFirmware {
-namespace IO {
+namespace Console {
 
-// Default implementation
-void OStream::put(const char* s) {
-	assert(s != NULL);
-	
-	for (; *s != '\0'; ++s) {
-		this->put(*s);
-	}
-}
+/// Initializes the Console subsystem and starts
+/// the console task.
+void Init();
 
-size_t OStream::readline(char* buffer, size_t length, Time::millitime_t timeout)
-{
-	return -1;
-}
+void printf(const char* format, ...);
+void printf_va(const char* format, va_list args);
 
-}
-}
+} // namespace Console
+} // namespace TheFirmware

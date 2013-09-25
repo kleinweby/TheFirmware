@@ -23,13 +23,13 @@
 //
 
 #include "Firmware/Runtime.h"
-#include "Firmware/Log.h"
+#include "Firmware/Console/Log.h"
 #include "Firmware/Time/Systick.h"
 #include "Firmware/Schedule/Task.h"
 
 #include "LPC11xx.h"
 
-using namespace TheFirmware::Log;
+using namespace TheFirmware::Console;
 
 namespace TheFirmware {
 namespace Time {

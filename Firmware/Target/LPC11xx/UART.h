@@ -27,11 +27,13 @@
 #include <stdint.h>
 
 #include "Firmware/IO/OStream.h"
+#include "Firmware/Utils/Ringbuffer.h"
 
 namespace TheFirmware {
 namespace LPC11xx {
 
 class UART : public IO::OStream {
+	Utils::Ringbuffer<10> rxBuffer;
 public:
 	/// Initialize the UART hardware
 	///
@@ -41,6 +43,10 @@ public:
 	// Retain overloaded functions from put
 	using OStream::put;
 	virtual void put(char c);
+
+	char get();
+
+	void isr();
 };
 
 } // namespace LPC11xx

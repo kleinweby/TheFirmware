@@ -1,6 +1,6 @@
 #include "LPC11xx.h"
-#include "Firmware/Log.h"
 #include "Firmware/Runtime.h"
+#include "Firmware/Console/Console.h"
 #include "Firmware/Schedule/Task.h"
 #include "Firmware/Time/Systick.h"
 #include "Firmware/Time/Delay.h"
@@ -8,7 +8,7 @@
 #include "Firmware/Devices/24XX64.h"
 
 using namespace TheFirmware;
-using namespace TheFirmware::Log;
+using namespace TheFirmware::Console;
 using namespace TheFirmware::LPC11xx;
 using namespace TheFirmware::Time;
 
@@ -35,12 +35,13 @@ extern "C" int main() {
 
 	TheFirmware::Schedule::Init();
 
+	TheFirmware::Console::Init();
+
 	LogDebug("Starting up");
 
 
 	SystemCoreClockUpdate();
 	// LPC_SYSCON->SYSAHBCLKCTRL |= (1<<6);
-
 
 	LPC_IOCON->R_PIO1_2 |= 0x1;
 	LPC_IOCON->R_PIO1_1 |= 0x1;

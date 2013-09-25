@@ -22,26 +22,15 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "OStream.h"
+#pragma once
 
-#include "Firmware/Runtime.h"
+#include "Firmware/Target/LPC11xx/UART.h"
 
 namespace TheFirmware {
-namespace IO {
 
-// Default implementation
-void OStream::put(const char* s) {
-	assert(s != NULL);
-	
-	for (; *s != '\0'; ++s) {
-		this->put(*s);
-	}
-}
+namespace Target = LPC11xx;
 
-size_t OStream::readline(char* buffer, size_t length, Time::millitime_t timeout)
-{
-	return -1;
-}
+// Import target dependent definitions
+using Target::UART;
 
-}
-}
+} // namespace TheFirmware

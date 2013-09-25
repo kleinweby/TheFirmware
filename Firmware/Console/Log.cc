@@ -22,26 +22,42 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "OStream.h"
-
+#include "Log.h"
+#include "Firmware/Console/Console.h"
 #include "Firmware/Runtime.h"
 
+#include <stdint.h>
+
 namespace TheFirmware {
-namespace IO {
+namespace Console {
 
-// Default implementation
-void OStream::put(const char* s) {
-	assert(s != NULL);
-	
-	for (; *s != '\0'; ++s) {
-		this->put(*s);
-	}
-}
-
-size_t OStream::readline(char* buffer, size_t length, Time::millitime_t timeout)
+void Logv(LogLevel logLevel, const char* format, va_list args)
 {
-	return -1;
+	assert(format != NULL);
+	
+	// Print level
+	switch(logLevel) {
+		case kLogLevelError:
+			printf("\033[1;31m[E]\033[0m ");
+			break;
+		case kLogLevelWarn:
+			printf("\033[1;33m[W]\033[0m ");
+			break;
+		case kLogLevelInfo:
+			printf("\033[0;34m[I]\033[0m ");
+			break;
+		case kLogLevelVerbose:
+			printf("\033[0;32m[V]\033[0m ");
+			break;
+		case kLogLevelDebug:
+			printf("\033[0;32m[D]\033[0m ");
+			break;
+	}
+
+	printf_va(format, args);
+
+	printf("\r\n");
 }
 
-}
-}
+} // namespace Console
+} // namespace TheFirmware
