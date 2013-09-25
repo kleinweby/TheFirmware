@@ -48,6 +48,17 @@ void Init()
 	consoleTask.setState(Schedule::kTaskStateReady);
 }
 
+/// Checks if a given char is a digit
+bool isAlpha(char c) {
+	if (c >= 'a' && c <= 'z')
+		return true;
+
+	if (c >= 'A' && c <= 'Z')
+		return true;
+	
+	return false;
+}
+
 int readline(char* buffer, size_t bufferSize)
 {
 	int i;
@@ -65,6 +76,17 @@ int readline(char* buffer, size_t bufferSize)
 			if (i > 0) {
 				i--;
 				stream.put("\033[1D\033[K");
+			}
+		}
+		// Received control sequence
+		else if (c == 0x1B) {
+			c = stream.get();
+
+			// Parameter to follow
+			// just read them away
+			if (c == '[') {
+				while (!isAlpha(c))
+					c = stream.get();
 			}
 		}
 		else {
