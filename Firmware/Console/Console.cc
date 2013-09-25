@@ -22,22 +22,104 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "Log.h"
-#include "Firmware/Target/LPC11xx/UART.h"
-#include "Firmware/Runtime.h"
+#include "Firmware/Console/Console.h"
 
-#include <stdint.h>
+#include "Firmware/Console/CLI.h"
+
+#include "Firmware/Schedule/Task.h"
+#include "Firmware/Runtime.h"
+#include "Firmware/UART.h"
+
+#include "Firmware/Console/string.h"
 
 namespace TheFirmware {
-namespace Log {
+namespace Console {
+
+UART stream(38400);
+Schedule::Task consoleTask;
+uint8_t consoleStack[1024];
+
+void task();
+
+void Init()
+{
+	consoleTask.Init((Schedule::TaskStack)consoleStack, sizeof consoleStack, task, 0);
+	consoleTask.setPriority(-1);
+	consoleTask.setState(Schedule::kTaskStateReady);
+}
+
+int readline(char* buffer, size_t bufferSize)
+{
+	int i;
+
+	for (i = 0; i < bufferSize - 1;) {
+		char c = stream.get();
+
+		if (c == '\r' || c == '\n') {
+			buffer[i++] = '\0';
+			stream.put("\r\n");
+			break;
+		}
+		// Backspace
+		else if (c == 0x7F) {
+			if (i > 0) {
+				i--;
+				stream.put("\033[1D\033[K");
+			}
+		}
+		else {
+			stream.put(c);
+			buffer[i++] = c;
+		}
+	}
+
+	buffer[i+1] = '\0';
+
+	return i;
+}
+
+void task()
+{
+	while (1) {
+		char _buffer[80];
+		char* buffer = _buffer;
+		size_t i = 0;
+
+		stream.put("> ");
+
+		i = readline(buffer, 80);
+
+		if (i >= 80) {
+			printf("Line too long.\r\n");
+			continue;
+		}
+
+		char* command = strsep_ext(&buffer, " ");
+		int argc = 0;
+
+		// Calculate argument count
+		{
+			for (char* t = buffer; strsep_ext(&t, " "); argc++)
+				;
+		}
+
+		char* argv[argc];
+		// Get args
+		for (int i = 0; i < argc; i++) {
+			argv[i] = buffer;
+
+			// During calculation the '\0 have been inserted, so we just need
+			// to refind the boundaries now
+			buffer = &buffer[strlen(buffer) + 1];
+		}
+
+		run(command, argc, argv);
+	}
+}
 
 static char numberDefinitions[] = "0123456789ABCDEF";
 static const char *trueString = "true";
 static const char *falseString = "false";
-
-using LogStream = LPC11xx::UART;
-
-LogStream logStream(38400);
 
 /// Checks if a given char is a digit
 bool isDigit(char c) {
@@ -94,34 +176,23 @@ void printNumber(uint32_t number, uint8_t base, uint32_t minLength, bool useWhit
 	
 	// Now swap the thing around
 	for (uint8_t i = 0; i < usedLength; i++, tempString--) {
-		logStream.put(*tempString);
+		stream.put(*tempString);
 	}
 
 	return;
 }
 
-void Logv(LogLevel logLevel, const char* format, va_list args)
+void printf(const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	printf_va(format, args);
+	va_end(args);
+}
+
+void printf_va(const char* format, va_list args)
 {
 	assert(format != NULL);
-	
-	// Print level
-	switch(logLevel) {
-		case kLogLevelError:
-			logStream.put("\033[1;31m[E]\033[0m ");
-			break;
-		case kLogLevelWarn:
-			logStream.put("\033[1;33m[W]\033[0m ");
-			break;
-		case kLogLevelInfo:
-			logStream.put("\033[0;34m[I]\033[0m ");
-			break;
-		case kLogLevelVerbose:
-			logStream.put("\033[0;32m[V]\033[0m ");
-			break;
-		case kLogLevelDebug:
-			logStream.put("\033[0;32m[D]\033[0m ");
-			break;
-	}
 
 	while (*format != '\0') {
 		// We have a format specifier here
@@ -130,7 +201,7 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 			format++;
 			
 			if (*format == '%') {
-				logStream.put('%');
+				stream.put('%');
 			}
 			// It is in deed an format
 			else {
@@ -170,13 +241,13 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 					case 'p':
 						minLength = 8;
 						useWhitespacePadding = false;
-						logStream.put('*');
+						stream.put('*');
 					// Hex number
 					case 'X':
 					case 'x':
 					{
 						uint32_t val = va_arg(args, uint32_t);
-						logStream.put("0x");
+						stream.put("0x");
 						printNumber(val, 16, minLength, useWhitespacePadding);
 						break;
 					}
@@ -186,7 +257,7 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 					{
 						int32_t val = va_arg(args, int32_t);
 						if (val < 0) {
-							logStream.put('-');
+							stream.put('-');
 							val = -val;
 						}
 						
@@ -206,10 +277,10 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 						uint32_t val = va_arg(args, uint32_t);
 						
 						if (val == true) {
-							logStream.put(trueString);
+							stream.put(trueString);
 						}
 						else {
-							logStream.put(falseString);
+							stream.put(falseString);
 						}
 						break;
 					}
@@ -218,7 +289,10 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 					{
 						char* str = va_arg(args, char*);
 
-						logStream.put(str);
+						if (str)
+							stream.put(str);
+						else
+							stream.put("(null)");
 						break;
 					}
 					default:
@@ -228,15 +302,15 @@ void Logv(LogLevel logLevel, const char* format, va_list args)
 			}
 		}
 		else {
-			logStream.put(*format);
+			stream.put(*format);
+
+			if (*format == '\n')
+				stream.flush();
 		}
 		
 		format++;
 	}
-
-	logStream.put("\r\n");
-	logStream.flush();
 }
 
-} // namespace Log
+} // namespace Console
 } // namespace TheFirmware

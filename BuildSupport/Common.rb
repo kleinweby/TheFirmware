@@ -1,4 +1,5 @@
 require_relative 'DefaultConfig'
+require_relative 'VersionSupport'
 
 RakeFileUtils.verbose_flag = false # if RakeFileUtils.verbose_flag == RakeFileUtils::DEFAULT
 

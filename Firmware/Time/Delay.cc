@@ -25,9 +25,9 @@
 #include "Firmware/Time/Delay.h"
 #include "Firmware/Time/Systick.h"
 
-#include "Firmware/Log.h"
+#include "Firmware/Console/Log.h"
 
-using namespace TheFirmware::Log;
+using namespace TheFirmware::Console;
 
 namespace TheFirmware {
 namespace Time {

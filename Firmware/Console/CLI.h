@@ -22,26 +22,32 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "OStream.h"
-
-#include "Firmware/Runtime.h"
+#pragma once
 
 namespace TheFirmware {
-namespace IO {
+namespace Console {
 
-// Default implementation
-void OStream::put(const char* s) {
-	assert(s != NULL);
-	
-	for (; *s != '\0'; ++s) {
-		this->put(*s);
-	}
-}
+/// Runs a given command
+///
+/// @param command Name of the command to run
+/// @param argc Number of command arguments
+/// @param argv Pointer to arguments
+void run(const char* command, int argc, char** argv);
 
-size_t OStream::readline(char* buffer, size_t length, Time::millitime_t timeout)
-{
-	return -1;
-}
+struct CLICommand {
+	const char* name;
+	const struct {
+		void (*func) (int argc, char**argv);
+		const char* help;
+	} info;
+};
 
-}
-}
+#define REGISTER_COMMAND(_name, ...) \
+	CLICommand CLICommand_##_name __attribute__ ((section (".CLICommands." #_name))) \
+		= { \
+			.name = #_name, \
+			.info = __VA_ARGS__ \
+		}
+
+} // namespace Console
+} // namespace TheFirmware

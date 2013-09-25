@@ -22,26 +22,15 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "OStream.h"
+#pragma once
 
-#include "Firmware/Runtime.h"
+#include <stddef.h>
 
-namespace TheFirmware {
-namespace IO {
+extern "C" {
 
-// Default implementation
-void OStream::put(const char* s) {
-	assert(s != NULL);
-	
-	for (; *s != '\0'; ++s) {
-		this->put(*s);
-	}
-}
+size_t strlen(const char* str);
+char *strsep(char **stringp, const char *delim);
+char* strsep_ext(char** stringp, const char* delim);
+int strcmp(const char* str1, const char* str2);
 
-size_t OStream::readline(char* buffer, size_t length, Time::millitime_t timeout)
-{
-	return -1;
-}
-
-}
-}
+} // extern "C"

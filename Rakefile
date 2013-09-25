@@ -32,7 +32,11 @@ FIRMWARE_SRC = FileList[
 	'Firmware/Time/Systick.cc',
 	'Firmware/Time/Delay.cc',
 	'Firmware/Time/Timer.cc',
-  'Firmware/Log.cc',
+  'Firmware/Console/Log.cc',
+  'Firmware/Console/Console.cc',
+  'Firmware/Console/CLI.cc',
+  'Firmware/Console/string.cc',
+  'Firmware/FirmwareInfo.c',
 ]
 
 SRC.include(FIRMWARE_SRC)

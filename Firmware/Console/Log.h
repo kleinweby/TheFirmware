@@ -27,11 +27,9 @@
 #include <stdint.h>
 
 namespace TheFirmware {
-/// Logging Utilities
-namespace Log {
+namespace Console {
 
 /// Describes the servity of the log message
-/// Blub
 typedef enum : uint8_t {
 	kLogLevelDebug,
 	kLogLevelVerbose,
@@ -94,5 +92,5 @@ static inline void LogError(const char* format, ...) {
 
 /// @}
 
-}
-}
+} // namespace Console
+} // namespace TheFirmware

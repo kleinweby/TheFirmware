@@ -24,6 +24,8 @@
 
 #pragma once 
 
+#include "Firmware/Time/Timer.h"
+
 namespace TheFirmware {
 namespace IO {
 
@@ -45,6 +47,14 @@ public:
 	///
 	/// @note A stream is not required to use an internal buffer
 	virtual void flush() {};
+
+	/// Reads a line into a given buffer
+	///
+	/// @param buffer Buffer to write read bytes to
+	/// @oaram length Length of the buffer
+	/// @param timeout Maximal time to wait. 0 - don't wait, -1 - no timeout
+	/// @return Returns the number of bytes read or -1 if an error occourd
+	virtual size_t readline(char* buffer, size_t length, Time::millitime_t timeout);
 };
 
 }

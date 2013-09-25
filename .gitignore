@@ -2,3 +2,5 @@
 *.elf
 *.toolchain
 doc/
+FirmwareInfo.cc.rake-defs
+FirmwareInfo.cc

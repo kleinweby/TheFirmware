@@ -36,8 +36,25 @@ namespace LPC11xx {
 #define IER_ABTO        (0x01<<9)
 
 #define LSR_RDR         (0x01<<0)
+#define LSR_OE          (0x01<<1)
+#define LSR_PE          (0x01<<2)
+#define LSR_FE          (0x01<<3)
+#define LSR_BI          (0x01<<4)
 #define LSR_THRE        (0x01<<5)
 #define LSR_TEMT        (0x01<<6)
+#define LSR_RXFE        (0x01<<7)
+
+UART* GlobalUART;
+
+enum {
+  kIIRReceiveLineStatus = 0x6,
+  kIIRReceiveDataAvailable = 0x4
+};
+
+extern "C" void UART_IRQHandler(void)
+{
+  GlobalUART->isr();
+}
 
 UART::UART(uint32_t baud)
 {
@@ -77,7 +94,12 @@ UART::UART(uint32_t baud)
     regVal = LPC_UART->RBR; /* Dump data from RX FIFO */
   }
 
-  // LPC_UART->IER = IER_RBR | IER_RLS;
+  GlobalUART = this;
+
+  LPC_UART->IER = IER_RBR | IER_RLS;
+
+  // Enable interrupt
+  NVIC_EnableIRQ(UART_IRQn);
 }
 
 void UART::put(char c)
@@ -85,6 +107,37 @@ void UART::put(char c)
     while ( !(LPC_UART->LSR & LSR_THRE) )
         ;
     LPC_UART->THR = c;
+}
+
+char UART::get()
+{
+  char c;
+
+  this->rxBuffer.get(c);
+
+  return c;
+}
+
+void UART::isr()
+{
+  uint8_t IIR = LPC_UART->IIR & 0xE;
+
+  if (IIR == kIIRReceiveLineStatus) {
+    uint8_t LSR = LPC_UART->LSR;
+
+    if (LSR & (LSR_OE | LSR_PE | LSR_FE | LSR_RXFE | LSR_BI))
+    {
+      uint8_t d = LPC_UART->RBR;
+#pragma unused(d)
+      return;
+    }
+
+    // No Error, read data
+    if (LSR & LSR_RDR)    
+      this->rxBuffer.put(LPC_UART->RBR, true);
+  }
+  else if (IIR == kIIRReceiveDataAvailable) /* Receive Data Available */
+    this->rxBuffer.put(LPC_UART->RBR, true);
 }
 
 } // namespace LPC11xx

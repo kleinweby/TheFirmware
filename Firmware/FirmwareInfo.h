@@ -22,26 +22,13 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "OStream.h"
-
-#include "Firmware/Runtime.h"
+#pragma once
 
 namespace TheFirmware {
-namespace IO {
 
-// Default implementation
-void OStream::put(const char* s) {
-	assert(s != NULL);
-	
-	for (; *s != '\0'; ++s) {
-		this->put(*s);
-	}
-}
+extern const char* FirmwareVersion;
+extern const char* FirmwareGitVersion;
+extern const char* FirmwareGitBranch;
+extern const char* FirmwareBuildDate;
 
-size_t OStream::readline(char* buffer, size_t length, Time::millitime_t timeout)
-{
-	return -1;
-}
-
-}
-}
+} // namespace TheFirmware

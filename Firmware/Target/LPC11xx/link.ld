@@ -4,7 +4,6 @@ ENTRY(ResetISR)
 
 SECTIONS
 {
-
     /* MAIN TEXT SECTION */    
     .text : ALIGN(4)
     {
@@ -31,7 +30,7 @@ SECTIONS
         *(.after_vectors*)
         
     } >MFlash16
-    
+
     .text : ALIGN(4)    
     {
          *(.text*)
@@ -68,6 +67,18 @@ SECTIONS
         KEEP (*crtend.o(.dtors))
         /* End C++ */
     } > MFlash16
+
+
+    /* Support for staticly declaring logging drivers */
+    .text : ALIGN(4) {
+        PROVIDE_HIDDEN(_CLICommands = .);
+
+        KEEP(*(SORT(.CLICommands.*)))
+        KEEP(*(.CLICommands))
+
+        PROVIDE_HIDDEN(_CLICommandsLength = . - _CLICommands);
+    } > MFlash16
+
 
     /*
      * for exception handling/unwind - some Newlib functions (in common

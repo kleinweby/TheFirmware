@@ -22,26 +22,72 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "OStream.h"
+#include "Firmware/Console/string.h"
 
-#include "Firmware/Runtime.h"
+extern "C" {
 
-namespace TheFirmware {
-namespace IO {
+bool charInStr(char c, const char* str) {
+	for (; *str != '\0'; str++)
+		if (*str == c)
+			return true;
 
-// Default implementation
-void OStream::put(const char* s) {
-	assert(s != NULL);
-	
-	for (; *s != '\0'; ++s) {
-		this->put(*s);
-	}
+	return false;
 }
 
-size_t OStream::readline(char* buffer, size_t length, Time::millitime_t timeout)
+size_t strlen(const char* str)
 {
-	return -1;
+	size_t size = 0;
+	for (; *str != '\0'; size++, str++)
+		;
+
+	return size;
 }
 
+char *strsep(char **stringp, const char *delim)
+{
+	char* found = *stringp;
+	char* remaining = found;
+
+	if (!stringp)
+		return NULL;
+
+	for (; *remaining != '\0'; remaining++) {
+		if (charInStr(*remaining, delim)) {
+			*remaining = '\0';
+			remaining++;
+			break;
+		}
+	}
+
+	if (*remaining == '\0')
+		*stringp = NULL;
+	else 
+		*stringp = remaining;
+
+	return found;
 }
+
+char* strsep_ext(char** stringp, const char* delim) {
+	char* value;
+
+	do {
+		value = strsep(stringp, delim);
+	} while (value && strlen(value) == 0);
+
+	return value;
 }
+
+int strcmp(const char* str1, const char* str2)
+{
+	for (; *str1 != '\0' && *str2 != '\0' && *str1 == *str2; str1++, str2++)
+		;
+
+	if (*str1 < *str2)
+		return -1;
+	else if (*str1 > *str2)
+		return 1;
+	else
+		return 0;
+}
+
+} // extern "C"

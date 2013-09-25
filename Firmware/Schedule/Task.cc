@@ -23,14 +23,14 @@
 //
 
 #include "Task.h"
-#include "Firmware/Log.h"
+#include "Firmware/Console/Log.h"
 #include "Firmware/Runtime.h"
 #include "Firmware/Time/Systick.h"
 #include "LPC11xx.h"
 
 #include <stddef.h>
 
-using namespace TheFirmware::Log;
+using namespace TheFirmware::Console;
 
 namespace TheFirmware {
 namespace Schedule {
@@ -115,6 +115,8 @@ void Init()
 
 	// enable idle task
 	IdleTask.setState(kTaskStateReady);
+	// Restore normal priority
+	defaultTask.setPriority(0);
 }
 
 Task* GetCurrentTask()
@@ -249,12 +251,18 @@ void Task::removeFromRunningQueue(bool nextStateReady)
 void Task::addToReadyQueue()
 {
 	if (ReadyQueue) {
-		Task* t;
-		for (t = ReadyQueue; t->next != NULL && t->next->getPriority() >= this->priority; t = t->next)
-			;
+		if (this->priority > ReadyQueue->getPriority()) {
+			this->next = ReadyQueue;
+			ReadyQueue = this;
+		}
+		else {
+			Task* t;
+			for (t = ReadyQueue; t->next != NULL && t->next->getPriority() >= this->priority; t = t->next)
+				;
 
-		this->next = t->next;
-		t->next = this;
+			this->next = t->next;
+			t->next = this;
+		}
 	}
 	else {
 		this->next = NULL;
