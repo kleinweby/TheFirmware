@@ -48,6 +48,35 @@ void Init()
 	consoleTask.setState(Schedule::kTaskStateReady);
 }
 
+int readline(char* buffer, size_t bufferSize)
+{
+	int i;
+
+	for (i = 0; i < bufferSize - 1;) {
+		char c = stream.get();
+
+		if (c == '\r' || c == '\n') {
+			buffer[i++] = '\0';
+			stream.put("\r\n");
+			break;
+		}
+		// Backspace
+		else if (c == 0x7F) {
+			if (i > 0) {
+				i--;
+				stream.put("\033[1D\033[K");
+			}
+		}
+		else {
+			stream.put(c);
+			buffer[i++] = c;
+		}
+	}
+
+	buffer[i+1] = '\0';
+
+	return i;
+}
 
 void task()
 {
@@ -58,19 +87,7 @@ void task()
 
 		stream.put("> ");
 
-		while (i < 80) {
-			char c = stream.get();
-
-			if (c == '\r' || c == '\n') {
-				buffer[i++] = '\0';
-				stream.put("\r\n");
-				break;
-			}
-			else {
-				stream.put(c);
-				buffer[i++] = c;
-			}
-		}
+		i = readline(buffer, 80);
 
 		if (i >= 80) {
 			printf("Line too long.\r\n");

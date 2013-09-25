@@ -24,6 +24,8 @@
 
 #pragma once
 
+#include <stddef.h>
+
 #include "Firmware/Console/Log.h"
 
 namespace TheFirmware {
@@ -35,6 +37,11 @@ void Init();
 
 void printf(const char* format, ...);
 void printf_va(const char* format, va_list args);
+/// Reads one line from the console
+///
+/// @param buffer buffer to read into
+/// @param bufferSize the size of the buffer
+int readline(char* buffer, size_t bufferSize);
 
 } // namespace Console
 } // namespace TheFirmware
