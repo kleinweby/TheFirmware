@@ -43,10 +43,3 @@ rule '.o' => [
 	FileUtils.mkdir_p(File.dirname(t.name))
 	sh "#{NASM} -f elf -g -o #{t.name} #{t.source} #{DEFINES.join(' ')}"
 end
-
-def create_framework(name, headers_dir, framework_dir="System/Frameworks")
-  puts " [FRWK] #{name}"
-  FileUtils.mkdir_p "#{ROOT}/#{framework_dir}/#{name}.framework"
-  FileUtils.remove_dir "#{ROOT}/#{framework_dir}/#{name}.framework/Headers", true
-  FileUtils.cp_r headers_dir, "#{ROOT}/#{framework_dir}/#{name}.framework/Headers"
-end

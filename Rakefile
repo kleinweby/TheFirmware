@@ -11,16 +11,9 @@ SRC.include([
 ])
 
 FIRMWARE_SRC = FileList[
-	# Target
-	'Firmware/Target/LPC11xx/CMSIS/src/core_cm0.c',
-  'Firmware/Target/LPC11xx/CMSIS/src/system_LPC11xx.c',
-  'Firmware/Target/LPC11xx/startup.c',
-  'Firmware/Target/LPC11xx/UART.cc',
-  'Firmware/Target/LPC11xx/I2C.cc',
-  'Firmware/Target/LPC11xx/CLI.cc',
-  # Devices
-  'Firmware/Devices/MCP9800.cc',
-  'Firmware/Devices/24XX64.cc',
+	# Devices
+	'Firmware/Devices/MCP9800.cc',
+	'Firmware/Devices/24XX64.cc',
 	# General
 	'Firmware/IO/OStream.cc',
 	'Firmware/IO/GDBSemihostedOStream.cc',
@@ -33,13 +26,16 @@ FIRMWARE_SRC = FileList[
 	'Firmware/Time/Systick.cc',
 	'Firmware/Time/Delay.cc',
 	'Firmware/Time/Timer.cc',
-  'Firmware/Console/Log.cc',
-  'Firmware/Console/Console.cc',
-  'Firmware/Console/CLI.cc',
-  'Firmware/Console/string.cc',
-  'Firmware/FirmwareInfo.c',
+	'Firmware/Console/Log.cc',
+	'Firmware/Console/Console.cc',
+	'Firmware/Console/CLI.cc',
+	'Firmware/Console/string.cc',
+	'Firmware/FirmwareInfo.c',
 ]
 
+require_relative 'Firmware/Target/LPC11xx/Rakefile.defs'
+
+SRC.include(TARGET_SRC.pathmap("Firmware/Target/LPC11xx/%p"))
 SRC.include(FIRMWARE_SRC)
 
 OBJ = SRC.ext('o').pathmap("#{OBJ_DIR}/%p")
