@@ -9,6 +9,7 @@
 #include "Firmware/GPIO.h"
 #include "Firmware/Console/Console.h"
 #include "Firmware/Console/CLI.h"
+#include "Valve.h"
 
 using namespace TheFirmware;
 using namespace TheFirmware::Console;
@@ -33,6 +34,7 @@ extern "C" int main() {
 
 	LogDebug("Starting up");
 
+	GardenaValve::Init();
 
 	SystemCoreClockUpdate();
 	// LPC_SYSCON->SYSAHBCLKCTRL |= (1<<6);
