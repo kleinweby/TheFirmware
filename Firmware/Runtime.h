@@ -67,6 +67,17 @@ constexpr uint32_t CountVariadric(T value, Args... args)
 } // namespace Runtime
 } // namespace TheFirmware
 
+
+inline void* operator new( size_t sz, void* ptr )
+{
+	return ptr;
+}
+
+inline void* operator new[]( size_t sz, void* ptr )
+{
+	return ptr;
+}
+
 /// Assert a assumption in code
 ///
 /// @param expr Expression to assert

@@ -79,14 +79,14 @@ void Init()
     (*((volatile uint32_t *)0xE000ED20)) |=  0xFFFF0000;
 
 	// Create idle task
-	IdleTask.Init(IdleStack, sizeof(IdleStack), Idle, 0);
+	new (&IdleTask) Task(IdleStack, sizeof(IdleStack), Idle, 0);
 	IdleTask.setPriority(kIdleTaskPriority);
 
 	//
 	// Now we convert our non task to the main task
 	//
+	new (&defaultTask) Task(NULL, 0, NULL, 0);
 	defaultTask.next = &defaultTask; // No other tasks for now,
-	defaultTask.id = 1;
 	defaultTask.state = kTaskStateRunning;
 	defaultTask.priority = INT8_MAX; // Avoid loosing control during setup
 
@@ -124,35 +124,38 @@ Task* GetCurrentTask()
 	return CurrentTask;
 }
 
-void Task::Init(TaskStack stack, size_t stackSize, TaskEntryPoint entryPoint, uint8_t numberOfArgs, ...)
+Task::Task(TaskStack stack, size_t stackSize, TaskEntryPoint entryPoint, uint8_t numberOfArgs, ...)
 {
 	this->next = NULL;
 	this->state = kTaskStateWaiting;
 	this->priority = 0;
 	this->id = NextTaskID++;
-	this->stack = (TaskStack)((uint32_t)stack + stackSize - 4);
 
-	// Prepare stack
+	if (stack) {
+		assert(stackSize > 0 && entryPoint != NULL, "Specified stack needs entryPoint and size.");
+		this->stack = (TaskStack)((uint32_t)stack + stackSize - 4);
 
-	*this->stack-- = (uint32_t)0x01000000L; // PSR
-	*this->stack-- = (uint32_t)entryPoint;
-	*this->stack   = (uint32_t)0xFFFFFFFEL; // ?
-    this->stack -= 5; // ?
+		// Prepare stack
+		*this->stack-- = (uint32_t)0x01000000L; // PSR
+		*this->stack-- = (uint32_t)entryPoint;
+		*this->stack   = (uint32_t)0xFFFFFFFEL; // ?
+	    this->stack -= 5; // ?
 
-    if (numberOfArgs > 0) {
-    	va_list args;
-    	va_start(args, numberOfArgs);
+	    if (numberOfArgs > 0) {
+	    	va_list args;
+	    	va_start(args, numberOfArgs);
 
-    	// Only get the first argument for now
-    	*this->stack = va_arg(args, uint32_t);
+	    	// Only get the first argument for now
+	    	*this->stack = va_arg(args, uint32_t);
 
-    	va_end(args);
+	    	va_end(args);
 
-    	this->stack -= 8;
-    }
-    else {
-    	this->stack -= 8;
-    }
+	    	this->stack -= 8;
+	    }
+	    else {
+	    	this->stack -= 8;
+	    }
+	}
 }
 
 void Task::moveToRunningQueue()

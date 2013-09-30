@@ -43,7 +43,7 @@ void task();
 
 void Init()
 {
-	consoleTask.Init((Schedule::TaskStack)consoleStack, sizeof consoleStack, task, 0);
+	new (&consoleTask) Schedule::Task((Schedule::TaskStack)consoleStack, sizeof consoleStack, task, 0);
 	consoleTask.setPriority(-1);
 	consoleTask.setState(Schedule::kTaskStateReady);
 }

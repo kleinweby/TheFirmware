@@ -99,9 +99,7 @@ struct Task {
 	void moveToReadyQueue();
 	void moveToWaitingQueue();
 public:
-	// There is no constructor, as constructing task
-	// in an undefined order at boot may introduce strange problems
-	// use, the init method instead
+	Task() {}
 
 	///
 	/// Initializes the task and put it into waiting state
@@ -114,7 +112,7 @@ public:
 	///            only arguments that can be treated like uint32_t are correctly
 	///            passed.
 	///
-	void Init(TaskStack stack, size_t stackSize, TaskEntryPoint entryPoint, uint8_t numberOfArgs, ...);
+	Task(TaskStack stack, size_t stackSize, TaskEntryPoint entryPoint, uint8_t numberOfArgs, ...);
 
 	/// Returns the pointer to the current stack pointer
 	///
