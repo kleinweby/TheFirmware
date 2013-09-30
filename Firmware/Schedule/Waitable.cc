@@ -150,7 +150,7 @@ void Wait(Waitable* waitable)
 	waitable->endWaiting(false);
 }
 
-uint8_t WaitMultiple(uint8_t numberOfWaitables, ...)
+uint8_t WaitMultipleDo(uint8_t numberOfWaitables, ...)
 {
 	Waitee waitees[numberOfWaitables];
 

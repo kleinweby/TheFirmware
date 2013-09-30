@@ -52,6 +52,18 @@ inline void AssertHandler(const char* function, const char* file, uint32_t line,
 /// @note Calls global constructors
 void Init();
 
+/// Counts variadic arguments
+constexpr uint32_t CountVariadric()
+{
+	return 0;
+}
+
+template<typename T, typename... Args>
+constexpr uint32_t CountVariadric(T value, Args... args)
+{
+	return CountVariadric(args...) + 1;
+}
+
 } // namespace Runtime
 } // namespace TheFirmware
 

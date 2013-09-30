@@ -71,7 +71,7 @@ public:
 		else {
 			Time::WaitableTimeout timer(timeout, Time::SysTickTimer);
 
-			if (Schedule::WaitMultiple(2, &this->getSemaphore, &timer) == 1) {
+			if (Schedule::WaitMultiple(&this->getSemaphore, &timer) == 1) {
 				return false;
 			}
 		}
@@ -103,7 +103,7 @@ public:
 		else {
 			Time::WaitableTimeout timer(timeout, Time::SysTickTimer);
 
-			if (Schedule::WaitMultiple(2, &this->putSemaphore, &timer) == 1) {
+			if (Schedule::WaitMultiple(&this->putSemaphore, &timer) == 1) {
 				return false;
 			}
 		}

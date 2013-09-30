@@ -31,7 +31,7 @@
 namespace TheFirmware {
 namespace Schedule {
 
-class Semaphore : protected Waitable {
+class Semaphore : public Waitable {
 private:
 	int8_t count;
 

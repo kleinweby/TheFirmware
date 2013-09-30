@@ -27,6 +27,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "Firmware/Runtime.h"
+
 namespace TheFirmware {
 namespace Schedule {
 
@@ -40,14 +42,20 @@ class Waitable;
 ///
 void Wait(Waitable* waitable);
 
+/// Internal implemenatation of wait multiple
+uint8_t WaitMultipleDo(uint8_t numberOfWaitables, ...);
+
 ///
 /// Let the current task wait on multiple waitables
 ///
-/// @param numberOfWaitables Number of waitables to follow
 /// @param ... The waitable to wait on
 /// @returns the index of the waitable that woke the task
 ///
-uint8_t WaitMultiple(uint8_t numberOfWaitables, ...);
+template<typename... Args>
+static inline uint8_t WaitMultiple(Args&&... args)
+{
+	return WaitMultipleDo(Runtime::CountVariadric(args...), static_cast<Waitable*>(args)...);
+}
 
 ///
 /// Waitable is the primitive that is used for tasks
@@ -98,7 +106,7 @@ class Waitable {
 
 	friend struct Waitee;
 	friend void Wait(Waitable* waitable);
-	friend uint8_t WaitMultiple(uint8_t numberOfWaitables, ...);
+	friend uint8_t WaitMultipleDo(uint8_t numberOfWaitables, ...);
 public:
 	Waitable() : waitee(NULL) {};
 
