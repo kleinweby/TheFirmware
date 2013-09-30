@@ -64,6 +64,8 @@ protected:
 
 	void setFireTime(millitime_t time)
 	{
+		assert(time >= 0);
+		
 		millitime_t maxPossibleValue = 1000 * kMaxLoadValue/(SystemCoreClock/2);
 
 		if (time > maxPossibleValue)

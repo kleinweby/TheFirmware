@@ -54,6 +54,8 @@ struct Waitee {
 	///
 	void init(Waitable* waitable)
 	{
+		assert(waitable, "Cant create waitee for NULL waitable");
+		
 		this->waitable = waitable;
 		this->task = GetCurrentTask();
 		this->next = NULL;
@@ -137,6 +139,7 @@ bool Waitable::wakeupAll()
 
 void Wait(Waitable* waitable)
 {
+	assert(waitable, "Try to wait on NULL waitable");
 	Waitee waitee;
 
 	SchedulerLock();
@@ -160,6 +163,9 @@ uint8_t WaitMultipleDo(uint8_t numberOfWaitables, ...)
 	va_start(args, numberOfWaitables);
 	for (uint8_t i = 0; i < numberOfWaitables; i++) {
 		Waitable* waitable = va_arg(args, Waitable*);
+
+		assert(waitable, "Try to wait on NULL waitable");
+
 		// Waiting not allowed by this waitable, so clean up
 		if (!waitable->beginWaiting()) {
 			for (int8_t j = i - 1; j >= 0; j--) {

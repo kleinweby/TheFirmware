@@ -24,9 +24,14 @@
 
 #include "Firmware/Console/string.h"
 
+#include "Firmware/Runtime.h"
+
 extern "C" {
 
-bool charInStr(char c, const char* str) {
+bool charInStr(char c, const char* str)
+{
+	assert(str, "str can't be NULL");
+
 	for (; *str != '\0'; str++)
 		if (*str == c)
 			return true;
@@ -36,6 +41,8 @@ bool charInStr(char c, const char* str) {
 
 size_t strlen(const char* str)
 {
+	assert(str, "str can't be NULL");
+
 	size_t size = 0;
 	for (; *str != '\0'; size++, str++)
 		;
@@ -45,6 +52,9 @@ size_t strlen(const char* str)
 
 char *strsep(char **stringp, const char *delim)
 {
+	assert(stringp, "stringp can't be NULL");
+	assert(delim, "delim can't be NULL");
+
 	char* found = *stringp;
 	char* remaining = found;
 
@@ -79,6 +89,9 @@ char* strsep_ext(char** stringp, const char* delim) {
 
 int strcmp(const char* str1, const char* str2)
 {
+	assert(str1, "str1 can't be NULL");
+	assert(str2, "str2 can't be NULL");
+
 	for (; *str1 != '\0' && *str2 != '\0' && *str1 == *str2; str1++, str2++)
 		;
 
