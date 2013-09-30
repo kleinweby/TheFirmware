@@ -24,6 +24,7 @@
 
 #include "Firmware/Time/Timer.h"
 #include "Firmware/Schedule/Task.h"
+#include "Firmware/Runtime.h"
 
 #include <stddef.h>
 
@@ -55,6 +56,9 @@ void Timer::recalculateFireTime()
 Timeout::Timeout(millitime_t timeout, Timer* timer, bool repeating, bool attach)
 	: next(NULL), timer(timer), remainingTime(0), timeout(timeout), attached(false), fired(false), repeat(repeating)
 {
+	assert(timeout > 0, "Timeout must be in the futur");
+	assert(timer != NULL, "Timer must be specified");
+
 	if (attach)
 		this->attach();
 }
@@ -156,6 +160,8 @@ void Timeout::_detach()
 			this->next->_fire();
 		}
 	}
+
+	this->timer->recalculateFireTime();
 }
 
 void Timeout::_fire()
@@ -168,6 +174,16 @@ void Timeout::_fire()
 		this->_attach();
 
 	this->fire();
+}
+
+// Special case:
+//
+//   When timeout is 0, we just set fired=true and don't attach to a timer
+WaitableTimeout::WaitableTimeout(millitime_t timeout, Timer* timer, bool repeating, bool attach)
+	: Timeout(timeout > 0 ? timeout : 1, timer, repeating, timeout > 0 ? attach : false)
+{
+	if (timeout == 0)
+		this->fired = true;
 }
 
 bool WaitableTimeout::beginWaiting()

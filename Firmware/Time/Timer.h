@@ -130,7 +130,7 @@ private:
 	void fire();
 
 public:
-	using Timeout::Timeout;
+	WaitableTimeout(millitime_t timeout, Timer* timer, bool repeating = false, bool attach = true);
 };
 
 } // namespace Time
