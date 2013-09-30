@@ -71,5 +71,15 @@ REGISTER_COMMAND_EX(mcu-info, mcu_info, {
 	.help = "Show infos about the mcu"
 });
 
+void reset(int argc, char** argv)
+{
+	NVIC_SystemReset();
+}
+
+REGISTER_COMMAND(reset, {
+	.func = reset,
+	.help = "Triggers a reset of the mcu."
+});
+
 } // namespace LPC11xx
 } // namespace TheFirmware
