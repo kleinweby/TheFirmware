@@ -98,15 +98,19 @@ void Timeout::_attach()
 		}
 		else {
 			Timeout* t;
-			this->remainingTime = this->timeout;
+			this->remainingTime = this->timeout - this->timer->timeouts->remainingTime;
 
 			for (t = this->timer->timeouts;
-				t->next != NULL && t->next->remainingTime > this->remainingTime;
+				t->next != NULL && t->next->remainingTime < this->remainingTime;
 				this->remainingTime -= t->next->remainingTime, t = t->next)
 				;
 
 			this->next = t->next;
 			t->next = this;
+
+			if (this->next) {
+				this->next->remainingTime -= this->remainingTime;
+			}
 		}
 	}
 	// Only timeout at the moment
