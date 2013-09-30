@@ -28,7 +28,7 @@ namespace TheFirmware {
 namespace Runtime {
 
 extern "C" void __cxa_pure_virtual() {
-	while(1) {}
+	assert(false, "Pure virtual call");
 }
 
 void AssertHandler(const char* function, const char* file, uint32_t line, const char* expr, const char* msg)
@@ -46,11 +46,15 @@ void Init()
 		(*func)();
 }
 
-void IntDefaultHandler(void)
+extern "C" void IntDefaultHandler(void)
 {
 	assert(false, "Unhandled interrupt");
 }
 
+extern "C" void HardFault_Handler(void)
+{
+    assert(false, "Hard Fault");
+}
 
 } // namespace Runtime
 } // namespace TheFirmware
