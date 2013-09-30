@@ -78,6 +78,11 @@ int readline(char* buffer, size_t bufferSize)
 				stream.put("\033[1D\033[K");
 			}
 		}
+		// Ctrl-C
+		else if (c == 0x03) {
+			stream.put("\r\n");
+			return 0;
+		}
 		// Received control sequence
 		else if (c == 0x1B) {
 			c = stream.get();
@@ -115,6 +120,8 @@ void task()
 			printf("Line too long.\r\n");
 			continue;
 		}
+		else if (i == 0)
+			continue;
 
 		char* command = strsep_ext(&buffer, " ");
 		int argc = 0;
