@@ -81,7 +81,7 @@ void help(int argc, char** argv)
 
 	printf("Avaiable commands:\r\n");
 	for (uint32_t i = 0; i < count; i++) {
-		printf("    %s - %s\r\n", CLICommands[i].name, CLICommands[i].info.help);
+		printf("  %s - %s\r\n", CLICommands[i].name, CLICommands[i].info.help);
 	}
 }
 

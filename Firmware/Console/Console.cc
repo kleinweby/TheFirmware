@@ -112,7 +112,7 @@ void task()
 		char* buffer = _buffer;
 		size_t i = 0;
 
-		stream.put("> ");
+		stream.put("$ ");
 
 		i = readline(buffer, 81);
 
