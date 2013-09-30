@@ -26,6 +26,8 @@
 
 #include <stddef.h>
 
+#include "Firmware/Runtime.h"
+
 #include "Firmware/Console/Log.h"
 
 namespace TheFirmware {
@@ -35,6 +37,7 @@ namespace Console {
 /// the console task.
 void Init();
 
+PRINTF_FORMAT(1, 2)
 void printf(const char* format, ...);
 void printf_va(const char* format, va_list args);
 /// Reads one line from the console

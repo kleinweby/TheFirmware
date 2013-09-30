@@ -76,3 +76,6 @@ void Init();
 #else
 #define LINKER_SYMBOL(name, type) extern void _##name(); static const type name = (type)&_##name
 #endif
+
+#define PRINTF_FORMAT(formatIdx, vaIndex) __attribute__((__format__ (__printf__, formatIdx, vaIndex)))
+

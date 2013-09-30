@@ -25,6 +25,7 @@
 
 #include <stdarg.h>
 #include <stdint.h>
+#include "Firmware/Runtime.h"
 
 namespace TheFirmware {
 namespace Console {
@@ -51,6 +52,7 @@ void Logv(LogLevel logLevel, const char* format, va_list args);
 /// @{
 
 /// Prints a debug message
+PRINTF_FORMAT(1, 2)
 static inline void LogDebug(const char* format, ...) {
 	va_list args;
 	va_start(args, format);
@@ -59,6 +61,7 @@ static inline void LogDebug(const char* format, ...) {
 }
 
 /// Prints a verbose message
+PRINTF_FORMAT(1, 2)
 static inline void LogVerbose(const char* format, ...) {
 	va_list args;
 	va_start(args, format);
@@ -67,6 +70,7 @@ static inline void LogVerbose(const char* format, ...) {
 }
 
 /// Prints a info message
+PRINTF_FORMAT(1, 2)
 static inline void LogInfo(const char* format, ...) {
 	va_list args;
 	va_start(args, format);
@@ -75,6 +79,7 @@ static inline void LogInfo(const char* format, ...) {
 }
 
 /// Prints a warn message
+PRINTF_FORMAT(1, 2)
 static inline void LogWarn(const char* format, ...) {
 	va_list args;
 	va_start(args, format);
@@ -83,6 +88,7 @@ static inline void LogWarn(const char* format, ...) {
 }
 
 /// Prints a error message
+PRINTF_FORMAT(1, 2)
 static inline void LogError(const char* format, ...) {
 	va_list args;
 	va_start(args, format);
