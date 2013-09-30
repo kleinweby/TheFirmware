@@ -35,7 +35,7 @@
 namespace TheFirmware {
 namespace Console {
 
-UART stream(38400);
+UART stream(57600);
 Schedule::Task consoleTask;
 uint8_t consoleStack[1024];
 
