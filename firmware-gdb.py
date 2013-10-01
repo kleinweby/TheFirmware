@@ -18,7 +18,7 @@ class Timeout(object):
 		if self.timeout['attached'] == True:
 			options.append("attached")
 
-		return "<%s %d/%d %s>" % (self.timeout.type, self.timeout['remainingTime'], self.timeout['timeout'], " ".join(options))
+		return "<%s %d/%d %s>" % (self.timeout.dynamic_type, self.timeout['remainingTime'], self.timeout['timeout'], " ".join(options))
 
 class TimeoutIterator(object):
 	
@@ -43,7 +43,7 @@ class TimerPrinter(object):
         self.val = val
 
     def to_string(self):
-        return "Some timer %s" % str(self.val.type)
+        return "Some timer %s" % str(self.val.dynamic_type)
 
     def children(self):
     	counter = itertools.imap(lambda i: '[%d]' % i, itertools.count(1))
