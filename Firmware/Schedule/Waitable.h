@@ -35,15 +35,23 @@ namespace Schedule {
 struct Waitee;
 class Waitable;
 
+/// Internal implementation for waiting on onw waitable
+void _Wait(Waitable* waitable);
+
 ///
 /// Let the current task wait on one waitable
 ///
 /// @param waitable Waitable to wait for
 ///
-void Wait(Waitable* waitable);
+template<typename Type>
+static inline uint8_t Wait(Type waitable)
+{
+	_Wait(static_cast<Waitable*>(waitable));
+	return 0;
+}
 
 /// Internal implemenatation of wait multiple
-uint8_t WaitMultipleDo(uint8_t numberOfWaitables, ...);
+uint8_t _WaitMultiple(uint8_t numberOfWaitables, ...);
 
 ///
 /// Let the current task wait on multiple waitables
@@ -52,9 +60,9 @@ uint8_t WaitMultipleDo(uint8_t numberOfWaitables, ...);
 /// @returns the index of the waitable that woke the task
 ///
 template<typename... Args>
-static inline uint8_t WaitMultiple(Args&&... args)
+static inline uint8_t Wait(Args&&... args)
 {
-	return WaitMultipleDo(Runtime::CountVariadric(args...), static_cast<Waitable*>(args)...);
+	return _WaitMultiple(Runtime::CountVariadric(args...), static_cast<Waitable*>(args)...);
 }
 
 ///
@@ -105,8 +113,8 @@ class Waitable {
 	}
 
 	friend struct Waitee;
-	friend void Wait(Waitable* waitable);
-	friend uint8_t WaitMultipleDo(uint8_t numberOfWaitables, ...);
+	friend void _Wait(Waitable* waitable);
+	friend uint8_t _WaitMultiple(uint8_t numberOfWaitables, ...);
 public:
 	Waitable() : waitee(NULL) {};
 

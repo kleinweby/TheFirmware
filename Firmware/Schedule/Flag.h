@@ -31,7 +31,7 @@
 namespace TheFirmware {
 namespace Schedule {
 
-class Flag : protected Waitable {
+class Flag : public Waitable {
 private:
 	bool flag;
 

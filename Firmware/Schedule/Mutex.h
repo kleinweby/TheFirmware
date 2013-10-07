@@ -31,7 +31,7 @@
 namespace TheFirmware {
 namespace Schedule {
 
-class Mutex : protected Waitable {
+class Mutex : public Waitable {
 private:
 	bool locked;
 

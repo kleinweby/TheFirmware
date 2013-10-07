@@ -137,7 +137,7 @@ bool Waitable::wakeupAll()
 	return hasWokenOne;
 }
 
-void Wait(Waitable* waitable)
+void _Wait(Waitable* waitable)
 {
 	assert(waitable, "Try to wait on NULL waitable");
 	Waitee waitee;
@@ -153,7 +153,7 @@ void Wait(Waitable* waitable)
 	waitable->endWaiting(false);
 }
 
-uint8_t WaitMultipleDo(uint8_t numberOfWaitables, ...)
+uint8_t _WaitMultiple(uint8_t numberOfWaitables, ...)
 {
 	Waitee waitees[numberOfWaitables];
 
