@@ -232,7 +232,7 @@ class Configure < BuildConfiguration
       end
 
       opts.on_tail("--extra-env-paths") do
-        puts(File.join(self.options.basedir, 'Toolchain', 'arm.toolchain') + ':' + File.join(self.options.basedir, 'Toolchain', 'arm-gcc.toolchain'))
+        puts(File.join(self.options.basedir, 'Toolchain', 'arm.toolchain', 'bin') + ':' + File.join(self.options.basedir, 'Toolchain', 'arm-gcc.toolchain', 'bin'))
         exit
       end
 
