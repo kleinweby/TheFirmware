@@ -17,7 +17,7 @@ env:
   - FIRMWARE_BOARD=ValveController
 before_script:
 - sudo apt-get update
-- sudo apt-get install qemu libc6-dev-i386 ninja-build
+- sudo apt-get install qemu libc6-dev-i386
 - gem install travis-artifacts
 - ./Toolchain/prepare-toolchain.sh
 - ./BuildSupport/travis-ninja.sh
