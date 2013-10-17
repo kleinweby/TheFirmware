@@ -19,5 +19,6 @@ before_script:
 - sudo apt-get update
 - sudo apt-get install qemu libc6-dev-i386 ninja-build
 - gem install travis-artifacts
-- Toolchain/prepare-toolchain.sh
-script: ./build_and_test.sh
+- ./Toolchain/prepare-toolchain.sh
+- ./BuildSupport/travis-ninja.sh
+script: ./BuildSupport/travis-ci.sh

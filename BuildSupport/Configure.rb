@@ -231,6 +231,11 @@ class Configure < BuildConfiguration
         end
       end
 
+      opts.on_tail("--extra-env-paths") do
+        puts(File.join(self.options.basedir, 'Toolchain', 'arm.toolchain') + ':' + File.join(self.options.basedir, 'Toolchain', 'arm-gcc.toolchain'))
+        exit
+      end
+
       opts.on_tail("-h", "--help", "Show this message") do
         puts opts
         exit
