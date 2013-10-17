@@ -1,0 +1,17 @@
+
+var :define, [ "-D__USE_CMSIS=1" ]
+var :cflags, [ '$define', '-ggdb', '-fno-builtin', '-Wall', '-Werror', '-I.', '-Wno-deprecated-register']
+var :cxxflags, [ '$cflags', '-fno-exceptions', '-fno-rtti', '-fno-unwind-tables', '-Wno-c++98-compat-pedantic']
+var :ldflags, [ "-nostdlib", '-lgcc' ]
+
+file 'Console/*.{cc,c}'
+file 'Devices/*.{cc,c}'
+file 'IO/*.{cc,c}'
+file 'Schedule/*.{cc,c}'
+file 'Time/*.{cc,c}'
+file 'Utils/*.{cc,c}'
+file '*.{cc,c}'
+
+build 'firmware.elf', 'ld', objects, '$linker_file'
+
+parse 'Target/*/Build'

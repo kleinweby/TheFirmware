@@ -1,0 +1,11 @@
+
+target 'LPC11XX', :abstract => true do 
+  file '**/*.{c,cc}'
+  var :linker_file, path('./link.ld')
+
+  var :cflags, ['-mcpu=cortex-m0', '-mthumb', "-I#{path('./CMSIS/inc')}"]
+  var :ldflags, ['-mcpu=cortex-m0', '-mthumb']
+end
+
+target 'LPC11C24', :base => 'LPC11XX'
+
