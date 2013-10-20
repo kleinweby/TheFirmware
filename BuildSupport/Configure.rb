@@ -292,6 +292,7 @@ class Configure < BuildConfiguration
 
     self._objects += board._objects
     self.defs << board
+    var :define, "-DBOARD=#{board.name.upcase}"
   end
 
   def choose_target
@@ -301,9 +302,11 @@ class Configure < BuildConfiguration
     additional = []
     t = @targets[self.options.target.downcase]
 
+    var :define, "-DTARGET=#{t.name.upcase}"
     while not t.nil?
       additional.unshift(t)
       self._objects += t._objects
+      var :define, "-DTARGET_#{t.name.upcase}=1"
 
       if t.base.nil?
         break
