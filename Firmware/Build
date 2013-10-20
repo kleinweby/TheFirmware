@@ -19,6 +19,10 @@ file 'Time/*.{cc,c}'
 file 'Utils/*.{cc,c}'
 file '*.{cc,c}'
 
+build '$builddir/FirmwareInfo.gen.cc', 'gen'
+build '$builddir/FirmwareInfo.gen.cc.o', 'cxx', '$builddir/FirmwareInfo.gen.cc'
+objects << '$builddir/FirmwareInfo.gen.cc.o'
+
 build 'firmware.elf', 'ld', objects, '$linker_file'
 
 parse 'Target/*/Build'

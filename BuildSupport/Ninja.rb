@@ -159,7 +159,7 @@ class Ninja < NinjaBase
 		self.defs = []
 	end
 
-	def build(name, rule, inputs, implict=nil, &block)
+	def build(name, rule, inputs=nil, implict=nil, &block)
 		b = Build.new(self, name, rule, inputs, implict)
 
 		block.arity < 1 ? b.instance_eval(&block) : block.call(b) if block_given?

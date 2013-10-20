@@ -25,3 +25,8 @@ rule 'configure' do
 	var :generator, '1'
 	var :description, 'CONF ./configure.rb $configure_args'
 end
+
+rule 'gen' do
+	var :command, "BuildSupport/gen.rb $out"
+	var :description, 'GEN $out'
+end

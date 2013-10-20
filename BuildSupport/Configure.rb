@@ -4,13 +4,19 @@ require 'ostruct'
 require 'pathname'
 require 'time'
 
-class Late
+class LateProxy
+  instance_methods.each { |m| undef_method m unless m =~ /(^__|^send$|^object_id$)/ }
 
   def initialize(&block)
     @block = block
   end
 
-  def eval
+  protected
+  def method_missing(name, *args, &block)
+    target.send(name, *args, &block)
+  end
+
+  def target
     @block.call
   end
 
@@ -84,7 +90,7 @@ class BuildConfiguration < Ninja
 
   def objects
     conf = self
-    Late.new do 
+    LateProxy.new do 
       conf._objects
     end
   end
@@ -272,7 +278,7 @@ class Configure < BuildConfiguration
 
   def write_build
     # Declare which files will cause a reconfigure
-    build 'build.ninja', 'configure', [], @.map {|f| path(f) }
+    build 'build.ninja', 'configure', [], @configure_deps.map {|f| path(f) }
 
     @configure_deps.each do |f|
       build path(f), 'phony', []
