@@ -43,7 +43,7 @@ class NinjaBase
 		width = 80
 
 		while indent + line.length > width
-			max_idx = width - prefix.length - 1
+			max_idx = width - prefix.length - 2 # 2 because we need the space and the $ at the end
 
 			while true
 				idx = line.rindex(' ', max_idx)
