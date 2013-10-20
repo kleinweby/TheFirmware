@@ -140,7 +140,7 @@ class Configure < BuildConfiguration
     self.options.basedir = default_basedir
     self.options.action = :write
     self.options.debug = true
-    @configre_deps = [File.expand_path(__FILE__), File.expand_path(File.join(File.dirname(__FILE__), 'Ninja.rb'))]
+    @configure_deps = [File.expand_path(__FILE__), File.expand_path(File.join(File.dirname(__FILE__), 'Ninja.rb'))]
     @targets = {}
     @boards = {}
   end
@@ -256,7 +256,7 @@ class Configure < BuildConfiguration
       load file, wrap = true
     end
 
-    @configre_deps << file
+    @configure_deps << file
   end
 
   def to_ninja(indention = 0)
@@ -272,7 +272,11 @@ class Configure < BuildConfiguration
 
   def write_build
     # Declare which files will cause a reconfigure
-    build 'build.ninja', 'configure', [], @configre_deps.map {|f| path(f) }
+    build 'build.ninja', 'configure', [], @.map {|f| path(f) }
+
+    @configure_deps.each do |f|
+      build path(f), 'phony', []
+    end
 
     File.open('build.ninja', 'w') do |f|
       f.write(self.to_ninja)
