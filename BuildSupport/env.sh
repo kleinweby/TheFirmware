@@ -1,8 +1,6 @@
-#!/bin/bash
-
 # Find base dir
 pushd `dirname $0` > /dev/null
 BASEDIR=`pwd`
 popd > /dev/null
 
-rake
+export PATH=$($BASEDIR/../configure.rb --extra-env-paths):$PATH
