@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "Firmware/Target/LPC11xx/I2C.h"
+#include_next "I2C.h"
 
 namespace TheFirmware {
 

@@ -1,6 +1,7 @@
-.objs
+.build/
 *.elf
 *.toolchain
 doc/
 FirmwareInfo.cc.rake-defs
 FirmwareInfo.cc
+build.ninja

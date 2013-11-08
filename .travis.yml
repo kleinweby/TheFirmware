@@ -13,9 +13,12 @@ env:
       hpRlCyZMvafWoY46WEiJoMZ3aFiuzFESj8jBdg33zQES+55gHsk6tKHDHb9m
       u1GfFTAecpiwVUiLONYTPvJyeENgm4gCwNBQr88fPd0qKT8Y/PZDCm6pYeaU
       uDMw9yX04wrqOB1d/zxJ9GxLvcPAe7TpFE0rVL0xW61qXOF1jkQ=
+  matrix:
+  - FIRMWARE_BOARD=ValveController
 before_script:
 - sudo apt-get update
 - sudo apt-get install qemu libc6-dev-i386
 - gem install travis-artifacts
-- Toolchain/prepare-toolchain.sh
-script: ./build_and_test.sh
+- ./Toolchain/prepare-toolchain.sh
+- ./BuildSupport/travis-ninja.sh
+script: ./BuildSupport/travis-ci.sh

@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "Firmware/Target/LPC11xx/UART.h"
+#include_next "UART.h"
 
 namespace TheFirmware {
 

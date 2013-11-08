@@ -34,7 +34,7 @@ typedef enum {
 
 } // namespace TheFirmware
 
-#include "Firmware/Target/LPC11xx/GPIO.h"
+#include_next "GPIO.h"
 
 namespace TheFirmware {
 
