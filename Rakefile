@@ -64,7 +64,7 @@ task 'jlink' do |t|
 	sh "/Applications/JLink/JLinkGDBServer.command -if SWD -device LPC11C24 -vd #{JLINK_OPTIONS}"
 end
 
-task 'debug'  => ["#{EXECUTABLE_NAME}.elf", GDB_SCRIPT] do |t|
+task 'debug' do |t|
 	trap('INT') {}
 	sh "#{GDB} --init-eval-command='target remote localhost:2331' --command=#{GDB_SCRIPT} #{EXECUTABLE_NAME}.elf"
 end

@@ -1,0 +1,3 @@
+board 'test' do
+  targets 'lpc11xx'
+end

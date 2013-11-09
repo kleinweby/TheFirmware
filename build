@@ -1,0 +1,14 @@
+var :cflags, [ '$define', '-fno-builtin', '-Wall', '-Werror', "-I#{path('.')}", '-Wno-deprecated-register']
+var :cxxflags, [ '$cflags', '-fno-exceptions', '-fno-rtti', '-fno-unwind-tables', '-Wno-c++98-compat-pedantic']
+var :ldflags, [ "-nostdlib", '-lgcc' ]
+
+if options.debug
+  var :define, [ '-DDEBUG=1' ]
+  var :cflags, [ '-ggdb' ]
+else
+  var :cflags, [ '-Os' ]
+end
+
+parse 'core/build'
+parse 'arch/build'
+parse 'platform/build'

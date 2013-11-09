@@ -1,0 +1,6 @@
+
+target 'cortex-m0', :abstract => true do
+	var :cflags, ["-I#{path('.')}"]
+end
+
+parse '*/build'

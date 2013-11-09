@@ -1,0 +1,14 @@
+
+target 'lpc11xx', :base => 'cortex-m0' do
+  var :cc, 'arm-none-eabi-clang'
+  var :cxx, 'arm-none-eabi-clang++'
+  var :ld, 'arm-none-eabi-clang'
+
+  var :linker_file, path('./link.ld')
+
+  var :cflags, ['-mcpu=cortex-m0', '-mthumb', "-I#{path('./CMSIS/inc')}", "-I#{path('.')}"]
+  var :ldflags, ['-mcpu=cortex-m0', '-mthumb']
+
+  file '*.c'
+  file 'CMSIS/src/*.c'
+end

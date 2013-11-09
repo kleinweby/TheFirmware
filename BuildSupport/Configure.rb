@@ -158,8 +158,7 @@ class Configure < BuildConfiguration
 
     BuildConfiguration.push(self)
     self.parse_buildfile(File.join(self.options.basedir, 'BuildSupport', 'Rules.rb'))
-    self.parse_buildfile(File.join(self.options.basedir, 'Firmware', 'Build'))
-    self.parse(File.join(self.options.basedir, 'Boards', '*', 'Build'))
+    self.parse_buildfile(File.join(self.options.basedir, 'build'))
     BuildConfiguration.pop
 
     case self.options.action
