@@ -25,7 +25,7 @@
 #include "runtime.h"
 
 #include "printk.h"
-#include "system_LPC11xx.h"
+#include "LPC11xx.h"
 
      void ResetISR(void);
 WEAK void NMI_Handler(void);
@@ -169,7 +169,7 @@ void ResetISR(void)
 	printk("hallo\r\n");
 
 	while (1)
-		;
+		__WFI();
 }
 
 void NMI_Handler(void)

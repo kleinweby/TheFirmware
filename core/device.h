@@ -49,6 +49,8 @@ struct device {
 	uint16_t extra;
 
 	const char* name;
+
+	struct device_private* private;
 };
 
 void device_register(struct device* dev);

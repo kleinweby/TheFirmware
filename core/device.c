@@ -23,3 +23,9 @@
 //
 
 #include "device.h"
+
+struct device_private {
+	struct device* parent;
+
+	struct device* next;
+};

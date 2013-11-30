@@ -34,9 +34,6 @@ FIRMWARE_SRC = FileList[
 	'Firmware/FirmwareInfo.c',
 ]
 
-require_relative 'Firmware/Target/LPC11xx/Rakefile.defs'
-
-SRC.include(TARGET_SRC.pathmap("Firmware/Target/LPC11xx/%p"))
 SRC.include(FIRMWARE_SRC)
 
 OBJ = SRC.ext('o').pathmap("#{OBJ_DIR}/%p")
