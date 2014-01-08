@@ -262,6 +262,10 @@ void printf_va(const char* format, va_list args)
 						format++;
 					}
 				}
+
+				if (*format == 'l') {
+					format++;
+				}
 				
 				// Now we've parsed away the formatting options
 				// let look at the format

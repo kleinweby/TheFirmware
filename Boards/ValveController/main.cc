@@ -116,7 +116,7 @@ extern "C" int main() {
 
 void temp_cmd(int argc, char** argv)
 {
-	printf("Temp: %u.%04u\r\n", temp[0], temp[1]);
+	printf("Temp: %lu.%04lu\r\n", temp[0], temp[1]);
 }
 
 REGISTER_COMMAND(temp, {

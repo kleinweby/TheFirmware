@@ -1,6 +1,6 @@
 
 var :define, [ "-D__USE_CMSIS=1" ]
-var :cflags, [ '$define', '-fno-builtin', '-Wall', '-Werror', "-I#{path('..')}", '-Wno-deprecated-register']
+var :cflags, [ '$define', '-fno-builtin', '-Wall', '-Werror', "-I#{path('..')}", '-Wno-deprecated-register', '-nostdinc', '-I/Users/christian/Documents/Projects/TheFirmware/Toolchain/arm.toolchain/bin/../lib/clang/3.4/include/', '-I/Users/christian/Documents/Projects/TheFirmware/Toolchain/arm-gcc.toolchain/arm-none-eabi/include']
 var :cxxflags, [ '$cflags', '-fno-exceptions', '-fno-rtti', '-fno-unwind-tables', '-Wno-c++98-compat-pedantic']
 var :ldflags, [ "-nostdlib", '-lgcc' ]
 

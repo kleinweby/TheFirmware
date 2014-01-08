@@ -38,7 +38,7 @@ using namespace TheFirmware::Time;
 namespace GardenaValve {
 
 GPIO onPin(2, 7);
-GPIO offPin(2, 6);
+GPIO offPin(2, 8);
 
 millitime_t onTime = 50;
 millitime_t offTime = 5;
@@ -122,8 +122,8 @@ void valve_cmd(int argc, char** argv)
 	}
 	else if (strcmp(argv[0], "time") == 0) {
 		if (argc == 1) {
-			printf("On time %dms\r\n", onTime);
-			printf("Off time %dms\r\n", offTime);
+			printf("On time %ldms\r\n", onTime);
+			printf("Off time %ldms\r\n", offTime);
 		}
 		else if (argc == 3) {
 			onTime = atoi(argv[1]);
