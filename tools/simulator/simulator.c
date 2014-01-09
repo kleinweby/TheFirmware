@@ -33,8 +33,9 @@
 #include <assert.h>
 
 typedef enum {
-	reg_sp = 13,
-	reg_pc = 15,
+	REG_SP = 13,
+	REG_14 = 14,
+	REG_PC = 15,
 	reg_count
 } reg_t;
 
@@ -57,10 +58,19 @@ struct mem_dev {
 	bool (*write32)(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint32_t value);
 };
 
+enum {
+	CPSR_N = (1<<31),
+	CPSR_Z = (1<<30),
+	CPSR_C = (1<<29),
+	CPSR_V = (1<<28),
+	CPSR_Q = (1<<27)
+};
+
 struct mcu {
 	mem_dev_t mem_devs;
 
 	uint32_t regs[reg_count];
+	uint32_t cpsr;
 };
 
 mcu_t mcu_cortex_m0p_create(size_t ramsize)
@@ -149,22 +159,58 @@ void mcu_write_reg(mcu_t mcu, reg_t reg, uint32_t val)
 
 void mcu_update_nflag(mcu_t mcu, uint32_t c)
 {
-
+	if( c & (1 << 31))
+		mcu->cpsr |= CPSR_N;
+	else
+		mcu->cpsr &= ~CPSR_N;
 }
 
 void mcu_update_zflag(mcu_t mcu, uint32_t c)
 {
-	
+	if (c == 0) 
+		mcu->cpsr |= CPSR_Z; 
+	else 
+		mcu->cpsr &= ~CPSR_Z;
+}
+
+void mcu_update_cflag_bit(mcu_t mcu, uint32_t val)
+{
+	if (val) 
+    	mcu->cpsr |= CPSR_C;
+    else 
+    	mcu->cpsr &= ~CPSR_C;
 }
 
 void mcu_update_cflag(mcu_t mcu, uint32_t a, uint32_t b, uint32_t c)
 {
-	
+	uint32_t temp;
+
+	// carry in
+    temp = (a & 0x7FFFFFFF) + (b & 0x7FFFFFFF) + c;
+    //carry out
+    temp = (temp >> 31) + (a>>31) + (b >> 31);
+    mcu_update_cflag_bit(mcu, temp & 2);
+}
+
+void mcu_update_vflag_bit(mcu_t mcu, uint32_t val)
+{
+	if (val) 
+    	mcu->cpsr |= CPSR_V;
+    else 
+    	mcu->cpsr &= ~CPSR_V;
 }
 
 void mcu_update_vflag(mcu_t mcu, uint32_t a, uint32_t b, uint32_t c)
 {
-	
+	uint32_t temp1;
+    uint32_t temp2;
+
+    temp1 = (a & 0x7FFFFFFF) + (b & 0x7FFFFFFF) + c; //carry in
+    temp1 >>= 31; //carry in in lsbit
+    temp2 = (temp1 & 1) + (( a>> 31) & 1) + ((b >> 31) & 1); //carry out
+    temp2 >>= 1; //carry out in lsbit
+    temp1 = (temp1 ^ temp2) & 1; //if carry in != carry out then signed overflow
+    mcu_update_vflag_bit(mcu, temp1);
 }
 
 struct mcu_instr_def {
@@ -256,7 +302,7 @@ struct mcu_instr_def {
         	uint32_t b = mcu_read_reg(mcu, src2);
         	uint32_t c = a + b;
 
-        	if (reg == reg_pc) {
+        	if (reg == REG_PC) {
         		if ((c & 1) == 0) {
         			printf("add pc,... produced arm address, arm mode not supported!\n");
         			return false;
@@ -279,7 +325,7 @@ struct mcu_instr_def {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			reg_t dest = (instr >> 8) & 0x7;
 			uint32_t imm = ((instr >> 0) & 0xFF) << 2;
-        	uint32_t a = mcu_read_reg(mcu, reg_pc);
+        	uint32_t a = mcu_read_reg(mcu, REG_PC);
         	uint32_t c = (a & (~3) ) + imm;
 
         	mcu_write_reg(mcu, dest, c);
@@ -295,7 +341,7 @@ struct mcu_instr_def {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			reg_t dest = (instr >> 8) & 0x7;
 			uint32_t imm = ((instr >> 0) & 0xFF) << 2;
-        	uint32_t a = mcu_read_reg(mcu, reg_sp);
+        	uint32_t a = mcu_read_reg(mcu, REG_SP);
         	uint32_t c = a + imm;
 
         	mcu_write_reg(mcu, dest, c);
@@ -310,10 +356,10 @@ struct mcu_instr_def {
 		.instr = 0xB000,
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			uint32_t imm = ((instr >> 0) & 0x7F) << 2;
-        	uint32_t a = mcu_read_reg(mcu, reg_sp);
+        	uint32_t a = mcu_read_reg(mcu, REG_SP);
         	uint32_t c = a + imm;
 
-        	mcu_write_reg(mcu, reg_sp, c);
+        	mcu_write_reg(mcu, REG_SP, c);
 
 			return true;
 		}
@@ -338,12 +384,1238 @@ struct mcu_instr_def {
 			return true;
 		}
 	},
+
+	//ASR(1) two register immediate
+	{
+		.mask = 0xF800,
+		.instr = 0x1000,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest     = (instr >> 0) & 0x7;
+			reg_t src      = (instr >> 3) & 0x7;
+			uint32_t shift = (instr >> 6) & 0x1F;
+
+        	uint32_t a = mcu_read_reg(mcu, src);
+
+        	if (shift == 0) {
+        		if (a & (1 << 31)) {
+        			mcu_update_cflag_bit(mcu, 1);
+        			a = ~0;
+        		} 
+        		else {
+        			mcu_update_cflag_bit(mcu, 0);
+        			a = 0;
+        		}
+        	}
+        	else {
+        		mcu_update_cflag_bit(mcu, a & (1 << (shift - 1)));
+
+        		uint32_t b = a & (1 << 31);
+
+        		a >>= shift;
+
+        		// Sign
+        		if (b)
+        			a |= (~0) << (32 - shift);
+        	}
+
+        	mcu_write_reg(mcu, dest, a);
+        	mcu_update_nflag(mcu, a);
+        	mcu_update_zflag(mcu, a);
+
+			return true;
+		}
+	},
+
+	//ASR(2) two register
+	{
+		.mask = 0xF800,
+		.instr = 0x1000,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t reg      = (instr >> 0) & 0x7;
+			reg_t shift_reg = (instr >> 3) & 0x7;
+
+        	uint32_t a     = mcu_read_reg(mcu, reg);
+        	uint32_t shift = mcu_read_reg(mcu, shift_reg) & 0xFF;
+
+        	if (shift == 0) {
+        		// NOP
+        	}
+        	else if (shift < 32) {
+        		mcu_update_cflag_bit(mcu, a & (1 << (shift - 1)));
+
+        		uint32_t b = a & (1 << 31);
+
+        		a >>= shift;
+
+        		// Sign
+        		if (b)
+        			a |= (~0) << (32 - shift);
+        	}
+        	else {
+        		if (a & (1 << 31)) {
+        			mcu_update_cflag_bit(mcu, 1);
+        			a = ~0;
+        		} 
+        		else {
+        			mcu_update_cflag_bit(mcu, 0);
+        			a = 0;
+        		}
+        	}
+
+        	mcu_write_reg(mcu, reg, a);
+        	mcu_update_nflag(mcu, a);
+        	mcu_update_zflag(mcu, a);
+
+			return true;
+		}
+	},
+
+	//B(1) conditional branch
+	{
+		.mask = 0xF000,
+		.instr = 0xD000,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			uint32_t op     = (instr >> 8) & 0xF;
+			uint32_t new_pc = (instr >> 0) & 0xFF;
+
+			if (new_pc & 0x80) 
+				new_pc |= (~0) << 8;
+
+			new_pc = (new_pc << 1) + mcu_read_reg(mcu, REG_PC) + 2;
+
+			uint32_t cpsr = mcu->cpsr;
+			switch (op) {
+				case 0x0: //b eq  z set
+                	if(cpsr & CPSR_Z)
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+                case 0x1: //b ne  z clear
+                	if(!(cpsr & CPSR_Z))
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+
+                case 0x2: //b cs c set
+                	if(cpsr & CPSR_C)
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+                case 0x3: //b cc c clear
+                	if(!(cpsr & CPSR_C))
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+
+                case 0x4: //b mi n set
+                	if(cpsr & CPSR_N)
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+                case 0x5: //b pl n clear
+                	if(!(cpsr & CPSR_N))
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+
+                case 0x6: //b vs v set
+                	if(cpsr & CPSR_V)
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+                case 0x7: //b vc v clear
+                	if(!(cpsr & CPSR_V))
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+
+                case 0x8: //b hi c set z clear
+                	if((cpsr & CPSR_C) && !(cpsr & CPSR_Z))
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+                case 0x9: //b ls c clear or z set
+                	if((cpsr & CPSR_Z) || !(cpsr & CPSR_C))
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+
+                case 0xA: //b ge N == V
+                	if (     ((cpsr & CPSR_N)  &&  (cpsr & CPSR_V))
+                		|| ((!(cpsr & CPSR_N)) && !(cpsr & CPSR_V)))
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+                case 0xB: //b lt N != V
+                	if (   ((!(cpsr&CPSR_N))&&(cpsr&CPSR_V))
+                		|| ((!(cpsr&CPSR_V))&&(cpsr&CPSR_N)))
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+                case 0xC: //b gt Z==0 and N == V
+                	if (cpsr&CPSR_Z)
+                		return true;
+
+                	if (   ((cpsr&CPSR_N) &&  (cpsr&CPSR_V))
+                		|| ((!(cpsr&CPSR_N))&&(!(cpsr&CPSR_V))))
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+                case 0xD: //b le Z==1 or N != V
+                	if (   ((cpsr&CPSR_N) &&  (cpsr&CPSR_V))
+                		|| ((!(cpsr&CPSR_N))&&(!(cpsr&CPSR_V)))
+                		|| (cpsr&CPSR_Z))
+                    	mcu_write_reg(mcu, REG_PC, new_pc);
+                	return true;
+
+                case 0xE:
+                	printf("Undefined instruction!");
+                	return false;
+
+                case 0xF:
+                	printf("SWI");
+                	return false;
+			}
+
+			return true;
+		}
+	},
+
+	//B(2) unconditional branch
+	{
+		.mask = 0xF800,
+		.instr = 0xE000,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			uint32_t new_pc = (instr >> 0) & 0x7FF;
+
+			if (new_pc & (1 << 10)) 
+				new_pc |= (~0) << 11;
+
+			new_pc = (new_pc << 1) + mcu_read_reg(mcu, REG_PC) + 2;
+
+			mcu_write_reg(mcu, REG_PC, new_pc);
+			
+			return true;
+		}
+	},
+
+	//BIC
+	{
+		.mask = 0xFFC0,
+		.instr = 0x4380,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t reg  = (instr >> 0) & 0x7;
+			reg_t src2 = (instr >> 3) & 0x7;
+
+			uint32_t a = mcu_read_reg(mcu, reg);
+			uint32_t b = mcu_read_reg(mcu, src2);
+
+			uint32_t c =  a & ~b;
+
+			mcu_write_reg(mcu, reg, c);
+			mcu_update_nflag(mcu, c);
+			mcu_update_zflag(mcu, c);
+			
+			return true;
+		}
+	},
+
+	//BKPT
+	{
+		.mask = 0xFF00,
+		.instr = 0xBE00,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			uint32_t a  = (instr >> 0) & 0xFF;
+			
+			printf("Breakpoint %d", a);
+			
+			return false;
+		}
+	},
+
+	//BL/BLX(1) H=b10
+	{
+		.mask = 0xF800,
+		.instr = 0xF000,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			uint32_t a =instr & ((1 << 11) - 1);
+
+            if(a & (1<<10)) 
+            	a |= ~((1 << 11) - 1); //sign extend
+
+            a = (a << 12) + mcu_read_reg(mcu, REG_PC);
+
+            mcu_write_reg(mcu, REG_14, a);
+			
+			return true;
+		}
+	},
+
+	//BL/BLX(1) H=b11, branch to thumb
+	{
+		.mask = 0xF800,
+		.instr = 0xF800,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			uint32_t a = (instr & ((1 << 11) - 1)) << 1;
+
+            a = a + mcu_read_reg(mcu, REG_14) + 2;
+
+            mcu_write_reg(mcu, REG_14, (mcu_read_reg(mcu, REG_PC) - 2) | 1);
+            mcu_write_reg(mcu, REG_PC, a);
+			
+			return true;
+		}
+	},
+
+	//BL/BLX(1) H=b01, branch to arm
+	{
+		.mask = 0xF800,
+		.instr = 0xE800,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			printf("Cannot branch to arm!");
+
+			return false;
+		}
+	},
+
+	//BLX(2)
+	{
+		.mask = 0xFF87,
+		.instr = 0x4780,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t src = (instr >> 3) & 0xF;
+
+			uint32_t new_pc = mcu_read_reg(mcu, src) + 2;
+
+			if (new_pc & 1) {
+            	mcu_write_reg(mcu, REG_14, (mcu_read_reg(mcu, REG_PC) - 2) | 1);
+            	new_pc &= ~1;
+            	mcu_write_reg(mcu, REG_PC, new_pc);
+        	}
+        	else {
+        		printf("Cannot branch to arm!");
+        		return false;
+        	}
+			
+			return true;
+		}
+	},
+
+	//BX
+	{
+		.mask = 0xFF87,
+		.instr = 0x4700,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t src = (instr >> 3) & 0xF;
+
+			uint32_t new_pc = mcu_read_reg(mcu, src) + 2;
+
+			if (new_pc & 1) {
+            	new_pc &= ~1;
+            	mcu_write_reg(mcu, REG_PC, new_pc);
+        	}
+        	else {
+        		printf("Cannot branch to arm!");
+        		return false;
+        	}
+			
+			return true;
+		}
+	},
+
+	//CMN
+	{
+		.mask = 0xFFC0,
+		.instr = 0x42C0,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t src1 = (instr >> 0) & 0xF;
+			reg_t src2 = (instr >> 3) & 0xF;
+
+			uint32_t a = mcu_read_reg(mcu, src1);
+			uint32_t b = mcu_read_reg(mcu, src2);
+
+			uint32_t c = a + b;
+
+			mcu_update_nflag(mcu, c);
+			mcu_update_zflag(mcu, c);
+			mcu_update_cflag(mcu, a, b, 0);
+			mcu_update_vflag(mcu, a, b, 0);
+			
+			return true;
+		}
+	},
+
+	//CMP(1) compare immediate
+	{
+		.mask = 0xF800,
+		.instr = 0x2800,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t src    = (instr >> 8) & 0xF;
+			uint32_t imm = (instr >> 0) & 0xFF;
+
+			uint32_t a = mcu_read_reg(mcu, src);
+
+			uint32_t c = a - imm;
+
+			mcu_update_nflag(mcu, c);
+			mcu_update_zflag(mcu, c);
+			mcu_update_cflag(mcu, a, ~imm, 1);
+			mcu_update_vflag(mcu, a, ~imm, 1);
+			
+			return true;
+		}
+	},
+
+	//CMP(2) compare register
+	{
+		.mask = 0xFFC0,
+		.instr = 0x4280,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t src1 = (instr >> 0) & 0xF;
+			reg_t src2 = (instr >> 3) & 0xF;
+
+			uint32_t a = mcu_read_reg(mcu, src1);
+			uint32_t b = mcu_read_reg(mcu, src2);
+
+			uint32_t c = a - b;
+
+			mcu_update_nflag(mcu, c);
+			mcu_update_zflag(mcu, c);
+			mcu_update_cflag(mcu, a, ~b, 1);
+			mcu_update_vflag(mcu, a, ~b, 1);
+			
+			return true;
+		}
+	},
+
+	//CMP(3) compare high register
+	{
+		.mask = 0xFF00,
+		.instr = 0x4500,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			if (((instr >> 6) & 3) == 0x0)
+        	{
+            	printf("UNPREDICTABLE");
+            	return false;
+        	}
+
+			reg_t src1 = ((instr >> 0) & 0x7) | ((instr >> 4) & 0x8);
+			reg_t src2 = (instr >> 3) & 0xF;
+
+			if (src1 == 0xF)
+			{
+            	printf("UNPREDICTABLE");
+            	return false;
+        	}
+
+			uint32_t a = mcu_read_reg(mcu, src1);
+			uint32_t b = mcu_read_reg(mcu, src2);
+
+			uint32_t c = a - b;
+
+			mcu_update_nflag(mcu, c);
+			mcu_update_zflag(mcu, c);
+			mcu_update_cflag(mcu, a, ~b, 1);
+			mcu_update_vflag(mcu, a, ~b, 1);
+			
+			return true;
+		}
+	},
+
+	// TODO: CPS
+
+	//CPY copy high register
+	{
+		.mask = 0xFFC0,
+		.instr = 0x4600,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t src  = (instr >> 0) & 0x7;
+			reg_t dest = (instr >> 3) & 0x7;
+
+			mcu_write_reg(mcu, dest, mcu_read_reg(mcu, src));
+			
+			return true;
+		}
+	},
+
+	//EOR
+	{
+		.mask = 0xFFC0,
+		.instr = 0x4040,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t reg  = (instr >> 0) & 0x7;
+			reg_t src2 = (instr >> 3) & 0x7;
+
+			uint32_t a = mcu_read_reg(mcu, reg);
+			uint32_t b = mcu_read_reg(mcu, src2);
+
+			uint32_t c = a ^ b;
+
+			mcu_write_reg(mcu, reg, c);
+			mcu_update_nflag(mcu, c);
+			mcu_update_zflag(mcu, c);
+			
+			return true;
+		}
+	},
+
+	//LDMIA
+	{
+		.mask = 0xF800,
+		.instr = 0xC800,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t reg  = (instr >> 8) & 0x7;
+
+			uint32_t sp = mcu_read_reg(mcu, reg);
+
+			for (reg_t reg = 0; reg < 8; ++reg) {
+				if (instr & (1 << reg)) {
+					uint32_t val;
+
+					if (!mcu_fetch32(mcu, sp, &val)) {
+						printf("Fetch faild!");
+						return false;
+					}
+
+					mcu_write_reg(mcu, reg, val);
+					sp += 4;
+				}
+			}
+
+			mcu_write_reg(mcu, reg, sp);
+			
+			return true;
+		}
+	},
+
+	//LDR(1) two register immediate
+	{
+		.mask = 0xF800,
+		.instr = 0x6800,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t src    = (instr >> 3) & 0x7;
+			reg_t dest   = (instr >> 0) & 0x7;
+			uint32_t imm = ((instr >> 6) & 0x1F) << 2;
+
+			uint32_t addr = mcu_read_reg(mcu, src) + imm;
+			uint32_t val;
+
+			if (!mcu_fetch32(mcu, addr, &val)) {
+				printf("fetch failed");
+				return false;
+			}
+
+			mcu_write_reg(mcu, dest, val);
+			
+			return true;
+		}
+	},
+
+	//LDR(2) three register
+	{
+		.mask = 0xFE00,
+		.instr = 0x5800,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t src1   = (instr >> 3) & 0x7;
+			reg_t src2   = (instr >> 6) & 0x7;
+			reg_t dest   = (instr >> 0) & 0x7;
+
+			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
+			uint32_t val;
+
+			if (!mcu_fetch32(mcu, addr, &val)) {
+				printf("fetch failed");
+				return false;
+			}
+
+			mcu_write_reg(mcu, dest, val);
+			
+			return true;
+		}
+	},
+
+	//LDR(3) pc + imm
+	{
+		.mask = 0xF800,
+		.instr = 0x4800,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			uint32_t imm = ((instr >> 0) & 0xFF) << 2;
+			reg_t dest   = (instr >> 8) & 0x7;
+
+			uint32_t addr = (mcu_read_reg(mcu, REG_PC) & ~3) + imm;
+			uint32_t val;
+
+			if (!mcu_fetch32(mcu, addr, &val)) {
+				printf("fetch failed");
+				return false;
+			}
+
+			mcu_write_reg(mcu, dest, val);
+			
+			return true;
+		}
+	},
+
+	//LDR(4) sp + imm
+	{
+		.mask = 0xF800,
+		.instr = 0x9800,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			uint32_t imm = ((instr >> 0) & 0xFF) << 2;
+			reg_t dest   = (instr >> 8) & 0x7;
+
+			uint32_t addr = mcu_read_reg(mcu, REG_SP) + imm;
+			uint32_t val;
+
+			if (!mcu_fetch32(mcu, addr, &val)) {
+				printf("fetch failed");
+				return false;
+			}
+
+			mcu_write_reg(mcu, dest, val);
+			
+			return true;
+		}
+	},
+
+	//LDRB(1)
+	{
+		.mask = 0xF800,
+		.instr = 0x7800,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			uint32_t imm = (instr >> 6) & 0x1F;
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src    = (instr >> 3) & 0x7;
+
+			uint32_t addr = mcu_read_reg(mcu, src) + imm;
+			uint16_t val;
+
+			if (!mcu_fetch16(mcu, addr & ~1, &val)) {
+				printf("fetch failed");
+				return false;
+			}
+
+			if (addr & 1) {
+				val >>= 8;
+			}
+
+			mcu_write_reg(mcu, dest, val & 0xFF);
+			
+			return true;
+		}
+	},
+
+	//LDRB(2)
+	{
+		.mask = 0xFE00,
+		.instr = 0x5C00,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src1   = (instr >> 3) & 0x7;
+			reg_t src2   = (instr >> 6) & 0x7;
+
+			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
+			uint16_t val;
+
+			if (!mcu_fetch16(mcu, addr & ~1, &val)) {
+				printf("fetch failed");
+				return false;
+			}
+
+			if (addr & 1) {
+				val >>= 8;
+			}
+
+			mcu_write_reg(mcu, dest, val & 0xFF);
+			
+			return true;
+		}
+	},
+
+	//LDRH(1)
+	{
+		.mask = 0xF800,
+		.instr = 0x8800,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			uint32_t imm = ((instr >> 6) & 0x1F) << 1;
+			reg_t dest   =  (instr >> 0) & 0x7;
+			reg_t src    =  (instr >> 3) & 0x7;
+
+			uint32_t addr = mcu_read_reg(mcu, src) + imm;
+			uint16_t val;
+
+			if (!mcu_fetch16(mcu, addr, &val)) {
+				printf("fetch failed");
+				return false;
+			}
+
+			mcu_write_reg(mcu, dest, val);
+			
+			return true;
+		}
+	},
+
+	//LDRH(2)
+	{
+		.mask = 0xFE00,
+		.instr = 0x5A00,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src1   = (instr >> 3) & 0x7;
+			reg_t src2   = (instr >> 6) & 0x7;
+
+			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
+			uint16_t val;
+
+			if (!mcu_fetch16(mcu, addr, &val)) {
+				printf("fetch failed");
+				return false;
+			}
+
+			mcu_write_reg(mcu, dest, val);
+			
+			return true;
+		}
+	},
+
+	//LDRSB
+	{
+		.mask = 0xFE00,
+		.instr = 0x5600,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src1   = (instr >> 3) & 0x7;
+			reg_t src2   = (instr >> 6) & 0x7;
+
+			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
+			uint16_t val;
+
+			if (!mcu_fetch16(mcu, addr & ~1, &val)) {
+				printf("fetch failed");
+				return false;
+			}
+
+			if (addr & 1) {
+				val >>= 8;
+			}
+
+			val &= 0xFF;
+        	if(val & 0x80)
+        		val |= (~0) << 8;
+
+			mcu_write_reg(mcu, dest, val);
+			
+			return true;
+		}
+	},
+
+	//LDRSH
+	{
+		.mask = 0xFE00,
+		.instr = 0x5E00,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src1   = (instr >> 3) & 0x7;
+			reg_t src2   = (instr >> 6) & 0x7;
+
+			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
+			uint16_t val;
+
+			if (!mcu_fetch16(mcu, addr, &val)) {
+				printf("fetch failed");
+				return false;
+			}
+
+			val &= 0xFFFF;
+        	if(val & 0x8000)
+        		val |= (~0) << 16;
+
+			mcu_write_reg(mcu, dest, val);
+			
+			return true;
+		}
+	},
+
+	//LSL(1)
+	{
+		.mask = 0xF800,
+		.instr = 0x0000,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src    = (instr >> 3) & 0x7;
+			uint32_t imm = (instr >> 6) & 0x1F;
+
+			printf("lsls r%u,r%u,#0x%X\n", dest, src, imm);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+			
+			if (imm != 0) {
+				mcu_update_cflag_bit(mcu, a & (1 << (32 - imm)));
+            	a <<= imm;
+			}
+
+			mcu_write_reg(mcu, dest, a);
+			mcu_update_nflag(mcu, a);
+			mcu_update_zflag(mcu, a);
+
+			return true;
+		}
+	},
+
+	//LSL(2) two register
+	{
+		.mask = 0xFFC0,
+		.instr = 0x4080,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t reg   = (instr >> 0) & 0x7;
+			reg_t src   = (instr >> 3) & 0x7;
+
+			printf("lsls r%u,r%u\n", reg, src);
+
+			uint32_t a = mcu_read_reg(mcu, reg);
+			uint32_t shift = mcu_read_reg(mcu, src) & 0xFF;
+			
+			if(shift < 32)
+	        {
+	            mcu_update_cflag_bit(mcu, a & (1 << (32 - shift)));
+	            a <<= shift;
+	        }
+	        else if(shift == 32)
+	        {
+	            mcu_update_cflag_bit(mcu, a & 1);
+	            a = 0;
+	        }
+	        else if (shift != 0)
+	        {
+	            mcu_update_cflag_bit(mcu, 0);
+	            a = 0;
+	        }
+
+			mcu_write_reg(mcu, reg, a);
+			mcu_update_nflag(mcu, a);
+			mcu_update_zflag(mcu, a);
+
+			return true;
+		}
+	},
+
+	//LSR(1) two register immediate
+	{
+		.mask = 0xF800,
+		.instr = 0x0800,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src    = (instr >> 3) & 0x7;
+			uint32_t imm = (instr >> 6) & 0x1F;
+
+			printf("lsrs r%u,r%u,#0x%X\n", dest, src, imm);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+			
+			if (imm == 0) {
+				mcu_update_cflag_bit(mcu, a & 0x80000000);
+				a = 0;
+			}
+			else {
+				mcu_update_cflag_bit(mcu, a & (1 << (imm - 1)));
+            	a >>= imm;
+			}
+
+			mcu_write_reg(mcu, dest, a);
+			mcu_update_nflag(mcu, a);
+			mcu_update_zflag(mcu, a);
+
+			return true;
+		}
+	},
+
+	//LSR(2) two register
+	{
+		.mask = 0xFFC0,
+		.instr = 0x40C0,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t reg   = (instr >> 0) & 0x7;
+			reg_t src   = (instr >> 3) & 0x7;
+
+			printf("lsrs r%u,r%u\n", reg, src);
+
+			uint32_t a = mcu_read_reg(mcu, reg);
+			uint32_t shift = mcu_read_reg(mcu, src) & 0xFF;
+			
+			if(shift < 32)
+	        {
+	            mcu_update_cflag_bit(mcu, a & (1 << (shift - 1)));
+	            a >>= shift;
+	        }
+	        else if(shift == 32)
+	        {
+	            mcu_update_cflag_bit(mcu, a & 0x80000000);
+	            a = 0;
+	        }
+	        else if (shift != 0)
+	        {
+	            mcu_update_cflag_bit(mcu, 0);
+	            a = 0;
+	        }
+
+			mcu_write_reg(mcu, reg, a);
+			mcu_update_nflag(mcu, a);
+			mcu_update_zflag(mcu, a);
+
+			return true;
+		}
+	},
+
+	//MOV(1) immediate
+	{
+		.mask = 0xF800,
+		.instr = 0x2000,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 8) & 0x7;
+			uint32_t imm = (instr >> 0) & 0xFF;
+
+			printf("movs r%u,#0x%02X\n", dest, imm);
+
+			mcu_write_reg(mcu, dest, imm);
+			mcu_update_nflag(mcu, imm);
+			mcu_update_zflag(mcu, imm);
+
+			return true;
+		}
+	},
+
+	//MOV(2) two low registers
+	{
+		.mask = 0xFFC0,
+		.instr = 0x1C00,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src    = (instr >> 3) & 0x7;
+
+			printf("movs r%u,r%u\n", dest, src);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+
+			mcu_write_reg(mcu, dest, a);
+			mcu_update_nflag(mcu, a);
+			mcu_update_zflag(mcu, a);
+			mcu_update_cflag_bit(mcu, 0);
+			mcu_update_vflag_bit(mcu, 0);
+
+			return true;
+		}
+	},
+
+	//MOV(3)
+	{
+		.mask = 0xFF00,
+		.instr = 0x4600,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = ((instr >> 0) & 0x7) | ((instr >> 4) & 0x8);
+			reg_t src    = (instr >> 3) & 0xF;
+
+			printf("mov r%u,r%u\n", dest, src);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+
+			if (dest == REG_PC) {
+				a = a & ~1 + 2;
+			}
+
+			mcu_write_reg(mcu, dest, a);
+
+			return true;
+		}
+	},
+
+	//MUL
+	{
+		.mask = 0xFFC0,
+		.instr = 0x4340,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t reg    = (instr >> 0) & 0x7;
+			reg_t src2   = (instr >> 3) & 0x7;
+
+			printf("muls r%u,r%u\n", reg, src2);
+
+			uint32_t a = mcu_read_reg(mcu, reg);
+			uint32_t b = mcu_read_reg(mcu, src2);
+
+			uint32_t c = a * b;
+
+			mcu_write_reg(mcu, reg, c);
+			mcu_update_nflag(mcu, c);
+			mcu_update_zflag(mcu, c);
+
+			return true;
+		}
+	},
+
+	//MVN
+	{
+		.mask = 0xFFC0,
+		.instr = 0x43C0,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src    = (instr >> 3) & 0x7;
+
+			printf("mvns r%u,r%u\n", dest, src);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+
+			uint32_t c = ~a;
+
+			mcu_write_reg(mcu, dest, c);
+			mcu_update_nflag(mcu, c);
+			mcu_update_zflag(mcu, c);
+
+			return true;
+		}
+	},
+
+	//NEG
+	{
+		.mask = 0xFFC0,
+		.instr = 0x4240,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src    = (instr >> 3) & 0x7;
+
+			printf("negs r%u,r%u\n", dest, src);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+
+			uint32_t c = 0 - a;
+
+			mcu_write_reg(mcu, dest, c);
+			mcu_update_nflag(mcu, c);
+			mcu_update_zflag(mcu, c);
+			mcu_update_cflag(mcu, 0, ~a, 1);
+			mcu_update_vflag(mcu, 0, ~a, 1);
+
+			return true;
+		}
+	},
+
+	//ORR
+	{
+		.mask = 0xFFC0,
+		.instr = 0x4300,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t reg    = (instr >> 0) & 0x7;
+			reg_t src2   = (instr >> 3) & 0x7;
+
+			printf("orrs r%u,r%u\n", reg, src2);
+
+			uint32_t a = mcu_read_reg(mcu, reg);
+			uint32_t b = mcu_read_reg(mcu, src2);
+
+			uint32_t c = a | b;
+
+			mcu_write_reg(mcu, reg, c);
+			mcu_update_nflag(mcu, c);
+			mcu_update_zflag(mcu, c);
+
+			return true;
+		}
+	},
+
+	//POP
+	{
+		.mask = 0xFE00,
+		.instr = 0xBC00,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			uint32_t sp = mcu_read_reg(mcu, REG_SP);
+
+			for (reg_t reg = 0; reg < 8; ++reg) {
+				if (instr & (1 << reg)) {
+					uint32_t val;
+
+					if (!mcu_fetch32(mcu, sp, &val)) {
+						printf("Fetch faild!");
+						return false;
+					}
+
+					mcu_write_reg(mcu, reg, val);
+					sp += 4;
+				}
+			}
+
+			if (instr & 0x100) {
+				uint32_t val;
+
+				if (!mcu_fetch32(mcu, sp, &val)) {
+					printf("Fetch faild!");
+					return false;
+				}
+
+				if ((val & 1) == 0) {
+					printf("Pop with arm address");
+					return false;
+				}
+
+				val += 2;
+				mcu_write_reg(mcu, REG_PC, val);
+				sp += 4;
+			}
+
+			mcu_write_reg(mcu, REG_SP, sp);
+			
+			return true;
+		}
+	},
+
+	//PUSH
+	{
+		.mask = 0xFE00,
+		.instr = 0xB400,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			uint32_t sp = mcu_read_reg(mcu, REG_SP);
+
+			uint8_t num = 0;
+
+			for (reg_t reg = 0; reg < 8; ++reg)
+				if (instr & (1 << reg))
+					num++;
+			
+			if (instr & 0x100)
+				num++;
+
+			sp -= num << 2;
+
+			mcu_write_reg(mcu, REG_SP, sp);
+
+			for (reg_t reg = 0; reg < 8; ++reg) {
+				if (instr & (1 << reg)) {
+					uint32_t val = mcu_read_reg(mcu, reg);
+
+					if (!mcu_write32(mcu, sp, val)) {
+						printf("Write faild!");
+						return false;
+					}
+
+					sp += 4;
+				}
+			}
+
+			if (instr & 0x100) {
+				uint32_t val = mcu_read_reg(mcu, REG_14);
+
+				if (!mcu_write32(mcu, sp, val)) {
+					printf("Fetch faild!");
+					return false;
+				}
+				sp += 4;
+			}
+
+			
+			return true;
+		}
+	},
+
+	//REV
+	{
+		.mask = 0xFFC0,
+		.instr = 0xBA00,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest = (instr >> 0) & 0x7;
+			reg_t src  = (instr >> 3) & 0x7;
+
+			printf("rev r%u,r%u\n", dest, src);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+			uint32_t c;
+
+			c  = ((a >>  0) & 0xFF) << 24;
+        	c |= ((a >>  8) & 0xFF) << 16;
+        	c |= ((a >> 16) & 0xFF) <<  8;
+        	c |= ((a >> 24) & 0xFF) <<  0;
+
+        	mcu_write_reg(mcu, dest, c);
+
+			return true;
+		}
+	},
+
+	//REV16
+	{
+		.mask = 0xFFC0,
+		.instr = 0xBA40,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest = (instr >> 0) & 0x7;
+			reg_t src  = (instr >> 3) & 0x7;
+
+			printf("rev16 r%u,r%u\n", dest, src);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+			uint32_t c;
+
+			c  = ((a >>  0) & 0xFF) << 24;
+        	c |= ((a >>  8) & 0xFF) << 16;
+        	c |= ((a >> 16) & 0xFF) <<  8;
+        	c |= ((a >> 24) & 0xFF) <<  0;
+
+        	mcu_write_reg(mcu, dest, c);
+
+			return true;
+		}
+	},
+
+	//REVSH
+	{
+		.mask = 0xFFC0,
+		.instr = 0xBAC0,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest = (instr >> 0) & 0x7;
+			reg_t src  = (instr >> 3) & 0x7;
+
+			printf("revsh r%u,r%u\n", dest, src);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+			uint32_t c;
+
+			c  = ((a >> 0) & 0xFF) << 8;
+        	c |= ((a >> 8) & 0xFF) << 0;
+        	
+        	if(c & 0x8000)
+        		c |= 0xFFFF0000;
+        	else
+        	    c &= 0x0000FFFF;
+
+        	mcu_write_reg(mcu, dest, c);
+
+			return true;
+		}
+	},
+
+	//ROR
+	{
+		.mask = 0xFFC0,
+		.instr = 0xBAC0,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t reg  = (instr >> 0) & 0x7;
+			reg_t src2 = (instr >> 3) & 0x7;
+
+			printf("rors r%u,r%u\n", reg, src2);
+
+			uint32_t a = mcu_read_reg(mcu, reg);
+			uint32_t b = mcu_read_reg(mcu, reg);
+
+			if (b != 0) {
+				b &= 0x1F;
+
+				if (b == 0) {
+					mcu_update_cflag_bit(mcu, a & 0x80000000);
+				}
+				else {
+					mcu_update_cflag_bit(mcu, a & (1 << (b - 1)));
+                	uint32_t temp = a << (32 - b);
+                	a >>= b;
+                	a |= temp;
+				}
+			}
+
+        	mcu_write_reg(mcu, reg, a);
+        	mcu_update_nflag(mcu, a);
+        	mcu_update_zflag(mcu, a);
+
+			return true;
+		}
+	},
+
 	{ 0, 0, NULL }
 };
 
 bool mcu_instr_step(mcu_t mcu)
 {
-	uint32_t pc = mcu_read_reg(mcu, reg_pc);
+	uint32_t pc = mcu_read_reg(mcu, REG_PC);
 	uint16_t instr;
 
 	if (!mcu_fetch16(mcu, pc, &instr)) {
@@ -351,7 +1623,7 @@ bool mcu_instr_step(mcu_t mcu)
 		return false;
 	}
 
-	mcu_write_reg(mcu, reg_pc, pc+2);
+	mcu_write_reg(mcu, REG_PC, pc+2);
 
 	for (struct mcu_instr_def* def = instrs; def->impl != NULL; ++def) {
 		if ((instr & def->mask) == def->instr) {
@@ -424,11 +1696,9 @@ int main(int argc, char** argv) {
 	
 	mcu_write32(mcu, 0x0, 0xAABBCCDD);
 
-	if (mcu_instr_step(mcu)) {
+
+	while (mcu_instr_step(mcu)) {
 		printf("step\n");
-	}
-	else {
-		printf("no step\n");
 	}
 
 	printf("Bla");
