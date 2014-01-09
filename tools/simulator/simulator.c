@@ -47,8 +47,8 @@ typedef struct ram_dev* ram_dev_t;
 ram_dev_t ram_dev_create(size_t size);
 
 struct mem_dev {
-	uint16_t offset;
-	uint16_t length;
+	uint32_t offset;
+	uint32_t length;
 	mem_dev_t next;
 
 	bool (*fetch16)(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint16_t* valueOut);
@@ -141,7 +141,7 @@ bool mcu_add_mem_dev(mcu_t mcu, uint32_t offset, mem_dev_t dev)
 	// Quick and dirty, unordered
 
 	dev->next = mcu->mem_devs;
-	dev->offset = 0;//offset;
+	dev->offset = offset;
 	mcu->mem_devs = dev;
 
 	return true;
@@ -212,6 +212,8 @@ void mcu_update_vflag(mcu_t mcu, uint32_t a, uint32_t b, uint32_t c)
     temp1 = (temp1 ^ temp2) & 1; //if carry in != carry out then signed overflow
     mcu_update_vflag_bit(mcu, temp1);
 }
+
+#define trace_instr(...) printf(__VA_ARGS__)
 
 struct mcu_instr_def {
 	uint16_t mask;
@@ -1132,7 +1134,7 @@ struct mcu_instr_def {
 			reg_t src    = (instr >> 3) & 0x7;
 			uint32_t imm = (instr >> 6) & 0x1F;
 
-			printf("lsls r%u,r%u,#0x%X\n", dest, src, imm);
+			trace_instr("lsls r%u,r%u,#0x%X\n", dest, src, imm);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 			
@@ -1157,7 +1159,7 @@ struct mcu_instr_def {
 			reg_t reg   = (instr >> 0) & 0x7;
 			reg_t src   = (instr >> 3) & 0x7;
 
-			printf("lsls r%u,r%u\n", reg, src);
+			trace_instr("lsls r%u,r%u\n", reg, src);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
 			uint32_t shift = mcu_read_reg(mcu, src) & 0xFF;
@@ -1195,7 +1197,7 @@ struct mcu_instr_def {
 			reg_t src    = (instr >> 3) & 0x7;
 			uint32_t imm = (instr >> 6) & 0x1F;
 
-			printf("lsrs r%u,r%u,#0x%X\n", dest, src, imm);
+			trace_instr("lsrs r%u,r%u,#0x%X\n", dest, src, imm);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 			
@@ -1224,7 +1226,7 @@ struct mcu_instr_def {
 			reg_t reg   = (instr >> 0) & 0x7;
 			reg_t src   = (instr >> 3) & 0x7;
 
-			printf("lsrs r%u,r%u\n", reg, src);
+			trace_instr("lsrs r%u,r%u\n", reg, src);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
 			uint32_t shift = mcu_read_reg(mcu, src) & 0xFF;
@@ -1261,7 +1263,7 @@ struct mcu_instr_def {
 			reg_t dest   = (instr >> 8) & 0x7;
 			uint32_t imm = (instr >> 0) & 0xFF;
 
-			printf("movs r%u,#0x%02X\n", dest, imm);
+			trace_instr("movs r%u,#0x%02X\n", dest, imm);
 
 			mcu_write_reg(mcu, dest, imm);
 			mcu_update_nflag(mcu, imm);
@@ -1279,7 +1281,7 @@ struct mcu_instr_def {
 			reg_t dest   = (instr >> 0) & 0x7;
 			reg_t src    = (instr >> 3) & 0x7;
 
-			printf("movs r%u,r%u\n", dest, src);
+			trace_instr("movs r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
@@ -1301,7 +1303,7 @@ struct mcu_instr_def {
 			reg_t dest   = ((instr >> 0) & 0x7) | ((instr >> 4) & 0x8);
 			reg_t src    = (instr >> 3) & 0xF;
 
-			printf("mov r%u,r%u\n", dest, src);
+			trace_instr("mov r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
@@ -1323,7 +1325,7 @@ struct mcu_instr_def {
 			reg_t reg    = (instr >> 0) & 0x7;
 			reg_t src2   = (instr >> 3) & 0x7;
 
-			printf("muls r%u,r%u\n", reg, src2);
+			trace_instr("muls r%u,r%u\n", reg, src2);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
 			uint32_t b = mcu_read_reg(mcu, src2);
@@ -1346,7 +1348,7 @@ struct mcu_instr_def {
 			reg_t dest   = (instr >> 0) & 0x7;
 			reg_t src    = (instr >> 3) & 0x7;
 
-			printf("mvns r%u,r%u\n", dest, src);
+			trace_instr("mvns r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
@@ -1368,7 +1370,7 @@ struct mcu_instr_def {
 			reg_t dest   = (instr >> 0) & 0x7;
 			reg_t src    = (instr >> 3) & 0x7;
 
-			printf("negs r%u,r%u\n", dest, src);
+			trace_instr("negs r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
@@ -1392,7 +1394,7 @@ struct mcu_instr_def {
 			reg_t reg    = (instr >> 0) & 0x7;
 			reg_t src2   = (instr >> 3) & 0x7;
 
-			printf("orrs r%u,r%u\n", reg, src2);
+			trace_instr("orrs r%u,r%u\n", reg, src2);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
 			uint32_t b = mcu_read_reg(mcu, src2);
@@ -1508,7 +1510,7 @@ struct mcu_instr_def {
 			reg_t dest = (instr >> 0) & 0x7;
 			reg_t src  = (instr >> 3) & 0x7;
 
-			printf("rev r%u,r%u\n", dest, src);
+			trace_instr("rev r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 			uint32_t c;
@@ -1532,7 +1534,7 @@ struct mcu_instr_def {
 			reg_t dest = (instr >> 0) & 0x7;
 			reg_t src  = (instr >> 3) & 0x7;
 
-			printf("rev16 r%u,r%u\n", dest, src);
+			trace_instr("rev16 r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 			uint32_t c;
@@ -1556,7 +1558,7 @@ struct mcu_instr_def {
 			reg_t dest = (instr >> 0) & 0x7;
 			reg_t src  = (instr >> 3) & 0x7;
 
-			printf("revsh r%u,r%u\n", dest, src);
+			trace_instr("revsh r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 			uint32_t c;
@@ -1583,10 +1585,10 @@ struct mcu_instr_def {
 			reg_t reg  = (instr >> 0) & 0x7;
 			reg_t src2 = (instr >> 3) & 0x7;
 
-			printf("rors r%u,r%u\n", reg, src2);
+			trace_instr("rors r%u,r%u\n", reg, src2);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
-			uint32_t b = mcu_read_reg(mcu, reg);
+			uint32_t b = mcu_read_reg(mcu, src2);
 
 			if (b != 0) {
 				b &= 0x1F;
@@ -1610,6 +1612,469 @@ struct mcu_instr_def {
 		}
 	},
 
+	//SBC
+	{
+		.mask = 0xFFC0,
+		.instr = 0x4180,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t reg  = (instr >> 0) & 0x7;
+			reg_t src2 = (instr >> 3) & 0x7;
+
+			trace_instr("sbc r%u,r%u\n", reg, src2);
+
+			uint32_t a = mcu_read_reg(mcu, reg);
+			uint32_t b = mcu_read_reg(mcu, src2);
+
+			uint32_t c = a - b;
+
+			if (!(mcu->cpsr & CPSR_C)) 
+				c--;
+
+        	mcu_write_reg(mcu, reg, c);
+        	mcu_update_nflag(mcu, c);
+        	mcu_update_zflag(mcu, c);
+
+        	if(mcu->cpsr & CPSR_C) {
+	            mcu_update_cflag(mcu, a, ~b, 1);
+	            mcu_update_vflag(mcu, a, ~b, 1);
+        	}
+	        else {
+            	mcu_update_cflag(mcu, a, ~b, 0);
+	            mcu_update_vflag(mcu, a, ~b, 0);
+        	}
+
+			return true;
+		}
+	},
+
+	// TODO: SETEND
+
+	//STMIA
+	{
+		.mask = 0xF800,
+		.instr = 0xC000,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t reg  = (instr >> 8) & 0x7;
+
+			uint32_t sp = mcu_read_reg(mcu, reg);
+
+			for (reg_t reg = 0; reg < 8; ++reg) {
+				if (instr & (1 << reg)) {
+					uint32_t val = mcu_read_reg(mcu, reg);
+
+					if (!mcu_write32(mcu, sp, val)) {
+						printf("Write faild!");
+						return false;
+					}
+
+					sp += 4;
+				}
+			}
+
+			mcu_write_reg(mcu, reg, sp);
+			
+			return true;
+		}
+	},
+
+	//STR(1)
+	{
+		.mask = 0xF800,
+		.instr = 0x6000,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src    = (instr >> 3) & 0x7;
+			uint32_t imm = ((instr >> 6) & 0x1F) << 2;
+
+			trace_instr("str r%u,[r%u,#0x%X]\n", dest, src, imm);
+
+			uint32_t addr = mcu_read_reg(mcu, src) + imm;
+			uint32_t val = mcu_read_reg(mcu, dest);
+
+			if (!mcu_write32(mcu, addr, val)) {
+				printf("Write faild!");
+				return false;
+			}
+			
+			return true;
+		}
+	},
+
+	//STR(2)
+	{
+		.mask = 0xFE00,
+		.instr = 0x5000,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src1   = (instr >> 3) & 0x7;
+			reg_t src2   = (instr >> 6) & 0x7;
+
+			trace_instr("str r%u,[r%u,r%u]\n", dest, src1, src2);
+
+			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
+			uint32_t val = mcu_read_reg(mcu, dest);
+
+			if (!mcu_write32(mcu, addr, val)) {
+				printf("Write faild!");
+				return false;
+			}
+			
+			return true;
+		}
+	},
+
+	//STR(3)
+	{
+		.mask = 0xF800,
+		.instr = 0x9000,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 8) & 0x7;
+			uint32_t imm = ((instr >> 0) & 0xFF) << 2;
+
+			trace_instr("str r%u,[SP,#0x%X]\n", dest, imm);
+
+			uint32_t addr = mcu_read_reg(mcu, REG_SP) + imm;
+			uint32_t val = mcu_read_reg(mcu, dest);
+
+			if (!mcu_write32(mcu, addr, val)) {
+				printf("Write faild!");
+				return false;
+			}
+			
+			return true;
+		}
+	},
+
+	//STRB(1)
+	{
+		.mask = 0xF800,
+		.instr = 0x7000,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src    = (instr >> 3) & 0x7;
+			uint32_t imm = (instr >> 6) & 0x1F;
+
+			trace_instr("strb r%u,[r%u,#0x%X]\n", dest, src, imm);
+
+			uint32_t addr = mcu_read_reg(mcu, src) + imm;
+			uint16_t val;
+
+			if (!mcu_fetch16(mcu, addr & (~1), &val)) {
+				printf("Fetch failed!");
+				return false;
+			}
+
+			if (addr & 1) {
+				val &= 0x00FF;
+			 	val |= mcu_read_reg(mcu, dest) << 8;
+			}
+			else {
+				val &= 0xFF00;
+				val |= mcu_read_reg(mcu, dest) & 0xFF;
+			}
+
+			if (!mcu_write32(mcu, addr & (~1), val)) {
+				printf("Write faild!");
+				return false;
+			}
+			
+			return true;
+		}
+	},
+
+	//STRB(2)
+	{
+		.mask = 0xFE00,
+		.instr = 0x5400,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src1   = (instr >> 3) & 0x7;
+			reg_t src2   = (instr >> 6) & 0x7;
+
+			trace_instr("strb r%u,[r%u,r%u]\n", dest, src1, src2);
+
+			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
+			uint16_t val;
+
+			if (!mcu_fetch16(mcu, addr & (~1), &val)) {
+				printf("Fetch failed!");
+				return false;
+			}
+
+			if (addr & 1) {
+				val &= 0x00FF;
+			 	val |= mcu_read_reg(mcu, dest) << 8;
+			}
+			else {
+				val &= 0xFF00;
+				val |= mcu_read_reg(mcu, dest) & 0xFF;
+			}
+
+			if (!mcu_write32(mcu, addr & (~1), val)) {
+				printf("Write faild!");
+				return false;
+			}
+			
+			return true;
+		}
+	},
+
+	//STRH(1)
+	{
+		.mask = 0xF800,
+		.instr = 0x8000,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src    = (instr >> 3) & 0x7;
+			uint32_t imm = ((instr >> 6) & 0x1F) << 1;
+
+			trace_instr("strh r%u,[r%u,#0x%X]\n", dest, src, imm);
+
+			uint32_t addr = mcu_read_reg(mcu, src) + imm;
+			uint32_t val = mcu_read_reg(mcu, dest);
+
+			if (!mcu_write16(mcu, addr, val)) {
+				printf("Write faild!");
+				return false;
+			}
+			
+			return true;
+		}
+	},
+
+	//STRH(2)
+	{
+		.mask = 0xFE00,
+		.instr = 0x5200,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src1   = (instr >> 3) & 0x7;
+			reg_t src2   = (instr >> 6) & 0x7;
+
+			trace_instr("strh r%u,[r%u,r%u]\n", dest, src1, src2);
+
+			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
+			uint32_t val = mcu_read_reg(mcu, dest);
+
+			if (!mcu_write16(mcu, addr, val)) {
+				printf("Write faild!");
+				return false;
+			}
+			
+			return true;
+		}
+	},
+
+	//SUB(1)
+	{
+		.mask = 0xFE00,
+		.instr = 0x1E00,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src    = (instr >> 3) & 0x7;
+			uint32_t imm = (instr >> 6) & 0x7;
+
+			trace_instr("subs r%u,r%u,#0x%X\n", dest, src, imm);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+			uint32_t c = a - imm;
+			
+			mcu_write_reg(mcu, dest, c);
+			mcu_update_nflag(mcu, c);
+			mcu_update_zflag(mcu, c);
+			mcu_update_vflag(mcu, a, ~imm, 1);
+			mcu_update_cflag(mcu, a, ~imm, 1);
+			
+			return true;
+		}
+	},
+
+	//SUB(2)
+	{
+		.mask = 0xF800,
+		.instr = 0x3800,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t reg   = (instr >> 8) & 0x7;
+			uint32_t imm = (instr >> 0) & 0xFF;
+
+			trace_instr("subs r%u,#0x%02X\n", reg, imm);
+
+			uint32_t a = mcu_read_reg(mcu, reg);
+			uint32_t c = a - imm;
+			
+			mcu_write_reg(mcu, reg, c);
+			mcu_update_nflag(mcu, c);
+			mcu_update_zflag(mcu, c);
+			mcu_update_vflag(mcu, a, ~imm, 1);
+			mcu_update_cflag(mcu, a, ~imm, 1);
+			
+			return true;
+		}
+	},
+
+	//SUB(3)
+	{
+		.mask = 0xFE00,
+		.instr = 0x1A00,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest   = (instr >> 0) & 0x7;
+			reg_t src1   = (instr >> 3) & 0x7;
+			reg_t src2   = (instr >> 6) & 0x7;
+
+			trace_instr("subs r%u,r%u,r%u\n", dest, src1, src2);
+
+			uint32_t a = mcu_read_reg(mcu, src1);
+			uint32_t b = mcu_read_reg(mcu, src2);
+			uint32_t c = a - b;
+			
+			mcu_write_reg(mcu, dest, c);
+			mcu_update_nflag(mcu, c);
+			mcu_update_zflag(mcu, c);
+			mcu_update_vflag(mcu, a, ~b, 1);
+			mcu_update_cflag(mcu, a, ~b, 1);
+			
+			return true;
+		}
+	},
+
+	//SUB(4)
+	{
+		.mask = 0xFF80,
+		.instr = 0xB080,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			uint32_t imm = ((instr >> 0) & 0x1F) << 2;
+
+			trace_instr("sub SP,#0x%02X\n", imm);
+
+			mcu_write_reg(mcu, REG_SP, mcu_read_reg(mcu, REG_SP) - imm);
+			
+			return true;
+		}
+	},
+
+	//SUB(4)
+	{
+		.mask = 0xFF00,
+		.instr = 0xDF00,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			uint32_t imm = (instr >> 0) & 0xFF;
+
+			trace_instr("swi 0x%02X\n", imm);
+
+			printf("unkown swi 0x%02x\n", imm);
+			
+			return false;
+		}
+	},
+
+	//SXTB
+	{
+		.mask = 0xFFC0,
+		.instr = 0xB240,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest = (instr >> 0) & 0x7;
+			reg_t src  = (instr > 3) & 0x7;
+
+			trace_instr("sxtb r%u,r%u\n", dest, src);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+
+			a &= 0xFF;
+
+			if (a & 0x80)
+				a |= (~0) << 8;
+
+			mcu_write_reg(mcu, dest, a);
+			
+			return true;
+		}
+	},
+
+	//SXTH
+	{
+		.mask = 0xFFC0,
+		.instr = 0xB200,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest = (instr >> 0) & 0x7;
+			reg_t src  = (instr > 3) & 0x7;
+
+			trace_instr("sxth r%u,r%u\n", dest, src);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+
+			a &= 0xFFFF;
+
+			if (a & 0x8000)
+				a |= (~0) << 16;
+
+			mcu_write_reg(mcu, dest, a);
+			
+			return true;
+		}
+	},
+
+	//TST
+	{
+		.mask = 0xFFC0,
+		.instr = 0x4200,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t src1 = (instr >> 0) & 0x7;
+			reg_t src2  = (instr > 3) & 0x7;
+
+			trace_instr("tst r%u,r%u\n", src1, src2);
+
+			uint32_t a = mcu_read_reg(mcu, src1);
+			uint32_t b = mcu_read_reg(mcu, src2);
+
+			uint32_t c = a & b;
+
+			mcu_update_zflag(mcu, c);
+			mcu_update_nflag(mcu, c);
+			
+			return true;
+		}
+	},
+
+	//UXTB
+	{
+		.mask = 0xFFC0,
+		.instr = 0xB2C0,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest = (instr >> 0) & 0x7;
+			reg_t src  = (instr > 3) & 0x7;
+
+			trace_instr("uxtb r%u,r%u\n", dest, src);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+
+			a &= 0xFF;
+
+			mcu_write_reg(mcu, dest, a);
+			
+			return true;
+		}
+	},
+
+	//UXTH
+	{
+		.mask = 0xFFC0,
+		.instr = 0xB280,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			reg_t dest = (instr >> 0) & 0x7;
+			reg_t src  = (instr > 3) & 0x7;
+
+			trace_instr("uxth r%u,r%u\n", dest, src);
+
+			uint32_t a = mcu_read_reg(mcu, src);
+
+			a &= 0xFFFF;
+
+			mcu_write_reg(mcu, dest, a);
+			
+			return true;
+		}
+	},
+
 	{ 0, 0, NULL }
 };
 
@@ -1619,7 +2084,7 @@ bool mcu_instr_step(mcu_t mcu)
 	uint16_t instr;
 
 	if (!mcu_fetch16(mcu, pc, &instr)) {
-		printf("ERROR: could not fetch instruction. [pc=%x]", pc);
+		printf("ERROR: could not fetch instruction. [pc=0x%x]", pc);
 		return false;
 	}
 
