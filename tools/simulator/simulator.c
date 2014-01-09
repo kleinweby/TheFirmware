@@ -178,6 +178,9 @@ uint32_t mcu_read_reg(mcu_t mcu, reg_t reg)
 
 void mcu_write_reg(mcu_t mcu, reg_t reg, uint32_t val)
 {
+	if (reg == REG_PC)
+		val &= ~1;
+
 	mcu->regs[reg] = val;
 }
 
@@ -237,8 +240,15 @@ void mcu_update_vflag(mcu_t mcu, uint32_t a, uint32_t b, uint32_t c)
     mcu_update_vflag_bit(mcu, temp1);
 }
 
-#define trace_instr(fmt, ...) printf("[pc=0x%04x] "fmt, mcu_read_reg(mcu, REG_PC) - 3, __VA_ARGS__)
-#define error_instr(fmt, ...) printf("[pc=0x%04x] [instr=%04x] "fmt, mcu_read_reg(mcu, REG_PC) - 3, instr, __VA_ARGS__)
+#define trace_instr(fmt, ...) printf("[pc=0x%04x] %04x: "fmt, mcu_read_reg(mcu, REG_PC) - 4, instr, __VA_ARGS__)
+// #define trace_instr(fmt, ...)
+#define error_instr(fmt, ...) do { \
+	printf("    "fmt"\n", __VA_ARGS__); \
+	printf("    Registers:\n"); \
+	for (reg_t reg = 0; reg < reg_count; ++reg) \
+		printf("    r%u = 0x%08x\n", reg, mcu_read_reg(mcu, reg)); \
+	printf("\n"); \
+} while(0) \
 
 struct mcu_instr_def {
 	uint16_t mask;
@@ -916,8 +926,8 @@ struct mcu_instr_def {
 		.mask = 0xFFC0,
 		.instr = 0x4600,
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
-			reg_t src  = (instr >> 0) & 0x7;
-			reg_t dest = (instr >> 3) & 0x7;
+			reg_t src  = (instr >> 3) & 0x7;
+			reg_t dest = (instr >> 0) & 0x7;
 
 			trace_instr("cpy r%u,r%u\n", dest, src);
 
@@ -2376,7 +2386,7 @@ int main(int argc, char** argv) {
 			return -1;
 		}
 
-		mcu_write_reg(mcu, REG_PC, val);
+		mcu_write_reg(mcu, REG_PC, val + 2);
 	}
 
 	while (mcu_instr_step(mcu)) {
