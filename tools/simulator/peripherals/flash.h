@@ -22,71 +22,15 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-//
-// Much inspiration from github.com/dwelch67/thumbulator
-//
+#pragma once
 
-#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-#include <unistd.h>
 
-#include <time.h>
+typedef struct flash_dev* flash_dev_t;
+static const uint32_t flash_mem_type = 2;
 
-#include <mcu.h>
-#include <gdb.h>
-#include <flash.h>
+flash_dev_t flash_dev_create(size_t size);
 
-bool mcu_flash_file(mcu_t mcu, const char* filename)
-{
-	for (mem_dev_t dev = mcu->mem_devs; dev != NULL; dev = dev->next) {
-		if (dev->type == flash_mem_type) {
-			return flash_dev_load_bin((flash_dev_t)dev, filename);
-		}
-	}
-
-	return false;
-}
-
-int main(int argc, char** argv) {
-	mcu_t mcu = mcu_cortex_m0p_create(8 * 1024);
-	gdb_t gdb = gdb_create(1234, mcu);
-	
-	if (!mcu_flash_file(mcu, "./firmware.bin")) {
-		printf("Flash faild");
-		return -1;
-	}
-
-	if (!mcu_reset(mcu)) {
-		printf("MCU reset failed");
-		return -1;
-	}
-
-	// mcu_resume(mcu);
-
-	int i = 0;
-	clock_t start = clock();
-
-	printf("pc = 0x%04x\n", mcu_read_reg(mcu, REG_PC));
-
-	while (true) {
-		gdb_runloop(gdb);
-		mcu_runloop(mcu);
-		i++;
-		// printf("step\n");
-	}
-
-	clock_t end = clock();
-	uint32_t elapsed = (end - start)/ (CLOCKS_PER_SEC / 1000000);
-	uint64_t instructions_per_second = 1000000 * i / elapsed;
-
-	printf("Exit [pc=0x%04x]: %u instructions, %fms elapsed, %llu instr/s\n", mcu_read_reg(mcu, REG_PC), i, elapsed/1000.f, instructions_per_second);
-
-	printf("Bla");
-
-	return 0;
-}
-
+bool flash_dev_load_bin(flash_dev_t dev, const char* file);
