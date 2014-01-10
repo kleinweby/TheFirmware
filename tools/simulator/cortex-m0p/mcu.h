@@ -25,8 +25,25 @@
 #pragma once
 
 typedef enum {
+	// Low registers
+	REG_R0   =  0,
+	REG_R1   =  1,
+	REG_R2   =  2,
+	REG_R3   =  3,
+	REG_R4   =  4,
+	REG_R5   =  5,
+	REG_R6   =  6,
+	REG_R7   =  7,
+
+	// High registers
+	REG_R8   =  8,
+	REG_R9   =  9,
+	REG_R10  = 10,
+	REG_R11  = 11,
+	REG_R12  = 12,
+
 	REG_SP   = 13,
-	REG_LC   = 14,
+	REG_LR   = 14,
 	REG_PC   = 15,
 	REG_CPSR = 16,
 	reg_count
@@ -35,7 +52,9 @@ typedef enum {
 typedef enum {
 	HALT_STOPPED = 0,
 
-	HALT_HARD_FAULT
+	HALT_HARD_FAULT,
+
+	HAL_TRAP = 5,
 } halt_reason_t;
 
 #include_next <mcu.h>

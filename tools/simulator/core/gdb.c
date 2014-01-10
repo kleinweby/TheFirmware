@@ -280,7 +280,8 @@ bool gdb_handle_packet(gdb_t gdb, char* packet) {
 			break;
 		case '?':
 			gdb_send_packet_begin(gdb);
-			gdb_send_packet_str(gdb, "S05");
+			gdb_send_packet_str(gdb, "S");
+			gdb_send_packet_hex(gdb, mcu_halt_reason(gdb->mcu), 1);
 			gdb_send_packet_end(gdb);
 			break;
 		case 'H':
@@ -392,7 +393,8 @@ static void gdb_mcu_did_halt(mcu_t mcu, halt_reason_t reason, void* context)
 	gdb_t gdb = (gdb_t)context;
 
 	gdb_send_packet_begin(gdb);
-	gdb_send_packet_str(gdb, "S05");
+	gdb_send_packet_str(gdb, "S");
+	gdb_send_packet_hex(gdb, reason, 1);
 	gdb_send_packet_end(gdb);
 }
 
@@ -452,8 +454,14 @@ bool gdb_runloop(gdb_t gdb)
 		}
 
 		buffer[len] = '\0';
-		printf("gdb-packet: %s\n", buffer);
-		gdb_handle_packet(gdb, buffer);
+
+		if (*buffer == 0x03) {
+			mcu_halt(gdb->mcu, HAL_TRAP);
+		}
+		else {
+			printf("gdb-packet: %s\n", buffer);
+			gdb_handle_packet(gdb, buffer);
+		}
 	}
 
 	return gdb->socket_fd >= 0;

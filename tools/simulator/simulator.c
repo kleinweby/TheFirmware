@@ -70,8 +70,6 @@ int main(int argc, char** argv) {
 	int i = 0;
 	clock_t start = clock();
 
-	printf("pc = 0x%04x\n", mcu_read_reg(mcu, REG_PC));
-
 	while (true) {
 		gdb_runloop(gdb);
 		mcu_runloop(mcu);
