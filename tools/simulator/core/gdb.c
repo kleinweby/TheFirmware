@@ -108,24 +108,31 @@ gdb_t gdb_create(int port, mcu_t mcu)
 	return gdb;
 }
 
-bool gdb_send_ack(gdb_t gdb) {
+static void gdb_client_error(gdb_t gdb)
+{
+	perror("gdb-client");
+	close(gdb->gdb_fd);
+	gdb->gdb_fd = -1;
+}
+
+static bool gdb_send_ack(gdb_t gdb) {
 	static const char* ack = "+\n";
 
 	gdb_debug("gdb-send: %s", ack);
 	if (write(gdb->gdb_fd, ack, strlen(ack)) < 0) {
-		perror("write");
+		gdb_client_error(gdb);
 		return false;
 	}
 
 	return true;
 }
 
-bool gdb_send_nack(gdb_t gdb) {
+static bool gdb_send_nack(gdb_t gdb) {
 	static const char* ack = "-\n";
 
 	gdb_debug("gdb-send: %s", ack);
 	if (write(gdb->gdb_fd, ack, strlen(ack)) < 0) {
-		perror("write");
+		gdb_client_error(gdb);
 		return false;
 	}
 
@@ -138,7 +145,7 @@ static bool gdb_send_packet_begin(gdb_t gdb) {
 	gdb_debug("gdb-send: $");
 
 	if (write(gdb->gdb_fd, "$", 1) < 1) {
-		perror("write");
+		gdb_client_error(gdb);
 		return false;
 	}
 
@@ -152,7 +159,7 @@ static bool gdb_send_packet_char(gdb_t gdb, char c) {
 
 		gdb_debug("}");
 		if (write(gdb->gdb_fd, "}", 1) < 1) {
-			perror("write");
+			gdb_client_error(gdb);
 			return false;
 		}
 
@@ -162,7 +169,7 @@ static bool gdb_send_packet_char(gdb_t gdb, char c) {
 	gdb_debug("%c", c);
 	gdb->packet_checksum += c;
 	if (write(gdb->gdb_fd, &c, 1) < 1) {
-		perror("write");
+		gdb_client_error(gdb);
 		return false;
 	}
 
@@ -199,7 +206,7 @@ static bool gdb_send_packet_end(gdb_t gdb) {
 
 	gdb_debug("#");
 	if (write(gdb->gdb_fd, "#", 1) < 1) {
-		perror("write");
+		gdb_client_error(gdb);
 		return false;
 	}
 
@@ -211,7 +218,7 @@ static bool gdb_send_packet_end(gdb_t gdb) {
 	return true;
 }
 
-bool gdb_handle_packet(gdb_t gdb, char* packet) {
+static bool gdb_handle_packet(gdb_t gdb, char* packet) {
 
 	switch (*packet++) {
 		case '$':
@@ -452,7 +459,7 @@ bool gdb_runloop(gdb_t gdb)
 
 		len = read(gdb->gdb_fd, &buffer, GDB_BUF - 1);
 		if (len < 0) {
-			perror("read");
+			gdb_client_error(gdb);
 			return false;
 		}
 
