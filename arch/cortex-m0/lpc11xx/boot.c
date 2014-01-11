@@ -163,6 +163,8 @@ void ResetISR(void)
 		bss_init(ExeAddr, SectionLen);
 	}
 
+    (*(uint32_t*)0xE0000000) = 'H';
+
 	SystemInit();
 
 	printk_init(57600);

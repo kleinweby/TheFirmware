@@ -22,67 +22,58 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "ram.h"
+#include "uart.h"
 
 #include <mcu.h>
 #include <assert.h>
 #include <stdio.h>
 
-struct ram_dev {
+struct uart_dev {
 	struct mem_dev mem_dev;
-
-	uint32_t* ram;
 };
 
-bool ram_dev_read16(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint16_t* temp) {
-	*temp = ((uint16_t*)((ram_dev_t)mem_dev)->ram)[addr >> 1];
+bool uart_dev_read16(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint16_t* temp) {
+	return false;
+}
+
+bool uart_dev_read32(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint32_t* temp) {
+	return false;
+}
+
+bool uart_dev_write16(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint16_t temp) {
+	return true;
+}
+
+bool uart_dev_write32(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint32_t temp) {
+
+	switch(addr) {
+		case 0x0:
+		{
+			char c = temp & 0xFF;
+			putchar(c);
+			break;
+		}
+	}
 
 	return true;
 }
 
-bool ram_dev_read32(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint32_t* temp) {
-	*temp = (((ram_dev_t)mem_dev)->ram)[addr >> 2];
-
-	return true;
-}
-
-bool ram_dev_write16(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint16_t temp) {
-	((uint16_t*)((ram_dev_t)mem_dev)->ram)[addr >> 1] = temp;
-
-	return true;
-}
-
-bool ram_dev_write32(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint32_t temp) {
-	(((ram_dev_t)mem_dev)->ram)[addr >> 2] = temp;
-
-	return true;
-}
-
-ram_dev_t ram_dev_create(size_t size)
+uart_dev_t uart_dev_create()
 {
-	assert((size & 0x3FF) == 0 && "Ram size must be multiple of 1024");
-
-	ram_dev_t dev = calloc(1, sizeof(struct ram_dev));
+	uart_dev_t dev = calloc(1, sizeof(struct uart_dev));
 
 	if (!dev) {
-		perror("Could not allocate ram_dev structure");
+		perror("Could not allocate uart_dev structure");
 		return NULL;
 	}
 
-	dev->mem_dev.class = mem_class_ram;
-	dev->mem_dev.type = ram_mem_type;
-	dev->mem_dev.fetch16 = ram_dev_read16;
-	dev->mem_dev.fetch32 = ram_dev_read32;
-	dev->mem_dev.write16 = ram_dev_write16;
-	dev->mem_dev.write32 = ram_dev_write32;
-	dev->mem_dev.length = size;
-	dev->ram = malloc(size);
-
-	if (!dev->ram) {
-		perror("Could not allocate ram");
-		free(dev);
-		return NULL;
-	}
+	dev->mem_dev.class = mem_class_io;
+	dev->mem_dev.type = uart_mem_type;
+	dev->mem_dev.fetch16 = uart_dev_read16;
+	dev->mem_dev.fetch32 = uart_dev_read32;
+	dev->mem_dev.write16 = uart_dev_write16;
+	dev->mem_dev.write32 = uart_dev_write32;
+	dev->mem_dev.length = 0x40;
 
 	return dev;
 }

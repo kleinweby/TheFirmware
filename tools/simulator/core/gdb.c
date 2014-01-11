@@ -405,10 +405,12 @@ static void gdb_mcu_did_halt(mcu_t mcu, halt_reason_t reason, void* context)
 {
 	gdb_t gdb = (gdb_t)context;
 
-	gdb_send_packet_begin(gdb);
-	gdb_send_packet_str(gdb, "S");
-	gdb_send_packet_hex(gdb, reason, 1);
-	gdb_send_packet_end(gdb);
+	if (gdb->gdb_fd >= 0) {
+		gdb_send_packet_begin(gdb);
+		gdb_send_packet_str(gdb, "S");
+		gdb_send_packet_hex(gdb, reason, 1);
+		gdb_send_packet_end(gdb);
+	}
 }
 
 bool gdb_runloop(gdb_t gdb)

@@ -43,7 +43,7 @@
 bool mcu_flash_file(mcu_t mcu, const char* filename)
 {
 	for (mem_dev_t dev = mcu->mem_devs; dev != NULL; dev = dev->next) {
-		if (dev->type == flash_mem_type) {
+		if (dev->class == mem_class_flash && dev->type == flash_mem_type) {
 			return flash_dev_load_bin((flash_dev_t)dev, filename);
 		}
 	}
@@ -52,12 +52,47 @@ bool mcu_flash_file(mcu_t mcu, const char* filename)
 }
 
 int main(int argc, char** argv) {
-	mcu_t mcu = mcu_cortex_m0p_create(8 * 1024);
-	gdb_t gdb = gdb_create(1234, mcu);
-	
-	if (!mcu_flash_file(mcu, "./firmware.bin")) {
-		printf("Flash faild");
+	bool wait_for_gdb = false;
+	int gdb_port = 1234;
+	const char* firmware_file = NULL;
+	char ch;
+
+	mcu_t mcu;
+	gdb_t gdb;
+
+	while ((ch = getopt(argc, argv, "gp:f:")) != -1) {
+		switch (ch) {
+			case 'g':
+				wait_for_gdb = true;
+				break;
+			case 'p':
+				gdb_port = atol(optarg);
+				break;
+			case 'f':
+				firmware_file = optarg;
+				break;
+		}
+	}
+
+	mcu = mcu_cortex_m0p_create(8 * 1024);
+
+	if (!mcu) {
+		printf("Could not create mcu\n");
 		return -1;
+	}
+
+	gdb = gdb_create(gdb_port, mcu);
+
+	if (!gdb) {
+		printf("Could not create gdb\n");
+		return -1;
+	}
+	
+	if (firmware_file) {
+		if (!mcu_flash_file(mcu, firmware_file)) {
+			printf("Flash faild");
+			return -1;
+		}
 	}
 
 	if (!mcu_reset(mcu)) {
@@ -65,7 +100,8 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 
-	// mcu_resume(mcu);
+	if (!wait_for_gdb)
+		mcu_resume(mcu);
 
 	int i = 0;
 	clock_t start = clock();

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2014, Christian Speich
+// Copyright (c) 2013, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -24,13 +24,7 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-
-typedef struct flash_dev* flash_dev_t;
-static const uint32_t flash_mem_type = 1;
-
-flash_dev_t flash_dev_create(size_t size);
-
-bool flash_dev_load_bin(flash_dev_t dev, const char* file);
+/// Entry point for TheFirmware.
+/// Is called by the arch to kickoff bootstraping
+///
+void bootstrap() __attribute__ ((noreturn));

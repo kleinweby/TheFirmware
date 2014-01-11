@@ -103,8 +103,16 @@ struct mcu_callbacks {
 	void* context;
 };
 
+typedef enum {
+	mem_class_ram,
+	mem_class_flash,
+
+	mem_class_io,
+} mem_class_t;
+
 struct mem_dev {
-	uint32_t type;
+	mem_class_t class;
+	uint16_t    type;
 
 	uint32_t offset;
 	uint32_t length;

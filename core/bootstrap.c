@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2014, Christian Speich
+// Copyright (c) 2013, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -22,15 +22,19 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
+#include "bootstrap.h"
+
+#include <arch.h>
 
 #include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
 
-typedef struct flash_dev* flash_dev_t;
-static const uint32_t flash_mem_type = 1;
+void bootstrap()
+{
+	arch_early_init();
 
-flash_dev_t flash_dev_create(size_t size);
+	arch_late_init();
 
-bool flash_dev_load_bin(flash_dev_t dev, const char* file);
+	while(1)
+		__asm("WFI");
+}
+

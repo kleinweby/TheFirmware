@@ -78,6 +78,7 @@ flash_dev_t flash_dev_create(size_t size)
 		return NULL;
 	}
 
+	dev->mem_dev.class = mem_class_flash;
 	dev->mem_dev.type = flash_mem_type;
 	dev->mem_dev.fetch16 = flash_dev_read16;
 	dev->mem_dev.fetch32 = flash_dev_read32;

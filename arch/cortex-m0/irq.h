@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2014, Christian Speich
+// Copyright (c) 2013, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -22,15 +22,31 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
+#define IRQ_NMI 2
+#define IRQ_HARD_FAULT 3
+#define IRQ_SVC 4
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
+#define IRQ_PENDSV 5
+#define IRQ_SYSTICK 6
 
-typedef struct flash_dev* flash_dev_t;
-static const uint32_t flash_mem_type = 1;
+#define IRQ0 7
+#define IRQ1 8
+#define IRQ2 9
+#define IRQ3 10
+#define IRQ4 11
+#define IRQ5 12
+#define IRQ6 13
+#define IRQ7 14
+#define IRQ8 15
+#define IRQ9 16
+#define IRQ10 17
+#define IRQ11 18
+#define IRQ12 19
+#define IRQ13 20
+#define IRQ14 21
+#define IRQ15 22
+#define IRQ16 23
 
-flash_dev_t flash_dev_create(size_t size);
+#define NUMBER_OF_IRQS 24
 
-bool flash_dev_load_bin(flash_dev_t dev, const char* file);
+#include_next <irq.h>

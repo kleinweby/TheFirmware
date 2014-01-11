@@ -5,7 +5,7 @@ pushd `dirname $0` > /dev/null
 BASEDIR=`pwd`
 popd > /dev/null
 
-pushd $BASEDIR/../Toolchain > /dev/null
+pushd $BASEDIR/../../Toolchain > /dev/null
 git clone https://github.com/martine/ninja.git ninja-build || exit 1
 
 pushd ninja-build > /dev/null

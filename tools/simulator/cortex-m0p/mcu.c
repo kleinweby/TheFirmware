@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <ram.h>
 #include <flash.h>
+#include <uart.h>
 
 typedef struct mcu_cortex_m0p* mcu_cortex_m0p_t;
 
@@ -77,6 +78,20 @@ mcu_t mcu_cortex_m0p_create(size_t ramsize)
 
 		if (!mcu_add_mem_dev((mcu_t)mcu, 0x10000000, (mem_dev_t)ram)) {
 			printf("Could not add ram_dev to mcu");
+			return NULL;
+		}
+	}
+
+	{
+		uart_dev_t uart = uart_dev_create();
+
+		if (!uart) {
+			printf("Could not create uart_dev");
+			return NULL;
+		}
+
+		if (!mcu_add_mem_dev((mcu_t)mcu, 0xE0000000, (mem_dev_t)uart)) {
+			printf("Could not add uart_dev to mcu");
 			return NULL;
 		}
 	}
@@ -145,11 +160,13 @@ void mcu_write_reg(mcu_t _mcu, reg_t reg, uint32_t val)
 bool mcu_instr_step(mcu_t mcu)
 {
 	uint32_t pc = mcu_read_reg(mcu, REG_PC);
+	uint32_t old_pc = pc;
 	uint32_t instr;
 	bool thritytwo = false;
 
 	if (!mcu_fetch16(mcu, pc - 2, (uint16_t*)&instr)) {
 		printf("ERROR: could not fetch instruction. [pc=0x%x]", pc);
+		mcu_halt(mcu, HALT_HARD_FAULT);
 		return false;
 	}
 
@@ -164,6 +181,7 @@ bool mcu_instr_step(mcu_t mcu)
 
 		if (!mcu_fetch16(mcu, pc - 2, (uint16_t*)&instr)) {
 			printf("ERROR: could not fetch instruction. [pc=0x%x]", pc);
+			mcu_halt(mcu, HALT_HARD_FAULT);
 			return false;
 		}
 	}
@@ -171,20 +189,35 @@ bool mcu_instr_step(mcu_t mcu)
 	mcu_write_reg(mcu, REG_PC, pc+2);
 
 	if (thritytwo) {
-		for (mcu_instr32_t def = mcu->instrs32; def->impl != NULL; ++def)
-			if ((instr & def->mask) == def->instr)
-				return def->impl(mcu, instr);
+		for (mcu_instr32_t def = mcu->instrs32; def->impl != NULL; ++def) {
+			if ((instr & def->mask) == def->instr){
+				if (!def->impl(mcu, instr)) {
+					mcu_write_reg(mcu, REG_PC, old_pc);
+					return false;
+				}
+				else
+					return true;
+			}
+		}
 
 		printf("Unkown 32-bit thumb instruction: 0x%08x", instr);
 	}
 	else {
-		for (mcu_instr16_t def = mcu->instrs16; def->impl != NULL; ++def)
-			if ((instr & def->mask) == def->instr)
-				return def->impl(mcu, instr);
+		for (mcu_instr16_t def = mcu->instrs16; def->impl != NULL; ++def) {
+			if ((instr & def->mask) == def->instr) {
+				if (!def->impl(mcu, instr)) {
+					mcu_write_reg(mcu, REG_PC, old_pc);
+					return false;
+				}
+				else
+					return true;
+			}
+		}
 
 		printf("Unkown 16-bit thumb instruction: 0x%04x", instr);
 	}
 
+	mcu_write_reg(mcu, REG_PC, old_pc);
 	mcu_halt(mcu, HALT_UNKOWN_INSTRUCTION);
 
 	return false;

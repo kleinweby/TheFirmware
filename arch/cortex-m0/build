@@ -1,6 +1,15 @@
 
 target 'cortex-m0', :abstract => true do
-	var :cflags, ["-I#{path('.')}"]
+	var :cc, 'arm-none-eabi-clang'
+  	var :cxx, 'arm-none-eabi-clang++'
+  	var :ld, 'arm-none-eabi-clang'
+
+  	var :defines, '-DCORTEX_M0'
+
+	var :cflags, ['-mcpu=cortex-m0', '-mthumb', "-I#{path('.')}"]
+	var :ldflags, ['-mcpu=cortex-m0', '-mthumb']
+
+	file 'startup.c'
 end
 
 parse '*/build'

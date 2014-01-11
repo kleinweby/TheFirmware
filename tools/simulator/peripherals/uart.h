@@ -24,13 +24,9 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <stdbool.h>
 #include <stdlib.h>
 
-typedef struct flash_dev* flash_dev_t;
-static const uint32_t flash_mem_type = 1;
+typedef struct uart_dev* uart_dev_t;
+static const uint32_t uart_mem_type = 1;
 
-flash_dev_t flash_dev_create(size_t size);
-
-bool flash_dev_load_bin(flash_dev_t dev, const char* file);
+uart_dev_t uart_dev_create();
