@@ -83,16 +83,15 @@ struct mcu_instr32 {
 	bool (^impl)(mcu_t mcu, uint32_t instr);
 };
 
-#define trace_instr16(fmt, ...) printf("[pc=0x%04x]     %04x: "fmt, mcu_read_reg(mcu, REG_PC) - 4, instr, __VA_ARGS__)
-#define trace_instr32(fmt, ...) printf("[pc=0x%04x] %08x: "fmt, mcu_read_reg(mcu, REG_PC) - 6, instr, __VA_ARGS__)
-// #define trace_instr(fmt, ...)
-#define error_instr(fmt, ...) do { \
-	printf("    "fmt"\n", __VA_ARGS__); \
-	printf("    Registers:\n"); \
-	for (reg_t reg = 0; reg < reg_count; ++reg) \
-		printf("    r%u = 0x%08x\n", reg, mcu_read_reg(mcu, reg)); \
-	printf("\n"); \
-} while(0)
+#if 0
+#define trace_instr16(fmt, ...) printf("[pc=0x%04x]     %04x: "fmt, mcu_read_reg(mcu, REG_PC) - 4, instr, ##__VA_ARGS__)
+#define trace_instr32(fmt, ...) printf("[pc=0x%04x] %08x: "fmt, mcu_read_reg(mcu, REG_PC) - 6, instr, ##__VA_ARGS__)
+#define trace_print(fmt, ...) printf(fmt, ##__VA_ARGS__)
+#else
+#define trace_instr16(fmt, ...)
+#define trace_instr32(fmt, ...)
+#define trace_print(fmt, ...) 
+#endif
 
 void mcu_add_callbacks(mcu_t mcu, mcu_callbacks_t callbacks);
 

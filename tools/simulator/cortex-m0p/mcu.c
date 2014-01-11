@@ -983,13 +983,20 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			reg_t reg  = (instr >> 8) & 0x7;
 
-			trace_instr16("LDMIA r%u\n", reg);
+			bool first = true;
+			trace_instr16("ldmia r%u, {", reg);
 
 			uint32_t sp = mcu_read_reg(mcu, reg);
 
 			for (reg_t reg = 0; reg < 8; ++reg) {
 				if (instr & (1 << reg)) {
 					uint32_t val;
+
+					if (first)
+						first = false;
+					else 
+						trace_print(",");
+					trace_print("r%u", reg);
 
 					if (!mcu_fetch32(mcu, sp, &val)) {
 						mcu_fetch_error(mcu, sp);
@@ -1002,6 +1009,8 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 			}
 
 			mcu_write_reg(mcu, reg, sp);
+
+			trace_print("}\n");
 			
 			return true;
 		}
@@ -1567,11 +1576,18 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			uint32_t sp = mcu_read_reg(mcu, REG_SP);
 
-			printf("pop\n");
+			bool first = true;
+			trace_instr16("pop {");
 
 			for (reg_t reg = 0; reg < 8; ++reg) {
 				if (instr & (1 << reg)) {
 					uint32_t val;
+
+					if (!first)
+						trace_print(",");
+					else
+						first = false;
+					trace_print("r%u", reg);
 
 					if (!mcu_fetch32(mcu, sp, &val)) {
 						printf("Fetch faild!");
@@ -1585,6 +1601,13 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 
 			if (instr & 0x100) {
 				uint32_t val;
+
+				if (!first)
+					trace_print(",");
+				else
+					first = false;
+				
+				trace_print("pc");
 
 				if (!mcu_fetch32(mcu, sp, &val)) {
 					printf("Fetch faild!");
@@ -1603,6 +1626,8 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 
 			mcu_write_reg(mcu, REG_SP, sp);
 			
+			trace_print("}\n");
+
 			return true;
 		}
 	},
@@ -1614,7 +1639,8 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			uint32_t sp = mcu_read_reg(mcu, REG_SP);
 
-			printf("push\n");
+			bool first = true;
+			trace_instr16("push {");
 
 			uint8_t num = 0;
 
@@ -1633,6 +1659,12 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 				if (instr & (1 << reg)) {
 					uint32_t val = mcu_read_reg(mcu, reg);
 
+					if (!first)
+						trace_print(",");
+					else
+						first = false;
+					trace_print("r%u", reg);
+
 					if (!mcu_write32(mcu, sp, val)) {
 						mcu_write_error(mcu, sp);
 						
@@ -1646,6 +1678,13 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 			if (instr & 0x100) {
 				uint32_t val = mcu_read_reg(mcu, REG_LR);
 
+				if (!first)
+					trace_print(",");
+				else
+					first = false;
+				
+				trace_print("lr");
+
 				if (!mcu_write32(mcu, sp, val)) {
 					printf("Fetch faild!");
 					return false;
@@ -1653,6 +1692,7 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 				sp += 4;
 			}
 
+			trace_print("}\n");
 			
 			return true;
 		}
@@ -1812,13 +1852,20 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			reg_t reg  = (instr >> 8) & 0x7;
 
-			printf("stmia\n");
+			bool first = true;
+			trace_instr16("stmia r%u, {\n", reg);
 
 			uint32_t sp = mcu_read_reg(mcu, reg);
 
 			for (reg_t reg = 0; reg < 8; ++reg) {
 				if (instr & (1 << reg)) {
 					uint32_t val = mcu_read_reg(mcu, reg);
+
+					if (first)
+						first = false;
+					else
+						trace_print(",");
+					trace_print("r%u", reg);
 
 					if (!mcu_write32(mcu, sp, val)) {
 						mcu_write_error(mcu, sp);
@@ -1830,6 +1877,7 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 			}
 
 			mcu_write_reg(mcu, reg, sp);
+			trace_print("}\n");
 			
 			return true;
 		}
