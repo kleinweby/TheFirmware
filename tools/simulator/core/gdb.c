@@ -45,6 +45,9 @@ struct gdb {
 	struct mcu_callbacks mcu_callbacks;
 };
 
+// #define gdb_debug(...) printf(__VA_ARGS__)
+#define gdb_debug(...)
+
 static const int GDB_BUF = 255;
 
 static void gdb_mcu_did_halt(mcu_t mcu, halt_reason_t reason, void* context);
@@ -108,7 +111,7 @@ gdb_t gdb_create(int port, mcu_t mcu)
 bool gdb_send_ack(gdb_t gdb) {
 	static const char* ack = "+\n";
 
-	printf("gdb-send: %s", ack);
+	gdb_debug("gdb-send: %s", ack);
 	if (write(gdb->gdb_fd, ack, strlen(ack)) < 0) {
 		perror("write");
 		return false;
@@ -120,7 +123,7 @@ bool gdb_send_ack(gdb_t gdb) {
 bool gdb_send_nack(gdb_t gdb) {
 	static const char* ack = "-\n";
 
-	printf("gdb-send: %s", ack);
+	gdb_debug("gdb-send: %s", ack);
 	if (write(gdb->gdb_fd, ack, strlen(ack)) < 0) {
 		perror("write");
 		return false;
@@ -132,7 +135,7 @@ bool gdb_send_nack(gdb_t gdb) {
 static bool gdb_send_packet_begin(gdb_t gdb) {
 	gdb->packet_checksum = 0;
 
-	printf("gdb-send: $");
+	gdb_debug("gdb-send: $");
 
 	if (write(gdb->gdb_fd, "$", 1) < 1) {
 		perror("write");
@@ -147,7 +150,7 @@ static bool gdb_send_packet_char(gdb_t gdb, char c) {
 	if (c == '$' || c == '#' || c == '}') {
 		gdb->packet_checksum += '}';
 
-		printf("}");
+		gdb_debug("}");
 		if (write(gdb->gdb_fd, "}", 1) < 1) {
 			perror("write");
 			return false;
@@ -156,7 +159,7 @@ static bool gdb_send_packet_char(gdb_t gdb, char c) {
 		c ^= 0x20;
 	}
 
-	printf("%c", c);
+	gdb_debug("%c", c);
 	gdb->packet_checksum += c;
 	if (write(gdb->gdb_fd, &c, 1) < 1) {
 		perror("write");
@@ -194,7 +197,7 @@ static bool gdb_send_packet_hex(gdb_t gdb, uint32_t number, int length) {
 
 static bool gdb_send_packet_end(gdb_t gdb) {
 
-	printf("#");
+	gdb_debug("#");
 	if (write(gdb->gdb_fd, "#", 1) < 1) {
 		perror("write");
 		return false;
@@ -203,7 +206,7 @@ static bool gdb_send_packet_end(gdb_t gdb) {
 	if (!gdb_send_packet_hex(gdb, gdb->packet_checksum, 1))
 		return false;
 
-	printf("\n");
+	gdb_debug("\n");
 
 	return true;
 }
@@ -219,7 +222,7 @@ bool gdb_handle_packet(gdb_t gdb, char* packet) {
 				return true;
 			break;
 		default:
-			printf("Packet does not start with '$'\n");
+			gdb_debug("Packet does not start with '$'\n");
 			gdb_send_nack(gdb);
 			return false;
 	}
@@ -459,7 +462,7 @@ bool gdb_runloop(gdb_t gdb)
 			mcu_halt(gdb->mcu, HAL_TRAP);
 		}
 		else {
-			printf("gdb-packet: %s\n", buffer);
+			gdb_debug("gdb-packet: %s\n", buffer);
 			gdb_handle_packet(gdb, buffer);
 		}
 	}

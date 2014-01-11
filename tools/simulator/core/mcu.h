@@ -30,7 +30,8 @@
 
 typedef struct mcu* mcu_t;
 typedef struct mcu_callbacks* mcu_callbacks_t;
-typedef struct mcu_instr* mcu_instr_t;
+typedef struct mcu_instr16* mcu_instr16_t;
+typedef struct mcu_instr32* mcu_instr32_t;
 typedef struct mem_dev* mem_dev_t;
 
 typedef enum {
@@ -40,7 +41,8 @@ typedef enum {
 } mcu_state_t;
 
 struct mcu {
-	mcu_instr_t instrs;
+	mcu_instr16_t instrs16;
+	mcu_instr32_t instrs32;
 
 	mem_dev_t mem_devs;
 
@@ -69,14 +71,21 @@ void mcu_write_reg(mcu_t _mcu, reg_t reg, uint32_t val);
 
 bool mcu_instr_step(mcu_t mcu);
 
-struct mcu_instr {
+struct mcu_instr16 {
 	uint16_t mask;
 	uint16_t instr;
 	bool (^impl)(mcu_t mcu, uint16_t instr);
 };
 
-// #define trace_instr(fmt, ...) printf("[pc=0x%04x] %04x: "fmt, mcu_read_reg(mcu, REG_PC) - 4, instr, __VA_ARGS__)
-#define trace_instr(fmt, ...)
+struct mcu_instr32 {
+	uint32_t mask;
+	uint32_t instr;
+	bool (^impl)(mcu_t mcu, uint32_t instr);
+};
+
+#define trace_instr16(fmt, ...) printf("[pc=0x%04x]     %04x: "fmt, mcu_read_reg(mcu, REG_PC) - 4, instr, __VA_ARGS__)
+#define trace_instr32(fmt, ...) printf("[pc=0x%04x] %08x: "fmt, mcu_read_reg(mcu, REG_PC) - 6, instr, __VA_ARGS__)
+// #define trace_instr(fmt, ...)
 #define error_instr(fmt, ...) do { \
 	printf("    "fmt"\n", __VA_ARGS__); \
 	printf("    Registers:\n"); \

@@ -30,7 +30,8 @@
 
 typedef struct mcu_cortex_m0p* mcu_cortex_m0p_t;
 
-extern struct mcu_instr mcu_instr_cortex_m0p[];
+extern struct mcu_instr16 mcu_instr16_cortex_m0p[];
+extern struct mcu_instr32 mcu_instr32_cortex_m0p[];
 
 enum {
 	CPSR_N = (1<<31),
@@ -49,7 +50,8 @@ mcu_t mcu_cortex_m0p_create(size_t ramsize)
 		return NULL;
 	}
 
-	mcu->mcu.instrs = mcu_instr_cortex_m0p;
+	mcu->mcu.instrs16 = mcu_instr16_cortex_m0p;
+	mcu->mcu.instrs32 = mcu_instr32_cortex_m0p;
 
 	{
 		flash_dev_t flash = flash_dev_create(32 * 1024);
@@ -129,20 +131,47 @@ void mcu_write_reg(mcu_t _mcu, reg_t reg, uint32_t val)
 bool mcu_instr_step(mcu_t mcu)
 {
 	uint32_t pc = mcu_read_reg(mcu, REG_PC);
-	uint16_t instr;
+	uint32_t instr;
+	bool thritytwo = false;
 
-	if (!mcu_fetch16(mcu, pc - 2, &instr)) {
+	if (!mcu_fetch16(mcu, pc - 2, (uint16_t*)&instr)) {
 		printf("ERROR: could not fetch instruction. [pc=0x%x]", pc);
 		return false;
 	}
 
-	mcu_write_reg(mcu, REG_PC, pc+2);
+	// 32-bit thumb instruction
+	if ((instr & 0xF800) == 0xF800 || 
+		(instr & 0xF800) == 0xE800 ||
+		(instr & 0xF800) == 0xF000) {
+		thritytwo = true;
 
-	for (mcu_instr_t def = mcu->instrs; def->impl != NULL; ++def) {
-		if ((instr & def->mask) == def->instr) {
-			return def->impl(mcu, instr);
+		instr <<= 16;
+		pc += 2;
+
+		if (!mcu_fetch16(mcu, pc - 2, (uint16_t*)&instr)) {
+			printf("ERROR: could not fetch instruction. [pc=0x%x]", pc);
+			return false;
 		}
 	}
+
+	mcu_write_reg(mcu, REG_PC, pc+2);
+
+	if (thritytwo) {
+		for (mcu_instr32_t def = mcu->instrs32; def->impl != NULL; ++def)
+			if ((instr & def->mask) == def->instr)
+				return def->impl(mcu, instr);
+
+		printf("Unkown 32-bit thumb instruction: 0x%08x", instr);
+	}
+	else {
+		for (mcu_instr16_t def = mcu->instrs16; def->impl != NULL; ++def)
+			if ((instr & def->mask) == def->instr)
+				return def->impl(mcu, instr);
+
+		printf("Unkown 16-bit thumb instruction: 0x%04x", instr);
+	}
+
+	mcu_halt(mcu, HALT_UNKOWN_INSTRUCTION);
 
 	return false;
 }
@@ -241,7 +270,7 @@ static void mcu_write_error(void* _mcu, uint32_t addr)
 	mcu_halt((mcu_t)mcu, HALT_HARD_FAULT);
 }
 
-struct mcu_instr mcu_instr_cortex_m0p[] = {
+struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 	// TODO: ADC
 
 	//ADD(1) small immediate two registers
@@ -253,7 +282,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
         	uint8_t src  = (instr >> 3) & 0x7;
         	uint8_t b  = (instr >> 6) & 0x7;
 
-        	trace_instr("adds r%u,r%u,#0x%X\n", dest, src, b);
+        	trace_instr16("adds r%u,r%u,#0x%X\n", dest, src, b);
 
         	uint32_t a = mcu_read_reg(mcu, src);
         	uint32_t c = a + b;
@@ -276,7 +305,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			uint8_t reg = (instr >> 8) & 0x7;
         	uint8_t b  = (instr >> 0) & 0xFF;
 
-        	trace_instr("adds r%u,#0x%02X\n", reg, b);
+        	trace_instr16("adds r%u,#0x%02X\n", reg, b);
 
         	uint32_t a = mcu_read_reg(mcu, reg);
         	uint32_t c = a + b;
@@ -300,7 +329,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
         	uint8_t dest  = (instr >> 3) & 0x7;
         	uint8_t src2  = (instr >> 6) & 0x7;
 
-        	trace_instr("adds r%u,r%u,r%u\n", dest, src, src2);
+        	trace_instr16("adds r%u,r%u,r%u\n", dest, src, src2);
 
         	uint32_t a = mcu_read_reg(mcu, src);
         	uint32_t b = mcu_read_reg(mcu, src2);
@@ -328,7 +357,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t reg = ((instr >> 0) & 0x7) | ((instr >> 4) & 0x8);
         	reg_t src2  = (instr >> 3) & 0xF;
 
-        	trace_instr("add r%u,r%u\n", reg, src2);
+        	trace_instr16("add r%u,r%u\n", reg, src2);
 
         	uint32_t a = mcu_read_reg(mcu, reg);
         	uint32_t b = mcu_read_reg(mcu, src2);
@@ -358,7 +387,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest = (instr >> 8) & 0x7;
 			uint32_t imm = ((instr >> 0) & 0xFF) << 2;
 
-			trace_instr("add r%u,PC,#0x%02X\n", dest, imm);
+			trace_instr16("add r%u,PC,#0x%02X\n", dest, imm);
 
         	uint32_t a = mcu_read_reg(mcu, REG_PC);
         	uint32_t c = (a & (~3) ) + imm;
@@ -377,7 +406,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest = (instr >> 8) & 0x7;
 			uint32_t imm = ((instr >> 0) & 0xFF) << 2;
 
-			trace_instr("add r%u,SP,#0x%02X\n", dest, imm);
+			trace_instr16("add r%u,SP,#0x%02X\n", dest, imm);
 
         	uint32_t a = mcu_read_reg(mcu, REG_SP);
         	uint32_t c = a + imm;
@@ -395,7 +424,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			uint32_t imm = ((instr >> 0) & 0x7F) << 2;
 
-			trace_instr("add SP,#0x%02X\n", imm);
+			trace_instr16("add SP,#0x%02X\n", imm);
 
         	uint32_t a = mcu_read_reg(mcu, REG_SP);
         	uint32_t c = a + imm;
@@ -414,7 +443,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t reg  = (instr >> 0) & 0x7;
 			reg_t src2 = (instr >> 3) & 0x7;
 
-			trace_instr("ands r%u,r%u\n", reg, src2);
+			trace_instr16("ands r%u,r%u\n", reg, src2);
 
         	uint32_t a = mcu_read_reg(mcu, reg);
         	uint32_t b = mcu_read_reg(mcu, src2);
@@ -437,7 +466,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src      = (instr >> 3) & 0x7;
 			uint32_t shift = (instr >> 6) & 0x1F;
 
-			trace_instr("asrs r%u,r%u,#0x%X\n", dest, src, shift);
+			trace_instr16("asrs r%u,r%u,#0x%X\n", dest, src, shift);
 
         	uint32_t a = mcu_read_reg(mcu, src);
 
@@ -479,7 +508,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t reg      = (instr >> 0) & 0x7;
 			reg_t shift_reg = (instr >> 3) & 0x7;
 
-			trace_instr("asrs r%u,r%u\n", reg, shift_reg);
+			trace_instr16("asrs r%u,r%u\n", reg, shift_reg);
 
         	uint32_t a     = mcu_read_reg(mcu, reg);
         	uint32_t shift = mcu_read_reg(mcu, shift_reg) & 0xFF;
@@ -533,86 +562,86 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			uint32_t cpsr = mcu_read_reg(mcu, REG_CPSR);
 			switch (op) {
 				case 0x0: //b eq  z set
-					trace_instr("beq 0x%08X\n", new_pc - 3);
+					trace_instr16("beq 0x%08X\n", new_pc - 3);
 
                 	if(cpsr & CPSR_Z)
                     	mcu_write_reg(mcu, REG_PC, new_pc);
                 	return true;
                 case 0x1: //b ne  z clear
-                	trace_instr("bne 0x%08X\n", new_pc - 3);
+                	trace_instr16("bne 0x%08X\n", new_pc - 3);
 
                 	if(!(cpsr & CPSR_Z))
                     	mcu_write_reg(mcu, REG_PC, new_pc);
                 	return true;
 
                 case 0x2: //b cs c set
-                	trace_instr("bcs 0x%08X\n", new_pc - 3);
+                	trace_instr16("bcs 0x%08X\n", new_pc - 3);
 
                 	if(cpsr & CPSR_C)
                     	mcu_write_reg(mcu, REG_PC, new_pc);
                 	return true;
                 case 0x3: //b cc c clear
-                	trace_instr("bcc 0x%08X\n", new_pc - 3);
+                	trace_instr16("bcc 0x%08X\n", new_pc - 3);
 
                 	if(!(cpsr & CPSR_C))
                     	mcu_write_reg(mcu, REG_PC, new_pc);
                 	return true;
 
                 case 0x4: //b mi n set
-                	trace_instr("bmi 0x%08X\n", new_pc - 3);
+                	trace_instr16("bmi 0x%08X\n", new_pc - 3);
 
                 	if(cpsr & CPSR_N)
                     	mcu_write_reg(mcu, REG_PC, new_pc);
                 	return true;
                 case 0x5: //b pl n clear
-                	trace_instr("bpl 0x%08X\n", new_pc - 3);
+                	trace_instr16("bpl 0x%08X\n", new_pc - 3);
 
                 	if(!(cpsr & CPSR_N))
                     	mcu_write_reg(mcu, REG_PC, new_pc);
                 	return true;
 
                 case 0x6: //b vs v set
-                	trace_instr("bvs 0x%08X\n", new_pc - 3);
+                	trace_instr16("bvs 0x%08X\n", new_pc - 3);
 
                 	if(cpsr & CPSR_V)
                     	mcu_write_reg(mcu, REG_PC, new_pc);
                 	return true;
                 case 0x7: //b vc v clear
-                	trace_instr("bvc 0x%08X\n", new_pc - 3);
+                	trace_instr16("bvc 0x%08X\n", new_pc - 3);
 
                 	if(!(cpsr & CPSR_V))
                     	mcu_write_reg(mcu, REG_PC, new_pc);
                 	return true;
 
                 case 0x8: //b hi c set z clear
-                	trace_instr("bhi 0x%08X\n", new_pc - 3);
+                	trace_instr16("bhi 0x%08X\n", new_pc - 3);
 
                 	if((cpsr & CPSR_C) && !(cpsr & CPSR_Z))
                     	mcu_write_reg(mcu, REG_PC, new_pc);
                 	return true;
                 case 0x9: //b ls c clear or z set
-                	trace_instr("bls 0x%08X\n", new_pc - 3);
+                	trace_instr16("bls 0x%08X\n", new_pc - 3);
 
                 	if((cpsr & CPSR_Z) || !(cpsr & CPSR_C))
                     	mcu_write_reg(mcu, REG_PC, new_pc);
                 	return true;
 
                 case 0xA: //b ge N == V
-                	trace_instr("bge 0x%08X\n", new_pc - 3);
+                	trace_instr16("bge 0x%08X\n", new_pc - 3);
 
                 	if (     ((cpsr & CPSR_N)  &&  (cpsr & CPSR_V))
                 		|| ((!(cpsr & CPSR_N)) && !(cpsr & CPSR_V)))
                     	mcu_write_reg(mcu, REG_PC, new_pc);
                 	return true;
                 case 0xB: //b lt N != V
-                	trace_instr("blt 0x%08X\n", new_pc - 3);
+                	trace_instr16("blt 0x%08X\n", new_pc - 3);
 
                 	if (   ((!(cpsr&CPSR_N))&&(cpsr&CPSR_V))
                 		|| ((!(cpsr&CPSR_V))&&(cpsr&CPSR_N)))
                     	mcu_write_reg(mcu, REG_PC, new_pc);
                 	return true;
                 case 0xC: //b gt Z==0 and N == V
-                	trace_instr("bgt 0x%08X\n", new_pc - 3);
+                	trace_instr16("bgt 0x%08X\n", new_pc - 3);
 
                 	if (cpsr&CPSR_Z)
                 		return true;
@@ -622,7 +651,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
                     	mcu_write_reg(mcu, REG_PC, new_pc);
                 	return true;
                 case 0xD: //b le Z==1 or N != V
-                	trace_instr("ble 0x%08X\n", new_pc - 3);
+                	trace_instr16("ble 0x%08X\n", new_pc - 3);
 
                 	if (   ((cpsr&CPSR_N) &&  (cpsr&CPSR_V))
                 		|| ((!(cpsr&CPSR_N))&&(!(cpsr&CPSR_V)))
@@ -655,7 +684,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 
 			new_pc = (new_pc << 1) + mcu_read_reg(mcu, REG_PC) + 2;
 
-			trace_instr("B 0x%08X\n", new_pc - 3);
+			trace_instr16("B 0x%08X\n", new_pc - 3);
 
 			mcu_write_reg(mcu, REG_PC, new_pc);
 			
@@ -671,7 +700,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t reg  = (instr >> 0) & 0x7;
 			reg_t src2 = (instr >> 3) & 0x7;
 
-			trace_instr("bics r%u,r%u\n", reg, src2);
+			trace_instr16("bics r%u,r%u\n", reg, src2);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
 			uint32_t b = mcu_read_reg(mcu, src2);
@@ -706,14 +735,14 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			uint32_t a =instr & ((1 << 11) - 1);
 
-			//trace_instr("??\n", "");
+			//trace_instr16("??\n", "");
 
             if(a & (1<<10)) 
             	a |= ~((1 << 11) - 1); //sign extend
 
             a = (a << 12) + mcu_read_reg(mcu, REG_PC);
 
-            trace_instr("bl 0x%08X\n", a - 3);
+            trace_instr16("bl 0x%08X\n", a - 3);
 
             mcu_write_reg(mcu, REG_LR, a);
 			
@@ -730,7 +759,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 
             a = a + mcu_read_reg(mcu, REG_LR) + 2;
 
-            trace_instr("bl 0x%08X\n", a - 3);
+            trace_instr16("bl 0x%08X\n", a - 3);
 
             mcu_write_reg(mcu, REG_LR, (mcu_read_reg(mcu, REG_PC) - 2) | 1);
             mcu_write_reg(mcu, REG_PC, a);
@@ -757,7 +786,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			reg_t src = (instr >> 3) & 0xF;
 
-			trace_instr("blx r%u\n", src);
+			trace_instr16("blx r%u\n", src);
 
 			uint32_t new_pc = mcu_read_reg(mcu, src) + 2;
 
@@ -782,7 +811,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			reg_t src = (instr >> 3) & 0xF;
 
-			trace_instr("bx r%u\n", src);
+			trace_instr16("bx r%u\n", src);
 
 			uint32_t new_pc = mcu_read_reg(mcu, src) + 2;
 
@@ -807,7 +836,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src1 = (instr >> 0) & 0xF;
 			reg_t src2 = (instr >> 3) & 0xF;
 
-			trace_instr("cmns r%u,r%u\n", src1, src2);
+			trace_instr16("cmns r%u,r%u\n", src1, src2);
 
 			uint32_t a = mcu_read_reg(mcu, src1);
 			uint32_t b = mcu_read_reg(mcu, src2);
@@ -831,7 +860,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src    = (instr >> 8) & 0xF;
 			uint32_t imm = (instr >> 0) & 0xFF;
 
-			trace_instr("cmp r%u,#0x%02X\n", src, imm);
+			trace_instr16("cmp r%u,#0x%02X\n", src, imm);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
@@ -854,7 +883,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src1 = (instr >> 0) & 0xF;
 			reg_t src2 = (instr >> 3) & 0xF;
 
-			trace_instr("cmps r%u,r%u\n", src1, src2);
+			trace_instr16("cmps r%u,r%u\n", src1, src2);
 
 			uint32_t a = mcu_read_reg(mcu, src1);
 			uint32_t b = mcu_read_reg(mcu, src2);
@@ -884,7 +913,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src1 = ((instr >> 0) & 0x7) | ((instr >> 4) & 0x8);
 			reg_t src2 = (instr >> 3) & 0xF;
 
-			trace_instr("cmps r%u,r%u\n", src1, src2);
+			trace_instr16("cmps r%u,r%u\n", src1, src2);
 
 			if (src1 == 0xF)
 			{
@@ -916,7 +945,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src  = (instr >> 3) & 0x7;
 			reg_t dest = (instr >> 0) & 0x7;
 
-			trace_instr("cpy r%u,r%u\n", dest, src);
+			trace_instr16("cpy r%u,r%u\n", dest, src);
 
 			mcu_write_reg(mcu, dest, mcu_read_reg(mcu, src));
 			
@@ -932,7 +961,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t reg  = (instr >> 0) & 0x7;
 			reg_t src2 = (instr >> 3) & 0x7;
 
-			trace_instr("eors r%u,r%u\n", reg, src2);
+			trace_instr16("eors r%u,r%u\n", reg, src2);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
 			uint32_t b = mcu_read_reg(mcu, src2);
@@ -954,7 +983,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			reg_t reg  = (instr >> 8) & 0x7;
 
-			trace_instr("LDMIA r%u\n", reg);
+			trace_instr16("LDMIA r%u\n", reg);
 
 			uint32_t sp = mcu_read_reg(mcu, reg);
 
@@ -987,7 +1016,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest   = (instr >> 0) & 0x7;
 			uint32_t imm = ((instr >> 6) & 0x1F) << 2;
 
-			trace_instr("ldr r%u,[r%u,#0x%X]\n", dest, src, imm);
+			trace_instr16("ldr r%u,[r%u,#0x%X]\n", dest, src, imm);
 
 			uint32_t addr = mcu_read_reg(mcu, src) + imm;
 			uint32_t val;
@@ -1013,7 +1042,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src2   = (instr >> 6) & 0x7;
 			reg_t dest   = (instr >> 0) & 0x7;
 
-			trace_instr("ldr r%u,[r%u,r%u]\n", dest, src1, src2);
+			trace_instr16("ldr r%u,[r%u,r%u]\n", dest, src1, src2);
 
 			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
 			uint32_t val;
@@ -1037,7 +1066,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			uint32_t imm = ((instr >> 0) & 0xFF) << 2;
 			reg_t dest   = (instr >> 8) & 0x7;
 
-			trace_instr("ldr r%u,[PC+#0x%X]\n", dest, imm);
+			trace_instr16("ldr r%u,[PC+#0x%X]\n", dest, imm);
 
 			uint32_t addr = (mcu_read_reg(mcu, REG_PC) & ~3) + imm;
 			uint32_t val;
@@ -1061,7 +1090,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			uint32_t imm = ((instr >> 0) & 0xFF) << 2;
 			reg_t dest   = (instr >> 8) & 0x7;
 
-			trace_instr("ldr r%u,[SP+#0x%X]\n", dest, imm);
+			trace_instr16("ldr r%u,[SP+#0x%X]\n", dest, imm);
 
 			uint32_t addr = mcu_read_reg(mcu, REG_SP) + imm;
 			uint32_t val;
@@ -1086,7 +1115,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest   = (instr >> 0) & 0x7;
 			reg_t src    = (instr >> 3) & 0x7;
 
-			trace_instr("ldrb r%u,[r%u,#0x%X]\n", dest, src, imm);
+			trace_instr16("ldrb r%u,[r%u,#0x%X]\n", dest, src, imm);
 
 			uint32_t addr = mcu_read_reg(mcu, src) + imm;
 			uint16_t val;
@@ -1115,7 +1144,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src1   = (instr >> 3) & 0x7;
 			reg_t src2   = (instr >> 6) & 0x7;
 
-			trace_instr("ldrb r%u,[r%u,r%u]\n", dest, src1, src2);
+			trace_instr16("ldrb r%u,[r%u,r%u]\n", dest, src1, src2);
 
 			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
 			uint16_t val;
@@ -1144,7 +1173,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest   =  (instr >> 0) & 0x7;
 			reg_t src    =  (instr >> 3) & 0x7;
 
-			trace_instr("ldrh r%u,[r%u,#0x%X]\n", dest, src, imm);
+			trace_instr16("ldrh r%u,[r%u,#0x%X]\n", dest, src, imm);
 
 			uint32_t addr = mcu_read_reg(mcu, src) + imm;
 			uint16_t val;
@@ -1169,7 +1198,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src1   = (instr >> 3) & 0x7;
 			reg_t src2   = (instr >> 6) & 0x7;
 
-			trace_instr("ldrh r%u,[r%u,r%u]\n", dest, src1, src2);
+			trace_instr16("ldrh r%u,[r%u,r%u]\n", dest, src1, src2);
 
 			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
 			uint16_t val;
@@ -1194,7 +1223,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src1   = (instr >> 3) & 0x7;
 			reg_t src2   = (instr >> 6) & 0x7;
 
-			trace_instr("ldrsb r%u,[r%u,r%u]\n", dest, src1, src2);
+			trace_instr16("ldrsb r%u,[r%u,r%u]\n", dest, src1, src2);
 
 			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
 			uint16_t val;
@@ -1227,7 +1256,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src1   = (instr >> 3) & 0x7;
 			reg_t src2   = (instr >> 6) & 0x7;
 
-			trace_instr("ldrsh r%u,[r%u,r%u]\n", dest, src1, src2);
+			trace_instr16("ldrsh r%u,[r%u,r%u]\n", dest, src1, src2);
 
 			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
 			uint16_t val;
@@ -1256,7 +1285,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src    = (instr >> 3) & 0x7;
 			uint32_t imm = (instr >> 6) & 0x1F;
 
-			trace_instr("lsls r%u,r%u,#0x%X\n", dest, src, imm);
+			trace_instr16("lsls r%u,r%u,#0x%X\n", dest, src, imm);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 			
@@ -1281,7 +1310,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t reg   = (instr >> 0) & 0x7;
 			reg_t src   = (instr >> 3) & 0x7;
 
-			trace_instr("lsls r%u,r%u\n", reg, src);
+			trace_instr16("lsls r%u,r%u\n", reg, src);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
 			uint32_t shift = mcu_read_reg(mcu, src) & 0xFF;
@@ -1319,7 +1348,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src    = (instr >> 3) & 0x7;
 			uint32_t imm = (instr >> 6) & 0x1F;
 
-			trace_instr("lsrs r%u,r%u,#0x%X\n", dest, src, imm);
+			trace_instr16("lsrs r%u,r%u,#0x%X\n", dest, src, imm);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 			
@@ -1348,7 +1377,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t reg   = (instr >> 0) & 0x7;
 			reg_t src   = (instr >> 3) & 0x7;
 
-			trace_instr("lsrs r%u,r%u\n", reg, src);
+			trace_instr16("lsrs r%u,r%u\n", reg, src);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
 			uint32_t shift = mcu_read_reg(mcu, src) & 0xFF;
@@ -1385,7 +1414,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest   = (instr >> 8) & 0x7;
 			uint32_t imm = (instr >> 0) & 0xFF;
 
-			trace_instr("movs r%u,#0x%02X\n", dest, imm);
+			trace_instr16("movs r%u,#0x%02X\n", dest, imm);
 
 			mcu_write_reg(mcu, dest, imm);
 			mcu_update_nflag(mcu, imm);
@@ -1403,7 +1432,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest   = (instr >> 0) & 0x7;
 			reg_t src    = (instr >> 3) & 0x7;
 
-			trace_instr("movs r%u,r%u\n", dest, src);
+			trace_instr16("movs r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
@@ -1425,7 +1454,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest   = ((instr >> 0) & 0x7) | ((instr >> 4) & 0x8);
 			reg_t src    = (instr >> 3) & 0xF;
 
-			trace_instr("mov r%u,r%u\n", dest, src);
+			trace_instr16("mov r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
@@ -1447,7 +1476,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t reg    = (instr >> 0) & 0x7;
 			reg_t src2   = (instr >> 3) & 0x7;
 
-			trace_instr("muls r%u,r%u\n", reg, src2);
+			trace_instr16("muls r%u,r%u\n", reg, src2);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
 			uint32_t b = mcu_read_reg(mcu, src2);
@@ -1470,7 +1499,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest   = (instr >> 0) & 0x7;
 			reg_t src    = (instr >> 3) & 0x7;
 
-			trace_instr("mvns r%u,r%u\n", dest, src);
+			trace_instr16("mvns r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
@@ -1492,7 +1521,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest   = (instr >> 0) & 0x7;
 			reg_t src    = (instr >> 3) & 0x7;
 
-			trace_instr("negs r%u,r%u\n", dest, src);
+			trace_instr16("negs r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
@@ -1516,7 +1545,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t reg    = (instr >> 0) & 0x7;
 			reg_t src2   = (instr >> 3) & 0x7;
 
-			trace_instr("orrs r%u,r%u\n", reg, src2);
+			trace_instr16("orrs r%u,r%u\n", reg, src2);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
 			uint32_t b = mcu_read_reg(mcu, src2);
@@ -1637,7 +1666,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest = (instr >> 0) & 0x7;
 			reg_t src  = (instr >> 3) & 0x7;
 
-			trace_instr("rev r%u,r%u\n", dest, src);
+			trace_instr16("rev r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 			uint32_t c;
@@ -1661,7 +1690,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest = (instr >> 0) & 0x7;
 			reg_t src  = (instr >> 3) & 0x7;
 
-			trace_instr("rev16 r%u,r%u\n", dest, src);
+			trace_instr16("rev16 r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 			uint32_t c;
@@ -1685,7 +1714,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest = (instr >> 0) & 0x7;
 			reg_t src  = (instr >> 3) & 0x7;
 
-			trace_instr("revsh r%u,r%u\n", dest, src);
+			trace_instr16("revsh r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 			uint32_t c;
@@ -1712,7 +1741,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t reg  = (instr >> 0) & 0x7;
 			reg_t src2 = (instr >> 3) & 0x7;
 
-			trace_instr("rors r%u,r%u\n", reg, src2);
+			trace_instr16("rors r%u,r%u\n", reg, src2);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
 			uint32_t b = mcu_read_reg(mcu, src2);
@@ -1747,7 +1776,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t reg  = (instr >> 0) & 0x7;
 			reg_t src2 = (instr >> 3) & 0x7;
 
-			trace_instr("sbc r%u,r%u\n", reg, src2);
+			trace_instr16("sbc r%u,r%u\n", reg, src2);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
 			uint32_t b = mcu_read_reg(mcu, src2);
@@ -1815,7 +1844,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src    = (instr >> 3) & 0x7;
 			uint32_t imm = ((instr >> 6) & 0x1F) << 2;
 
-			trace_instr("str r%u,[r%u,#0x%X]\n", dest, src, imm);
+			trace_instr16("str r%u,[r%u,#0x%X]\n", dest, src, imm);
 
 			uint32_t addr = mcu_read_reg(mcu, src) + imm;
 			uint32_t val = mcu_read_reg(mcu, dest);
@@ -1838,7 +1867,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src1   = (instr >> 3) & 0x7;
 			reg_t src2   = (instr >> 6) & 0x7;
 
-			trace_instr("str r%u,[r%u,r%u]\n", dest, src1, src2);
+			trace_instr16("str r%u,[r%u,r%u]\n", dest, src1, src2);
 
 			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
 			uint32_t val = mcu_read_reg(mcu, dest);
@@ -1860,7 +1889,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest   = (instr >> 8) & 0x7;
 			uint32_t imm = ((instr >> 0) & 0xFF) << 2;
 
-			trace_instr("str r%u,[SP,#0x%X]\n", dest, imm);
+			trace_instr16("str r%u,[SP,#0x%X]\n", dest, imm);
 
 			uint32_t addr = mcu_read_reg(mcu, REG_SP) + imm;
 			uint32_t val = mcu_read_reg(mcu, dest);
@@ -1883,7 +1912,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src    = (instr >> 3) & 0x7;
 			uint32_t imm = (instr >> 6) & 0x1F;
 
-			trace_instr("strb r%u,[r%u,#0x%X]\n", dest, src, imm);
+			trace_instr16("strb r%u,[r%u,#0x%X]\n", dest, src, imm);
 
 			uint32_t addr = mcu_read_reg(mcu, src) + imm;
 			uint16_t val;
@@ -1920,7 +1949,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src1   = (instr >> 3) & 0x7;
 			reg_t src2   = (instr >> 6) & 0x7;
 
-			trace_instr("strb r%u,[r%u,r%u]\n", dest, src1, src2);
+			trace_instr16("strb r%u,[r%u,r%u]\n", dest, src1, src2);
 
 			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
 			uint16_t val;
@@ -1957,7 +1986,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src    = (instr >> 3) & 0x7;
 			uint32_t imm = ((instr >> 6) & 0x1F) << 1;
 
-			trace_instr("strh r%u,[r%u,#0x%X]\n", dest, src, imm);
+			trace_instr16("strh r%u,[r%u,#0x%X]\n", dest, src, imm);
 
 			uint32_t addr = mcu_read_reg(mcu, src) + imm;
 			uint32_t val = mcu_read_reg(mcu, dest);
@@ -1980,7 +2009,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src1   = (instr >> 3) & 0x7;
 			reg_t src2   = (instr >> 6) & 0x7;
 
-			trace_instr("strh r%u,[r%u,r%u]\n", dest, src1, src2);
+			trace_instr16("strh r%u,[r%u,r%u]\n", dest, src1, src2);
 
 			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
 			uint32_t val = mcu_read_reg(mcu, dest);
@@ -2003,7 +2032,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src    = (instr >> 3) & 0x7;
 			uint32_t imm = (instr >> 6) & 0x7;
 
-			trace_instr("subs r%u,r%u,#0x%X\n", dest, src, imm);
+			trace_instr16("subs r%u,r%u,#0x%X\n", dest, src, imm);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 			uint32_t c = a - imm;
@@ -2026,7 +2055,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t reg   = (instr >> 8) & 0x7;
 			uint32_t imm = (instr >> 0) & 0xFF;
 
-			trace_instr("subs r%u,#0x%02X\n", reg, imm);
+			trace_instr16("subs r%u,#0x%02X\n", reg, imm);
 
 			uint32_t a = mcu_read_reg(mcu, reg);
 			uint32_t c = a - imm;
@@ -2050,7 +2079,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src1   = (instr >> 3) & 0x7;
 			reg_t src2   = (instr >> 6) & 0x7;
 
-			trace_instr("subs r%u,r%u,r%u\n", dest, src1, src2);
+			trace_instr16("subs r%u,r%u,r%u\n", dest, src1, src2);
 
 			uint32_t a = mcu_read_reg(mcu, src1);
 			uint32_t b = mcu_read_reg(mcu, src2);
@@ -2073,7 +2102,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			uint32_t imm = ((instr >> 0) & 0x1F) << 2;
 
-			trace_instr("sub SP,#0x%02X\n", imm);
+			trace_instr16("sub SP,#0x%02X\n", imm);
 
 			mcu_write_reg(mcu, REG_SP, mcu_read_reg(mcu, REG_SP) - imm);
 			
@@ -2088,7 +2117,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			uint32_t imm = (instr >> 0) & 0xFF;
 
-			trace_instr("swi 0x%02X\n", imm);
+			trace_instr16("swi 0x%02X\n", imm);
 
 			printf("unkown swi 0x%02x\n", imm);
 			
@@ -2104,7 +2133,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest = (instr >> 0) & 0x7;
 			reg_t src  = (instr > 3) & 0x7;
 
-			trace_instr("sxtb r%u,r%u\n", dest, src);
+			trace_instr16("sxtb r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
@@ -2127,7 +2156,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest = (instr >> 0) & 0x7;
 			reg_t src  = (instr > 3) & 0x7;
 
-			trace_instr("sxth r%u,r%u\n", dest, src);
+			trace_instr16("sxth r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
@@ -2150,7 +2179,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t src1 = (instr >> 0) & 0x7;
 			reg_t src2  = (instr > 3) & 0x7;
 
-			trace_instr("tst r%u,r%u\n", src1, src2);
+			trace_instr16("tst r%u,r%u\n", src1, src2);
 
 			uint32_t a = mcu_read_reg(mcu, src1);
 			uint32_t b = mcu_read_reg(mcu, src2);
@@ -2172,7 +2201,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest = (instr >> 0) & 0x7;
 			reg_t src  = (instr > 3) & 0x7;
 
-			trace_instr("uxtb r%u,r%u\n", dest, src);
+			trace_instr16("uxtb r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
@@ -2192,7 +2221,7 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 			reg_t dest = (instr >> 0) & 0x7;
 			reg_t src  = (instr > 3) & 0x7;
 
-			trace_instr("uxth r%u,r%u\n", dest, src);
+			trace_instr16("uxth r%u,r%u\n", dest, src);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
@@ -2205,4 +2234,91 @@ struct mcu_instr mcu_instr_cortex_m0p[] = {
 	},
 
 	{ 0, 0, NULL }
+};
+
+struct mcu_instr32 mcu_instr32_cortex_m0p[] = {
+
+	// MSR
+	{
+		.mask = 0xFFE00000,
+		.instr = 0xF3800000,
+		.impl = ^bool(mcu_t mcu, uint32_t instr) {
+			reg_t   src  = (instr >> 16) & 0x7;
+			uint8_t sysm = (instr >>  0) & 0x7F;
+
+			switch (sysm) {
+				case 0x4:
+					trace_instr32("msr ASPR, r%u\n", src);
+					break;
+				case 0x8:
+					trace_instr32("msr MSP, r%u\n", src);
+					break;
+				case 0x9:
+					trace_instr32("msr PSP, r%u\n", src);
+					break;
+				case 0x10:
+					trace_instr32("msr PRIMASK, r%u\n", src);
+					break;
+				case 0x14:
+					trace_instr32("msr CONTROL, r%u\n", src);
+					break;
+			}
+
+			return true;
+		}
+	},
+
+	// MRS
+	{
+		.mask = 0xFFE00000,
+		.instr = 0xF3E00000,
+		.impl = ^bool(mcu_t mcu, uint32_t instr) {
+			reg_t   dest = (instr >> 8) & 0xF;
+			uint8_t sysm = (instr >> 0) & 0x7F;
+
+			switch (sysm) {
+				case 0x8:
+					trace_instr32("mrs r%u, MSP\n", dest);
+					break;
+				case 0x9:
+					trace_instr32("mrs r%u, PSP\n", dest);
+					break;
+				case 0x10:
+					trace_instr32("mrs r%u, PRIMASK\n", dest);
+					break;
+				case 0x14:
+					trace_instr32("mrs r%u, CONTROL\n", dest);
+					break;
+			}
+
+			return true;
+		}
+	},
+
+	//BL
+	{
+		.mask = 0xF8000000,
+		.instr = 0xF0000000,
+		.impl = ^bool(mcu_t mcu, uint32_t instr) {
+			uint32_t imm;
+			uint32_t addr;
+			uint8_t sign = (instr >> 26) & 0x1;
+			uint8_t j1   = (instr >> 13) & 0x1;
+			uint8_t j2   = (instr >> 11) & 0x1;  
+
+			imm = (!(j1 ^ sign) << 23) | (!(j2 ^ sign) << 22) | (((instr >> 16) & 0x3FF) << 12) | ((instr & 0x7FF) << 1);
+
+            if(sign) 
+            	imm |= 0xFF000000; //sign extend
+
+            addr = imm + mcu_read_reg(mcu, REG_PC);
+
+            trace_instr32("bl 0x%08X ; @0x%08x\n", imm, addr - 3);
+
+            mcu_write_reg(mcu, REG_LR, (mcu_read_reg(mcu, REG_PC) - 2) | 1);
+            mcu_write_reg(mcu, REG_PC, addr);
+			
+			return true;
+		}
+	},
 };

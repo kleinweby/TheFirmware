@@ -53,6 +53,7 @@ typedef enum {
 	HALT_STOPPED = 0,
 
 	HALT_HARD_FAULT,
+	HALT_UNKOWN_INSTRUCTION,
 
 	HAL_TRAP = 5,
 } halt_reason_t;
