@@ -24,6 +24,9 @@
 
 #pragma once
 
+// Some of these registers are unused
+// as these are remapped. We don't care about
+// the few ints as it makes the rest way easier
 typedef enum {
 	// Low registers
 	REG_R0   =  0,
@@ -45,7 +48,12 @@ typedef enum {
 	REG_SP   = 13,
 	REG_LR   = 14,
 	REG_PC   = 15,
-	REG_CPSR = 16,
+	
+	REG_CPSR = 25,
+
+	REG_CONTROL,
+	REG_MSP,
+	REG_PSP,
 	reg_count
 } reg_t;
 

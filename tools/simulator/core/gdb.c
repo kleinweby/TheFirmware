@@ -45,8 +45,11 @@ struct gdb {
 	struct mcu_callbacks mcu_callbacks;
 };
 
-// #define gdb_debug(...) printf(__VA_ARGS__)
+#if 0
+#define gdb_debug(...) printf(__VA_ARGS__)
+#else
 #define gdb_debug(...)
+#endif
 
 static const int GDB_BUF = 255;
 

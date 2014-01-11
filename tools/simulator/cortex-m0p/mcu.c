@@ -115,6 +115,13 @@ uint32_t mcu_read_reg(mcu_t _mcu, reg_t reg)
 {
 	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
 
+	if (reg == REG_SP) {
+		if (mcu->regs[reg] & 0x2)
+			reg = REG_PSP;
+		else
+			reg = REG_MSP;
+	}
+
 	return mcu->regs[reg];
 }
 
@@ -124,6 +131,13 @@ void mcu_write_reg(mcu_t _mcu, reg_t reg, uint32_t val)
 
 	if (reg == REG_PC)
 		val &= ~1;
+
+	if (reg == REG_SP) {
+		if (mcu->regs[reg] & 0x2)
+			reg = REG_PSP;
+		else
+			reg = REG_MSP;
+	}
 
 	mcu->regs[reg] = val;
 }
@@ -995,7 +1009,7 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 					if (first)
 						first = false;
 					else 
-						trace_print(",");
+						trace_print(", ");
 					trace_print("r%u", reg);
 
 					if (!mcu_fetch32(mcu, sp, &val)) {
@@ -1584,7 +1598,7 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 					uint32_t val;
 
 					if (!first)
-						trace_print(",");
+						trace_print(", ");
 					else
 						first = false;
 					trace_print("r%u", reg);
@@ -1603,7 +1617,7 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 				uint32_t val;
 
 				if (!first)
-					trace_print(",");
+					trace_print(", ");
 				else
 					first = false;
 				
@@ -1660,7 +1674,7 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 					uint32_t val = mcu_read_reg(mcu, reg);
 
 					if (!first)
-						trace_print(",");
+						trace_print(", ");
 					else
 						first = false;
 					trace_print("r%u", reg);
@@ -1679,7 +1693,7 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 				uint32_t val = mcu_read_reg(mcu, REG_LR);
 
 				if (!first)
-					trace_print(",");
+					trace_print(", ");
 				else
 					first = false;
 				
@@ -1864,7 +1878,7 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 					if (first)
 						first = false;
 					else
-						trace_print(",");
+						trace_print(", ");
 					trace_print("r%u", reg);
 
 					if (!mcu_write32(mcu, sp, val)) {
@@ -2295,21 +2309,26 @@ struct mcu_instr32 mcu_instr32_cortex_m0p[] = {
 			uint8_t sysm = (instr >>  0) & 0x7F;
 
 			switch (sysm) {
-				case 0x4:
-					trace_instr32("msr ASPR, r%u\n", src);
-					break;
 				case 0x8:
 					trace_instr32("msr MSP, r%u\n", src);
+					mcu_write_reg(mcu, REG_MSP, mcu_read_reg(mcu, src));
 					break;
 				case 0x9:
 					trace_instr32("msr PSP, r%u\n", src);
+					mcu_write_reg(mcu, REG_PSP, mcu_read_reg(mcu, src));
 					break;
-				case 0x10:
-					trace_instr32("msr PRIMASK, r%u\n", src);
-					break;
+				// case 0x10:
+				// 	trace_instr32("msr PRIMASK, r%u\n", src);
+				// 	mcu_write_reg(mcu, REG_PRIMASK, mcu_read_reg(mcu, src));
+				// 	break;
 				case 0x14:
 					trace_instr32("msr CONTROL, r%u\n", src);
+					mcu_write_reg(mcu, REG_CONTROL, mcu_read_reg(mcu, src));
 					break;
+				default:
+					trace_instr32("msr <unkown>, r%u\n", src);
+					mcu_halt(mcu, HALT_UNKOWN_INSTRUCTION);
+					return false;
 			}
 
 			return true;
@@ -2327,16 +2346,24 @@ struct mcu_instr32 mcu_instr32_cortex_m0p[] = {
 			switch (sysm) {
 				case 0x8:
 					trace_instr32("mrs r%u, MSP\n", dest);
+					mcu_write_reg(mcu, dest, mcu_read_reg(mcu, REG_MSP));
 					break;
 				case 0x9:
 					trace_instr32("mrs r%u, PSP\n", dest);
+					mcu_write_reg(mcu, dest, mcu_read_reg(mcu, REG_PSP));
 					break;
-				case 0x10:
-					trace_instr32("mrs r%u, PRIMASK\n", dest);
-					break;
+				// case 0x10:
+				// 	trace_instr32("mrs r%u, PRIMASK\n", dest);
+				// 	mcu_write_reg(mcu, dest, mcu_read_reg(mcu, REG_PRIMASK));
+				// 	break;
 				case 0x14:
 					trace_instr32("mrs r%u, CONTROL\n", dest);
+					mcu_write_reg(mcu, dest, mcu_read_reg(mcu, REG_CONTROL));
 					break;
+				default:
+					trace_instr32("mrs r%u, <unkown>\n", dest);
+					mcu_halt(mcu, HALT_UNKOWN_INSTRUCTION);
+					return false;
 			}
 
 			return true;
