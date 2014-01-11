@@ -27,6 +27,6 @@ rule 'configure' do
 end
 
 rule 'gen' do
-	var :command, "BuildSupport/gen.rb $out"
+	var :command, "./tools/configure/gen.rb $out"
 	var :description, 'GEN $out'
 end

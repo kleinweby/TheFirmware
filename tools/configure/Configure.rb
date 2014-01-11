@@ -157,7 +157,7 @@ class Configure < BuildConfiguration
     var :builddir, self.options.builddir
 
     BuildConfiguration.push(self)
-    self.parse_buildfile(File.join(self.options.basedir, 'BuildSupport', 'Rules.rb'))
+    self.parse_buildfile(File.join(self.options.basedir, 'tools/configure', 'Rules.rb'))
     self.parse_buildfile(File.join(self.options.basedir, 'build'))
     BuildConfiguration.pop
 
