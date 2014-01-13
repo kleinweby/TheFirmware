@@ -37,7 +37,6 @@ typedef struct mem_dev* mem_dev_t;
 typedef enum {
 	mcu_halted,
 	mcu_running,
-	mcu_flashing
 } mcu_state_t;
 
 struct mcu {
@@ -50,12 +49,35 @@ struct mcu {
 	halt_reason_t halt_reason;
 
 	mcu_callbacks_t callbacks;
+
+	bool unlocked;
 };
 
 bool mcu_is_halted(mcu_t mcu);
 halt_reason_t mcu_halt_reason(mcu_t mcu);
 bool mcu_halt(mcu_t mcu, halt_reason_t reason);
 bool mcu_resume(mcu_t mcu);
+
+/// Returns true when the mcu is unlocket.
+/// Unlocked means that additional access (for the debugger) is granted.
+/// This allows write/read access to regions previously disabled.
+///
+bool mcu_is_unlocked(mcu_t mcu);
+
+/// Unlocks the mcu
+bool mcu_unlock(mcu_t mcu);
+
+/// Locks the mcu
+bool mcu_lock(mcu_t mcu);
+
+/// Posts an exception to the mcu
+bool mcu_do_exception(mcu_t mcu, exception_t exception);
+
+/// Posts an fault to the mcu
+bool mcu_do_fault(mcu_t mcu, fault_t fault);
+
+/// Posts an irq to the mcu
+bool mcu_do_irq(mcu_t mcu, irq_t fault);
 
 // Call repeatly to do on workpackage
 // Does not need to be called when mcu is halted
@@ -108,6 +130,8 @@ typedef enum {
 	mem_class_flash,
 
 	mem_class_io,
+
+	mem_class_other,
 } mem_class_t;
 
 struct mem_dev {

@@ -304,7 +304,7 @@ static bool gdb_handle_packet(gdb_t gdb, char* packet) {
 			break;
 		case 'g':
 			gdb_send_packet_begin(gdb);
-			for (reg_t reg = 0; reg < reg_count; reg++)
+			for (reg_t reg = 0; reg < reg_gdb_count; reg++)
 				gdb_send_packet_hex(gdb, mcu_read_reg(gdb->mcu, reg), 4);
 			gdb_send_packet_end(gdb);
 			break;

@@ -99,31 +99,59 @@ mcu_t mcu_cortex_m0p_create(size_t ramsize)
 	return (mcu_t)mcu;
 }
 
-bool mcu_reset(mcu_t mcu)
+bool mcu_reset(mcu_t _mcu)
 {
+	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
+
 	{
 		uint32_t val;
 
-		if (!mcu_fetch32(mcu, 0x0, &val)) {
+		if (!mcu_fetch32(_mcu, 0x0, &val)) {
 			printf("Fetch faild");
 			return false;
 		}
 
-		mcu_write_reg(mcu, REG_SP, val);
+		mcu_write_reg(_mcu, REG_SP, val);
 	}
 
 	{
 		uint32_t val;
 
-		if (!mcu_fetch32(mcu, 0x4, &val)) {
+		if (!mcu_fetch32(_mcu, 0x4, &val)) {
 			printf("Fetch faild");
 			return false;
 		}
 
-		mcu_write_reg(mcu, REG_PC, val + 2);
+		if ((val & 1) == 0) {
+			printf("Reset vector contains arm address\n");
+			return false;
+		}
+
+		mcu_write_reg(_mcu, REG_PC, val + 2);
 	}
+
+	mcu->processor_mode = processor_thread_mode;
+	mcu_write_reg(_mcu, REG_EPSR, 1 << 24);
 
 	return true;
+}
+
+bool mcu_do_exception(mcu_t mcu, exception_t exception)
+{
+	if (exception == exception_reset)
+		return mcu_reset(mcu);
+
+	return mcu_do_irq(mcu, exception - 16);
+}
+
+bool mcu_do_fault(mcu_t mcu, fault_t fault)
+{
+	return mcu_do_exception(mcu, exception_hardfault);
+}
+
+bool mcu_do_irq(mcu_t mcu, irq_t fault)
+{
+	return false;
 }
 
 uint32_t mcu_read_reg(mcu_t _mcu, reg_t reg)
@@ -136,6 +164,12 @@ uint32_t mcu_read_reg(mcu_t _mcu, reg_t reg)
 		else
 			reg = REG_MSP;
 	}
+	else if (reg == REG_APSR)
+		return mcu->regs[REG_XPSR] & 0xF0000000;
+	else if (reg == REG_IPSR)
+		return mcu->regs[REG_XPSR] & 0x1F;
+	else if (reg == REG_EPSR)
+		return mcu->regs[REG_XPSR] & 0x1000000;
 
 	return mcu->regs[reg];
 }
@@ -144,8 +178,9 @@ void mcu_write_reg(mcu_t _mcu, reg_t reg, uint32_t val)
 {
 	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
 
-	if (reg == REG_PC)
+	if (reg == REG_PC) {
 		val &= ~1;
+	}
 
 	if (reg == REG_SP) {
 		if (mcu->regs[reg] & 0x2)
@@ -153,8 +188,15 @@ void mcu_write_reg(mcu_t _mcu, reg_t reg, uint32_t val)
 		else
 			reg = REG_MSP;
 	}
-
-	mcu->regs[reg] = val;
+	
+	if (reg == REG_APSR)
+		mcu->regs[REG_XPSR] = (mcu->regs[REG_XPSR] & ~0xF0000000) | (val & 0xF0000000);
+	else if (reg == REG_IPSR)
+		mcu->regs[REG_XPSR] = (mcu->regs[REG_XPSR] & ~0x1F) | (val & 0x1F);
+	else if (reg == REG_EPSR)
+		mcu->regs[REG_XPSR] = (mcu->regs[REG_XPSR] & ~0x1000000) | (val & 0x1000000);
+	else
+		mcu->regs[reg] = val;
 }
 
 bool mcu_instr_step(mcu_t mcu)
@@ -226,40 +268,40 @@ bool mcu_instr_step(mcu_t mcu)
 static void mcu_update_nflag(void* _mcu, uint32_t c)
 {
 	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
-	uint32_t cpsr = mcu_read_reg(_mcu, REG_CPSR);
+	uint32_t cpsr = mcu_read_reg(_mcu, REG_APSR);
 
 	if( c & (1 << 31))
 		cpsr |= CPSR_N;
 	else
 		cpsr &= ~CPSR_N;
 
-	mcu_write_reg(_mcu, REG_CPSR, cpsr);
+	mcu_write_reg(_mcu, REG_APSR, cpsr);
 }
 
 static void mcu_update_zflag(void* _mcu, uint32_t c)
 {
 	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
-	uint32_t cpsr = mcu_read_reg(_mcu, REG_CPSR);
+	uint32_t cpsr = mcu_read_reg(_mcu, REG_APSR);
 
 	if (c == 0) 
 		cpsr |= CPSR_Z; 
 	else 
 		cpsr &= ~CPSR_Z;
 
-	mcu_write_reg(_mcu, REG_CPSR, cpsr);
+	mcu_write_reg(_mcu, REG_APSR, cpsr);
 }
 
 static void mcu_update_cflag_bit(void* _mcu, uint32_t val)
 {
 	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
-	uint32_t cpsr = mcu_read_reg(_mcu, REG_CPSR);
+	uint32_t cpsr = mcu_read_reg(_mcu, REG_APSR);
 
 	if (val) 
     	cpsr |= CPSR_C;
     else 
     	cpsr &= ~CPSR_C;
 
-    mcu_write_reg(_mcu, REG_CPSR, cpsr);
+    mcu_write_reg(_mcu, REG_APSR, cpsr);
 }
 
 static void mcu_update_cflag(void* _mcu, uint32_t a, uint32_t b, uint32_t c)
@@ -278,14 +320,14 @@ static void mcu_update_cflag(void* _mcu, uint32_t a, uint32_t b, uint32_t c)
 static void mcu_update_vflag_bit(void* _mcu, uint32_t val)
 {
 	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
-	uint32_t cpsr = mcu_read_reg(_mcu, REG_CPSR);
+	uint32_t cpsr = mcu_read_reg(_mcu, REG_APSR);
 
 	if (val) 
     	cpsr |= CPSR_V;
     else 
     	cpsr &= ~CPSR_V;
 
-    mcu_write_reg(_mcu, REG_CPSR, cpsr);
+    mcu_write_reg(_mcu, REG_APSR, cpsr);
 }
 
 static void mcu_update_vflag(void* _mcu, uint32_t a, uint32_t b, uint32_t c)
@@ -606,7 +648,7 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 
 			new_pc = (new_pc << 1) + mcu_read_reg(mcu, REG_PC) + 2;
 
-			uint32_t cpsr = mcu_read_reg(mcu, REG_CPSR);
+			uint32_t cpsr = mcu_read_reg(mcu, REG_APSR);
 			switch (op) {
 				case 0x0: //b eq  z set
 					trace_instr16("beq 0x%08X\n", new_pc - 3);
@@ -1870,14 +1912,14 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 
 			uint32_t c = a - b;
 
-			if (!(mcu_read_reg(mcu, REG_CPSR) & CPSR_C)) 
+			if (!(mcu_read_reg(mcu, REG_APSR) & CPSR_C)) 
 				c--;
 
         	mcu_write_reg(mcu, reg, c);
         	mcu_update_nflag(mcu, c);
         	mcu_update_zflag(mcu, c);
 
-        	if(mcu_read_reg(mcu, REG_CPSR) & CPSR_C) {
+        	if(mcu_read_reg(mcu, REG_APSR) & CPSR_C) {
 	            mcu_update_cflag(mcu, a, ~b, 1);
 	            mcu_update_vflag(mcu, a, ~b, 1);
         	}
@@ -2342,6 +2384,9 @@ struct mcu_instr32 mcu_instr32_cortex_m0p[] = {
 			uint8_t sysm = (instr >>  0) & 0x7F;
 
 			switch (sysm) {
+				case 0x0:
+					trace_instr32("msr APSR, r%u\n", src);
+					mcu_write_reg(mcu, REG_APSR, mcu_read_reg(mcu, src));
 				case 0x8:
 					trace_instr32("msr MSP, r%u\n", src);
 					mcu_write_reg(mcu, REG_MSP, mcu_read_reg(mcu, src));
@@ -2377,6 +2422,53 @@ struct mcu_instr32 mcu_instr32_cortex_m0p[] = {
 			uint8_t sysm = (instr >> 0) & 0x7F;
 
 			switch (sysm) {
+				case 0x0:
+				case 0x1:
+				case 0x2:
+				case 0x3:
+				case 0x4:
+				case 0x5:
+				case 0x6:
+				case 0x7:
+				{
+					trace_instr32("mrs r%u, {", dest);
+					bool first = true;
+
+					uint32_t val = 0;
+
+					if (sysm & (1 << 0)) {
+						first = false;
+						trace_print("IPSR");
+
+						val |= mcu_read_reg(mcu, REG_IPSR);
+					}
+
+					if (sysm & (1 << 1)) {
+						if (first)
+							first = false;
+						else
+							trace_print(",");
+						trace_print("EPSR");
+						
+						// From ARMv6 ARM, B4-309:
+						//
+						// None of the EPSR bits are readable during normal execution. They
+						// all Read-As-Zero when read using MRS. Halting debug can read the
+						// EPSR bits using the register transfer mechanism.
+					}
+
+					if (sysm & (1 << 2)) {
+						if (first)
+							first = false;
+						else
+							trace_print(",");
+						trace_print("APSR");
+						
+						val |= mcu_read_reg(mcu, REG_APSR);
+					}
+
+					mcu_write32(mcu, dest, val);
+				}
 				case 0x8:
 					trace_instr32("mrs r%u, MSP\n", dest);
 					mcu_write_reg(mcu, dest, mcu_read_reg(mcu, REG_MSP));

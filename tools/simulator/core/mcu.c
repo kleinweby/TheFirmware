@@ -60,9 +60,28 @@ bool mcu_add_mem_dev(mcu_t mcu, uint32_t offset, mem_dev_t dev)
 	return true;
 }
 
+bool mcu_is_unlocked(mcu_t mcu)
+{
+	return mcu->unlocked;
+}
+
+bool mcu_unlock(mcu_t mcu)
+{
+	mcu->unlocked = true;
+
+	return true;
+}
+
+bool mcu_lock(mcu_t mcu)
+{
+	mcu->unlocked = false;
+	
+	return true;
+}
+
 bool mcu_is_halted(mcu_t mcu)
 {
-	return mcu->state == mcu_halted || mcu->state == mcu_flashing;
+	return mcu->state == mcu_halted;
 }
 
 halt_reason_t mcu_halt_reason(mcu_t mcu)

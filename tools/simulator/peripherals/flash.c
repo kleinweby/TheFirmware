@@ -50,7 +50,7 @@ bool flash_dev_read32(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint32_t* tem
 }
 
 bool flash_dev_write16(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint16_t temp) {
-	if (mcu->state != mcu_flashing)
+	if (!mcu_is_unlocked(mcu))
 		return false;
 
 	((uint16_t*)((flash_dev_t)mem_dev)->flash)[addr >> 1] = temp;
@@ -59,7 +59,7 @@ bool flash_dev_write16(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint16_t tem
 }
 
 bool flash_dev_write32(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint32_t temp) {
-	if (mcu->state != mcu_flashing)
+	if (!mcu_is_unlocked(mcu))
 		return false;
 
 	(((flash_dev_t)mem_dev)->flash)[addr >> 2] = temp;

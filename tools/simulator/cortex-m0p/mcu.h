@@ -24,6 +24,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 // Some of these registers are unused
 // as these are remapped. We don't care about
 // the few ints as it makes the rest way easier
@@ -49,12 +51,17 @@ typedef enum {
 	REG_LR   = 14,
 	REG_PC   = 15,
 	
-	REG_CPSR = 25,
+	REG_XPSR = 16,
 
 	REG_CONTROL,
 	REG_MSP,
 	REG_PSP,
-	reg_count
+	reg_count,
+	reg_gdb_count = REG_XPSR + 1,
+
+	REG_APSR = 25,
+	REG_IPSR,
+	REG_EPSR,
 } reg_t;
 
 typedef enum {
@@ -66,12 +73,39 @@ typedef enum {
 	HAL_TRAP = 5,
 } halt_reason_t;
 
+typedef enum {
+	exception_reset = 1,
+	exception_nmi = 2,
+	exception_hardfault = 3,
+
+    exception_svcall = 11,
+    exception_pendsv = 14,
+    exception_systick = 15,
+} exception_t;
+
+typedef enum {
+	fault_generic
+} fault_t;
+
+typedef int8_t irq_t;
+
+static const irq_t irq_svcall = -5;
+static const irq_t irq_pendsv = -2;
+static const irq_t irq_systick = -1;
+
+typedef enum {
+	processor_thread_mode,
+	processor_handler_mode,
+} processor_mode_t;
+
 #include_next <mcu.h>
 
 struct mcu_cortex_m0p {
 	struct mcu mcu;
 
 	uint32_t regs[reg_count];
+
+	processor_mode_t processor_mode;
 };
 
 mcu_t mcu_cortex_m0p_create(size_t ramsize);
