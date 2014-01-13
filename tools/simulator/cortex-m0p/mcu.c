@@ -2370,6 +2370,28 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		}
 	},
 
+	// WFE
+	{
+		.mask = 0xFFFF,
+		.instr = 0xBF20,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			// TODO do actually wait here
+
+			return true;
+		}
+	},
+
+	// WFI
+	{
+		.mask = 0xFFFF,
+		.instr = 0xBF30,
+		.impl = ^bool(mcu_t mcu, uint16_t instr) {
+			// TODO do actually wait here
+
+			return true;
+		}
+	},
+
 	{ 0, 0, NULL }
 };
 
