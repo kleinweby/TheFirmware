@@ -221,6 +221,40 @@ static bool gdb_send_packet_end(gdb_t gdb) {
 	return true;
 }
 
+static bool gdb_mcu_write_byte(mcu_t mcu, uint32_t addr, char c)
+{
+	uint16_t val;
+
+	if (!mcu_fetch16(mcu, addr & ~1, &val))
+		return false;
+
+	if (addr & 1)
+		val = (val & 0x00FF) | (c << 8);
+	else
+		val = (val & 0xFF00) | c;
+
+	if (!mcu_write16(mcu, addr & ~1, val))
+		return false;
+
+	return true;
+}
+
+
+static bool gdb_mcu_fetch_byte(mcu_t mcu, uint32_t addr, char* c)
+{
+	uint16_t val;
+
+	if (!mcu_fetch16(mcu, addr & ~1, &val))
+		return false;
+
+	if (addr & 1)
+		*c = (val & 0xFF00) >> 8;
+	else
+		*c = (val & 0x00FF);
+
+	return true;
+}
+
 static bool gdb_handle_packet(gdb_t gdb, char* packet) {
 
 	switch (*packet++) {
@@ -326,54 +360,20 @@ static bool gdb_handle_packet(gdb_t gdb, char* packet) {
 
 			gdb_send_packet_begin(gdb);
 
-			// not 16bit aligned
-			if (addr & 1) {
-				uint16_t val;
+			for (; length > 0; length--, addr++) {
+				char c;
 
-				if (!mcu_fetch16(gdb->mcu, addr & ~1, &val))
-					return false;
-
-				gdb_send_packet_hex(gdb, val & 0xFF, 1);
-				addr++;
-				length--;
-			}
-
-			for (; length > 0;) {
-				if (length > 4) {
-					uint32_t val = 0;
-
-					if (!mcu_fetch32(gdb->mcu, addr, &val))
-						return false;
-
-					gdb_send_packet_hex(gdb, val, 4);
-					addr += 4;
-					length -= 4;
+				if (!gdb_mcu_fetch_byte(gdb->mcu, addr, &c)) {
+					break;
 				}
-				else if (length > 2) {
-					uint16_t val = 0;
 
-					if (!mcu_fetch16(gdb->mcu, addr, &val))
-						return false;
-
-					gdb_send_packet_hex(gdb, val, 2);
-					addr += 2;
-					length -= 2;
-				} 
-				else {
-					uint16_t val = 0;
-
-					if (!mcu_fetch16(gdb->mcu, addr, &val))
-						return false;
-
-					gdb_send_packet_hex(gdb, (val >> 8) & 0xFF, 1);
-					addr += 1;
-					length -= 1;
-				} 
+				gdb_send_packet_hex(gdb, c, 1);
 			}
 
 			gdb_send_packet_end(gdb);
 			break;
 		}
+
 		case 'v':
 			gdb_send_packet_begin(gdb);
 			gdb_send_packet_end(gdb);
@@ -392,6 +392,35 @@ static bool gdb_handle_packet(gdb_t gdb, char* packet) {
 			mcu_resume(gdb->mcu);
 
 			break;
+
+		case 'X':
+		{
+			uint32_t addr = strtol(packet, &packet, 16);
+			packet++;
+			uint32_t length = strtol(packet, NULL, 16);
+			packet++; // After the :
+			bool sucess = true;
+
+			mcu_unlock(gdb->mcu);
+
+			for (; length > 0; length--, packet++, addr++) {
+				if (!gdb_mcu_write_byte(gdb->mcu, addr, *packet)) {
+					sucess = false;
+					break;
+				}
+			}
+
+			mcu_lock(gdb->mcu);
+
+			gdb_send_packet_begin(gdb);
+			if (sucess)
+				gdb_send_packet_str(gdb, "OK");
+			else
+				gdb_send_packet_str(gdb, "EFF");
+			gdb_send_packet_end(gdb);
+
+			break;
+		}
 
 		default:
 			gdb_send_packet_begin(gdb);

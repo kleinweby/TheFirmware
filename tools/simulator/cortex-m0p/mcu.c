@@ -811,9 +811,9 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			uint32_t a  = (instr >> 0) & 0xFF;
 			
-			printf("Breakpoint %d\n", a);
+			mcu_halt(mcu, HAL_TRAP);
 			
-			return false;
+			return true;
 		}
 	},
 
