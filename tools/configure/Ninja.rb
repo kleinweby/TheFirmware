@@ -7,14 +7,18 @@ class NinjaBase
 		self.parent = parent
 	end
 
-	def var(name, value = nil)
+	def var(name, value = nil, prefix=false)
 		if value.nil?
 			self.vars[name.to_sym]
 		else
 			value = value.join(" ") if value.is_a? Enumerable
 
 			if self.vars[name.to_sym]
-				self.vars[name.to_sym] += " " + value
+				if prefix
+					self.vars[name.to_sym] = value + " " + self.vars[name.to_sym]
+				else
+					self.vars[name.to_sym] += " " + value
+				end
 			else
 				self.vars[name.to_sym] = value
 			end
@@ -179,10 +183,10 @@ class Ninja < NinjaBase
 		defs = self.defs.map do |d|
 			if d.is_a? Ninja
 				d.vars.each do |k,v|
-					var k, v
+					var k, v, true
 				end
 
-        d.defs
+				d.defs
 			else
 				d
 			end

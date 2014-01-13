@@ -23,8 +23,8 @@
 //
 
 #define IRQ_NMI 2
-#define IRQ_HARD_FAULT 3
-#define IRQ_SVC 4
+#define IRQ_HARDFAULT 3
+#define IRQ_SV 4
 
 #define IRQ_PENDSV 5
 #define IRQ_SYSTICK 6

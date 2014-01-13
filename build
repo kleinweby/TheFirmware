@@ -9,6 +9,6 @@ else
   var :cflags, [ '-Os' ]
 end
 
-parse 'core/build'
 parse 'arch/build'
+parse 'core/build'
 parse 'platform/build'

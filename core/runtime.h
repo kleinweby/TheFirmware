@@ -51,4 +51,3 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 
 #define WEAK __attribute__ ((weak))
 #define ALIAS(f) __attribute__ ((weak, alias (#f)))
-

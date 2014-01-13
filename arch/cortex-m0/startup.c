@@ -24,6 +24,7 @@
 
 #include <irq.h>
 #include <bootstrap.h>
+#include <runtime.h>
 
 #include <stdint.h>
 
@@ -34,32 +35,7 @@ extern unsigned int __data_section_table_end;
 extern unsigned int __bss_section_table;
 extern unsigned int __bss_section_table_end;
 
-#define INT_HANDLER(number) do_irq_##number
-#define DECL_INT_HANDLER(number) static void do_irq_##number(void)
-
-DECL_INT_HANDLER(IRQ_NMI);
-DECL_INT_HANDLER(IRQ_HARDFAULT);
-DECL_INT_HANDLER(IRQ_SV);
-DECL_INT_HANDLER(IRQ_PENDSV);
-DECL_INT_HANDLER(IRQ_SYSTICK);
-
-DECL_INT_HANDLER(IRQ0);
-DECL_INT_HANDLER(IRQ1);
-DECL_INT_HANDLER(IRQ2);
-DECL_INT_HANDLER(IRQ3);
-DECL_INT_HANDLER(IRQ4);
-DECL_INT_HANDLER(IRQ5);
-DECL_INT_HANDLER(IRQ6);
-DECL_INT_HANDLER(IRQ7);
-DECL_INT_HANDLER(IRQ8);
-DECL_INT_HANDLER(IRQ9);
-DECL_INT_HANDLER(IRQ10);
-DECL_INT_HANDLER(IRQ11);
-DECL_INT_HANDLER(IRQ12);
-DECL_INT_HANDLER(IRQ13);
-DECL_INT_HANDLER(IRQ14);
-DECL_INT_HANDLER(IRQ15);
-DECL_INT_HANDLER(IRQ16);
+static void arch_handle_irq(void);
 
 static void do_irq_reset(void);
 
@@ -68,8 +44,8 @@ __attribute__ ((section(".isr_vector")))
 void (* const g_pfnVectors[])(void) = {
     &_vStackTop,
     do_irq_reset,
-    INT_HANDLER(IRQ_NMI),
-    INT_HANDLER(IRQ_HARDFAULT),
+    arch_handle_irq, // NMI
+    arch_handle_irq, // HardFault
     0,
     0,
     0,
@@ -77,29 +53,29 @@ void (* const g_pfnVectors[])(void) = {
     0,
     0,
     0,
-    INT_HANDLER(IRQ_SV),
+   	arch_handle_irq, // SVCall
     0,
     0,
-    INT_HANDLER(IRQ_PENDSV),
-    INT_HANDLER(IRQ_SYSTICK),
+    arch_handle_irq, // PendSV
+    arch_handle_irq, // SysTick
 
-    INT_HANDLER(IRQ0),
-    INT_HANDLER(IRQ1),
-    INT_HANDLER(IRQ2),
-    INT_HANDLER(IRQ3),
-    INT_HANDLER(IRQ4),
-    INT_HANDLER(IRQ5),
-    INT_HANDLER(IRQ6),
-    INT_HANDLER(IRQ7),
-    INT_HANDLER(IRQ8),
-    INT_HANDLER(IRQ9),
-    INT_HANDLER(IRQ10),
-    INT_HANDLER(IRQ11),
-    INT_HANDLER(IRQ12),
-    INT_HANDLER(IRQ13),
-    INT_HANDLER(IRQ14),
-    INT_HANDLER(IRQ15),
-    INT_HANDLER(IRQ16),
+    arch_handle_irq, // IRQ0
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
+    arch_handle_irq,
 };
 
 static __attribute__ ((section(".after_vectors")))
@@ -158,10 +134,10 @@ void arch_late_init()
 	// Now we switch the used stack from msp to psp
     __asm volatile (
         // Move to psp
-        "MRS R1, MSP\n"
-        "MSR PSP, R1\n"
-        "MOVS R1, #2\n"
-        "MSR CONTROL, R1\n"
+        "mrs r1, MSP\n"
+        "msr PSP, r1\n"
+        "movs r1, #2\n"
+        "msr CONTROL, r1\n"
         :
         :
         : "r1"
@@ -176,30 +152,11 @@ void arch_late_init()
     // );
 }
 
-#define DEF_INT_HANDLER(number) static void do_irq_##number(void) { \
-	\
+static void arch_handle_irq(void)
+{
+	register uint32_t irq;
+
+  	__asm volatile ("mrs %0, IPSR\n" : "=r" (irq) );
+
+  	do_irq(irq);
 }
-
-DEF_INT_HANDLER(IRQ_NMI);
-DEF_INT_HANDLER(IRQ_HARDFAULT);
-DEF_INT_HANDLER(IRQ_SV);
-DEF_INT_HANDLER(IRQ_PENDSV);
-DEF_INT_HANDLER(IRQ_SYSTICK);
-
-DEF_INT_HANDLER(IRQ0);
-DEF_INT_HANDLER(IRQ1);
-DEF_INT_HANDLER(IRQ2);
-DEF_INT_HANDLER(IRQ3);
-DEF_INT_HANDLER(IRQ4);
-DEF_INT_HANDLER(IRQ5);
-DEF_INT_HANDLER(IRQ6);
-DEF_INT_HANDLER(IRQ7);
-DEF_INT_HANDLER(IRQ8);
-DEF_INT_HANDLER(IRQ9);
-DEF_INT_HANDLER(IRQ10);
-DEF_INT_HANDLER(IRQ11);
-DEF_INT_HANDLER(IRQ12);
-DEF_INT_HANDLER(IRQ13);
-DEF_INT_HANDLER(IRQ14);
-DEF_INT_HANDLER(IRQ15);
-DEF_INT_HANDLER(IRQ16);
