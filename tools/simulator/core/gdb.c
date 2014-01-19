@@ -39,6 +39,11 @@ struct gdb {
 	int socket_fd;
 	int gdb_fd;
 
+	// Receiving
+	char* rev_buffer;
+	size_t rev_buffer_filled;
+	size_t rev_buffer_length;
+
 	// Sending
 	char packet_checksum;
 
@@ -102,6 +107,14 @@ gdb_t gdb_create(int port, mcu_t mcu)
     }
 
    	gdb->gdb_fd = -1;
+   	gdb->rev_buffer_length = 4 * 1024;
+   	gdb->rev_buffer_filled = 0;
+   	gdb->rev_buffer = malloc(gdb->rev_buffer_length);
+
+   	if (!gdb->rev_buffer) {
+   		perror("malloc");
+   		return NULL;
+   	}
 
    	gdb->mcu_callbacks.mcu_did_halt = gdb_mcu_did_halt;
    	gdb->mcu_callbacks.context = gdb;
@@ -255,7 +268,7 @@ static bool gdb_mcu_fetch_byte(mcu_t mcu, uint32_t addr, char* c)
 	return true;
 }
 
-static bool gdb_handle_packet(gdb_t gdb, char* packet) {
+static bool gdb_handle_packet(gdb_t gdb, char* packet, size_t len) {
 
 	switch (*packet++) {
 		case '$':
@@ -275,10 +288,10 @@ static bool gdb_handle_packet(gdb_t gdb, char* packet) {
 		char checksum = 0;
 		char* buf;
 
-		for (buf = packet; *buf != '\0' && *buf != '#'; buf++)
+		for (buf = packet; *buf != '#' && buf < packet + len; buf++)
 			checksum += *buf;
 
-		if (*buf == '\0') {
+		if (buf >= packet + len) {
 			printf("Packet does not contain checksum!");
 			gdb_send_nack(gdb);
 			return false;
@@ -352,6 +365,25 @@ static bool gdb_handle_packet(gdb_t gdb, char* packet) {
 			gdb_send_packet_end(gdb);
 			break;
 		}
+		case 'P':
+		{
+			reg_t reg = strtol(packet, &packet, 16);
+
+			packet++; // = 
+			uint32_t val = strtol(packet, NULL, 16);
+
+			// When gdb sets the pc to 0x0, it actually means
+			// it want's to reset the mcu
+			if (reg == REG_PC && val == 0x0)
+				mcu_reset(gdb->mcu);
+			else
+				mcu_write_reg(gdb->mcu, reg, val);
+
+			gdb_send_packet_begin(gdb);
+			gdb_send_packet_str(gdb, "OK");
+			gdb_send_packet_end(gdb);
+			break;
+		}
 		case 'm':
 		{
 			uint32_t addr = strtol(packet, &packet, 16);
@@ -397,13 +429,14 @@ static bool gdb_handle_packet(gdb_t gdb, char* packet) {
 		{
 			uint32_t addr = strtol(packet, &packet, 16);
 			packet++;
-			uint32_t length = strtol(packet, NULL, 16);
+			uint32_t length = strtol(packet, &packet, 16);
 			packet++; // After the :
 			bool sucess = true;
 
 			mcu_unlock(gdb->mcu);
 
 			for (; length > 0; length--, packet++, addr++) {
+				printf("write %x: %x\n", addr, *packet);
 				if (!gdb_mcu_write_byte(gdb->mcu, addr, *packet)) {
 					sucess = false;
 					break;
@@ -488,23 +521,72 @@ bool gdb_runloop(gdb_t gdb)
 
 	// Message from gdb
 	if (gdb->gdb_fd >= 0 && FD_ISSET(gdb->gdb_fd, &set)) {
-		char buffer[GDB_BUF];
+		bool hasPacket = false;
+		bool hasBreak = false;
 		ssize_t len;
+		char* packetStart;
+		char* packetEnd;
 
-		len = read(gdb->gdb_fd, &buffer, GDB_BUF - 1);
+		len = read(gdb->gdb_fd, gdb->rev_buffer + gdb->rev_buffer_filled, gdb->rev_buffer_length - gdb->rev_buffer_filled - 1);
 		if (len < 0) {
 			gdb_client_error(gdb);
 			return false;
 		}
 
-		buffer[len] = '\0';
+		gdb->rev_buffer_filled += len;
+		gdb->rev_buffer[gdb->rev_buffer_filled] = '\0';
 
-		if (*buffer == 0x03) {
-			mcu_halt(gdb->mcu, HAL_TRAP);
+		packetStart = strchr(gdb->rev_buffer, '$');
+		for (packetEnd = packetStart; packetStart && packetEnd < gdb->rev_buffer + gdb->rev_buffer_filled; packetEnd++)
+			if (*packetEnd == '#')
+				break;
+
+		// We got an packet
+		if (packetStart && packetEnd && *packetEnd++ != '\0' && *packetEnd++ != '\0')
+			hasPacket = true;
+
+		// Look for a break 0x03 after the packet
+		for (char* b = packetEnd; packetEnd && *b != '$' && *b != '\0'; b++) {
+			if (*b == 0x03) {
+				hasBreak = true;
+				break;
+			}
 		}
-		else {
-			gdb_debug("gdb-packet: %s\n", buffer);
-			gdb_handle_packet(gdb, buffer);
+
+		// Look for a break 0x03 before the packet
+		char* end = packetStart ?: (gdb->rev_buffer + gdb->rev_buffer_filled);
+		for (char* b = gdb->rev_buffer; b < end && *b != '\0'; b++) {
+			if (*b == 0x03) {
+				hasBreak = true;
+				break;
+			}
+		}
+
+		if (hasPacket) {
+			*++packetEnd = '\0';
+
+			gdb_debug("gdb-packet: %s\n", packetStart);
+
+			gdb_handle_packet(gdb, packetStart, packetEnd - packetStart);
+
+			gdb->rev_buffer_filled -= packetEnd - gdb->rev_buffer;
+			memmove(gdb->rev_buffer, packetEnd, gdb->rev_buffer_filled + 1 /* \0 */);
+		}
+		// Overflow
+		else if (gdb->rev_buffer_filled >= gdb->rev_buffer_length - 1) {
+			printf("Overflow\n");
+			if (gdb->rev_buffer != packetStart) {
+				gdb->rev_buffer_filled -= packetStart - gdb->rev_buffer;
+				memmove(gdb->rev_buffer, packetStart, gdb->rev_buffer_filled);
+			}
+			else {
+				gdb->rev_buffer_filled = 0;
+			}
+		}
+
+
+		if (hasBreak) {
+			mcu_halt(gdb->mcu, HAL_TRAP);
 		}
 	}
 
