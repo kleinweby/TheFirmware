@@ -28,6 +28,7 @@
 #include <ram.h>
 #include <flash.h>
 #include <uart.h>
+#include <unittest.h>
 
 typedef struct mcu_cortex_m0p* mcu_cortex_m0p_t;
 
@@ -92,6 +93,20 @@ mcu_t mcu_cortex_m0p_create(size_t ramsize)
 
 		if (!mcu_add_mem_dev((mcu_t)mcu, 0xE0000000, (mem_dev_t)uart)) {
 			printf("Could not add uart_dev to mcu");
+			return NULL;
+		}
+	}
+
+	{
+		unittest_dev_t unittest = unittest_dev_create();
+
+		if (!unittest) {
+			printf("Could not create unittest_dev");
+			return NULL;
+		}
+
+		if (!mcu_add_mem_dev((mcu_t)mcu, 0xEE000000, (mem_dev_t)unittest)) {
+			printf("Could not add unittest_dev to mcu");
 			return NULL;
 		}
 	}
@@ -946,14 +961,16 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.mask = 0xF800,
 		.instr = 0x2800,
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
-			reg_t src    = (instr >> 8) & 0xF;
+			reg_t src    = (instr >> 8) & 0x7;
 			uint32_t imm = (instr >> 0) & 0xFF;
 
-			trace_instr16("cmp r%u,#0x%02X\n", src, imm);
+			trace_instr16("cmp r%u,#0x%02X", src, imm);
 
 			uint32_t a = mcu_read_reg(mcu, src);
 
 			uint32_t c = a - imm;
+
+			trace_print(" ; %d, %d", a, c);
 
 			mcu_update_nflag(mcu, c);
 			mcu_update_zflag(mcu, c);
@@ -969,8 +986,8 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.mask = 0xFFC0,
 		.instr = 0x4280,
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
-			reg_t src1 = (instr >> 0) & 0xF;
-			reg_t src2 = (instr >> 3) & 0xF;
+			reg_t src1 = (instr >> 0) & 0x7;
+			reg_t src2 = (instr >> 3) & 0x7;
 
 			trace_instr16("cmps r%u,r%u\n", src1, src2);
 

@@ -49,5 +49,9 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 /// Denotes a unimplemented code path
 #define unimplemented() assert(false, "Unimplemented")
 
+#define NO_RETURN  __attribute__ ((noreturn))
+
 #define WEAK __attribute__ ((weak))
 #define ALIAS(f) __attribute__ ((weak, alias (#f)))
+#define LINKER_SYMBOL(name, type) extern void _##name(); static const type name = (type)&_##name
+

@@ -22,29 +22,64 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
-
-#include <arch.h>
-
-#include <stdint.h>
-
 #include <test.h>
 
-void bootstrap()
+enum {
+	CURRENT_TEST_OFFSET =  0x0,
+	TOTAL_TESTS_OFFSET  =  0x4,
+	DESC_OFFSET         =  0x8,
+	STATUS_OFFSET       = 0x12,
+	STATUS_DESC_OFFSET  = 0x16,
+
+	SIZE                = 0x20,
+};
+
+enum {
+	STATUS_PREPARING    = 0x55555555,
+	STATUS_RUNNING      = 0xDB6DB6DB,
+
+	STATUS_SKIPPED      = 0x24924924,
+	STATUS_PASSED       = 0xBEEFBEEF,
+	STATUS_FAILED       = 0xDEADBEEF,
+};
+
+uint32_t* unittest_base = (uint32_t*)0xEE000000;
+#define UNITTEST(offset) *((uint32_t*)((uint32_t)unittest_base + (offset)))
+
+void arch_test_set_test_count(uint32_t count)
 {
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
-
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
-
-	while(1)
-		__asm("WFI");
+	UNITTEST(TOTAL_TESTS_OFFSET) = count;
+	unreachable();
 }
 
-void test_example() {
-
+int32_t arch_test_get_test_current()
+{
+	return UNITTEST(CURRENT_TEST_OFFSET);
 }
 
-DECLARE_TEST("Example test", TEST_AFTER_ARCH_EARLY_INIT, test_example);
+void arch_test_set_desc(const char* desc)
+{
+	UNITTEST(DESC_OFFSET) = (uint32_t)desc;
+	UNITTEST(STATUS_OFFSET) = STATUS_RUNNING;
+}
 
+void arch_test_skip(const char* reason)
+{
+	UNITTEST(STATUS_DESC_OFFSET) = (uint32_t)reason;
+	UNITTEST(STATUS_OFFSET) = STATUS_SKIPPED;
+	unreachable();
+}
+
+void arch_test_pass(const char* reason)
+{
+	UNITTEST(STATUS_DESC_OFFSET) = (uint32_t)reason;
+	UNITTEST(STATUS_OFFSET) = STATUS_PASSED;
+	unreachable();
+}
+
+void arch_test_fail(const char* reason)
+{
+	UNITTEST(STATUS_DESC_OFFSET) = (uint32_t)reason;
+	UNITTEST(STATUS_OFFSET) = STATUS_FAILED;
+	unreachable();
+}

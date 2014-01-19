@@ -78,12 +78,12 @@ SECTIONS
 
     /* Support for staticly declaring logging drivers */
     .text : ALIGN(4) {
-        PROVIDE_HIDDEN(_CLICommands = .);
+        PROVIDE_HIDDEN(_tests = .);
 
-        KEEP(*(SORT(.CLICommands.*)))
-        KEEP(*(.CLICommands))
+        KEEP(*(SORT(.tests.*)))
+        KEEP(*(.tests))
 
-        PROVIDE_HIDDEN(_CLICommandsLength = . - _CLICommands);
+        PROVIDE_HIDDEN(_tests_length = . - _tests);
     } > MFlash16
 
 

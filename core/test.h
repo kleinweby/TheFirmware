@@ -22,29 +22,25 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
+#pragma once
 
-#include <arch.h>
+typedef enum {
+	TEST_AFTER_ARCH_EARLY_INIT,
+	TEST_AFTER_ARCH_LATE_INIT,
+	TEST_IN_MAIN_TASK,
+} test_type;
 
-#include <stdint.h>
+struct test {
+	const char* desc;
+	test_type type;
+	void (*func)();
+};
 
-#include <test.h>
+#define DECLARE_TEST(_desc, _type, _func) \
+struct test test_##_func __attribute__ ((section (".tests." # _func))) = { \
+	.desc = _desc, \
+	.type = _type, \
+	.func = _func \
+};
 
-void bootstrap()
-{
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
-
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
-
-	while(1)
-		__asm("WFI");
-}
-
-void test_example() {
-
-}
-
-DECLARE_TEST("Example test", TEST_AFTER_ARCH_EARLY_INIT, test_example);
-
+void test_do(test_type type);

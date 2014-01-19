@@ -48,6 +48,50 @@ DECLARE_MEM_OP(fetch32, uint32_t*);
 DECLARE_MEM_OP(write16, uint16_t);
 DECLARE_MEM_OP(write32, uint32_t);
 
+bool mcu_emu_fetch16(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint16_t* valueOut)
+{
+	uint32_t value;
+
+	if (!mem_dev->fetch32(mcu, mem_dev, addr & ~2, &value))
+		return false;
+
+	if (addr & 2)
+		*valueOut = (value >> 0) & 0xFFFF;
+	else
+		*valueOut = (value >> 16) & 0xFFFF;
+
+	return true;
+}
+
+bool mcu_emu_write16(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint16_t valueIn)
+{
+	uint32_t value;
+
+	if (!mem_dev->fetch32(mcu, mem_dev, addr & ~2, &value))
+		return false;
+
+	if (addr & 2)
+		value = (value & ~0xFFFF) | ((valueIn << 0) & 0xFFFF);
+	else
+		value = (value &  0xFFFF) | ((valueIn << 16) & ~0xFFFF);
+
+	return mem_dev->write32(mcu, mem_dev, addr & ~2, value);
+}
+
+bool mcu_util_fetch8(mcu_t mcu, uint32_t addr, uint8_t* valueOut)
+{
+	uint16_t value;
+
+	if (!mcu_fetch16(mcu, addr & ~1, &value))
+		return false;
+
+	if (addr & 1)
+		*valueOut = (value >> 8) & 0xFF;
+	else
+		*valueOut = (value >> 0) & 0xFF;
+
+	return true;
+}
 
 bool mcu_add_mem_dev(mcu_t mcu, uint32_t offset, mem_dev_t dev) 
 {

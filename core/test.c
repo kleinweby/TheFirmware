@@ -22,29 +22,27 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
-
-#include <arch.h>
-
-#include <stdint.h>
-
 #include <test.h>
+#include <runtime.h>
 
-void bootstrap()
+LINKER_SYMBOL(tests, struct test*);
+LINKER_SYMBOL(tests_length, uint32_t);
+
+void test_do(test_type type)
 {
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
+	uint32_t count = tests_length/sizeof(struct test);
 
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
+	int32_t test_number = arch_test_get_test_current();
 
-	while(1)
-		__asm("WFI");
+	if (test_number < 0) {
+		arch_test_set_test_count(count);
+	}
+
+	const struct test* test = tests + test_number;
+
+	if (test->type == type) {
+		arch_test_set_desc(test->desc);
+		test->func();
+		arch_test_pass(0);
+	}
 }
-
-void test_example() {
-
-}
-
-DECLARE_TEST("Example test", TEST_AFTER_ARCH_EARLY_INIT, test_example);
-

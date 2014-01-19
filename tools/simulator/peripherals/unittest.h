@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2013, Christian Speich
+// Copyright (c) 2014, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -22,29 +22,11 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
+#pragma once
 
-#include <arch.h>
+#include <stdlib.h>
 
-#include <stdint.h>
+typedef struct unittest_dev* unittest_dev_t;
+static const uint32_t unittest_mem_type = 0xFF;
 
-#include <test.h>
-
-void bootstrap()
-{
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
-
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
-
-	while(1)
-		__asm("WFI");
-}
-
-void test_example() {
-
-}
-
-DECLARE_TEST("Example test", TEST_AFTER_ARCH_EARLY_INIT, test_example);
-
+unittest_dev_t unittest_dev_create();

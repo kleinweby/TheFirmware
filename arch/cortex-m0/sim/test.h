@@ -22,29 +22,18 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
+#pragma once
 
-#include <arch.h>
-
+#include <runtime.h>
 #include <stdint.h>
 
-#include <test.h>
+void arch_test_set_test_count(uint32_t count) NO_RETURN;
+int32_t arch_test_get_test_current();
 
-void bootstrap()
-{
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
+void arch_test_set_desc(const char* desc);
 
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
+void arch_test_skip(const char* reason) NO_RETURN;
+void arch_test_pass(const char* reason) NO_RETURN;
+void arch_test_fail(const char* reason) NO_RETURN;
 
-	while(1)
-		__asm("WFI");
-}
-
-void test_example() {
-
-}
-
-DECLARE_TEST("Example test", TEST_AFTER_ARCH_EARLY_INIT, test_example);
-
+#include_next <test.h>
