@@ -43,7 +43,7 @@ enum {
 	STATUS_FAILED       = 0xDEADBEEF,
 };
 
-uint32_t* unittest_base = (uint32_t*)0xEE000000;
+static uint32_t* unittest_base = (uint32_t*)0xEE000000;
 #define UNITTEST(offset) *((uint32_t*)((uint32_t)unittest_base + (offset)))
 
 void arch_test_set_test_count(uint32_t count)

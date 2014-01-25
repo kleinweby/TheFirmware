@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2013, Christian Speich
+// Copyright (c) 2014, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -22,35 +22,10 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
+#pragma once
 
-#include <arch.h>
+#include <mcu.h>
 
-#include <stdint.h>
+bool elf_load(mcu_t mcu, const char* file);
 
-#include <test.h>
-
-void bootstrap()
-{
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
-
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
-
-	while(1)
-		__asm("WFI");
-}
-
-void test_example1() {
-
-}
-
-DECLARE_TEST("Example test after early init", TEST_AFTER_ARCH_EARLY_INIT, test_example1);
-
-void test_example2() {
-
-}
-
-DECLARE_TEST("Example test after late init", TEST_AFTER_ARCH_LATE_INIT, test_example2);
-
+bool elf_load_fd(mcu_t mcu, int fd);

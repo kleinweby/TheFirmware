@@ -96,20 +96,3 @@ flash_dev_t flash_dev_create(size_t size)
 
 	return dev;
 }
-
-bool flash_dev_load_bin(flash_dev_t dev, const char* file)
-{
-	int fd = open(file, O_RDONLY);
-
-	if (fd < 0) {
-		perror("open");
-		return false;
-	}
-
-	if (read(fd, dev->flash, dev->mem_dev.length) < 0) {
-		perror("read");
-		return false;
-	}
-
-	return true;
-}

@@ -32,5 +32,3 @@ typedef struct flash_dev* flash_dev_t;
 static const uint32_t flash_mem_type = 1;
 
 flash_dev_t flash_dev_create(size_t size);
-
-bool flash_dev_load_bin(flash_dev_t dev, const char* file);

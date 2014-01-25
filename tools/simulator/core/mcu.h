@@ -155,6 +155,7 @@ bool mcu_write16(mcu_t mcu, uint32_t addr, uint16_t value);
 bool mcu_write32(mcu_t mcu, uint32_t addr, uint32_t value);
 
 bool mcu_util_fetch8(mcu_t mcu, uint32_t addr, uint8_t* value);
+bool mcu_util_write8(mcu_t mcu, uint32_t addr, uint8_t value);
 
 bool mcu_emu_fetch16(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint16_t* valueOut);
 bool mcu_emu_write16(mcu_t mcu, mem_dev_t mem_dev, uint32_t addr, uint16_t valueIn);

@@ -93,6 +93,21 @@ bool mcu_util_fetch8(mcu_t mcu, uint32_t addr, uint8_t* valueOut)
 	return true;
 }
 
+bool mcu_util_write8(mcu_t mcu, uint32_t addr, uint8_t valueIn)
+{
+	uint16_t value;
+
+	if (!mcu_fetch16(mcu, addr & ~1, &value))
+		return false;
+
+	if (addr & 1)
+		value = (value & 0x00FF) | (valueIn << 8);
+	else
+		value = (value & 0xFF00) | (valueIn << 0);
+
+	return mcu_write16(mcu, addr & ~1, value);
+}
+
 bool mcu_add_mem_dev(mcu_t mcu, uint32_t offset, mem_dev_t dev) 
 {
 	// Quick and dirty, unordered
@@ -141,7 +156,7 @@ bool mcu_halt(mcu_t mcu, halt_reason_t reason)
 	mcu->state = mcu_halted;
 	mcu->halt_reason = reason;
 
-	printf("=X CPU halted\n");
+	printf("[MCU] halted\n");
 
 	for (mcu_callbacks_t callbacks = mcu->callbacks; callbacks != NULL; callbacks = callbacks->next)
 		callbacks->mcu_did_halt(mcu, reason, callbacks->context);
@@ -156,7 +171,7 @@ bool mcu_resume(mcu_t mcu)
 
 	mcu->state = mcu_running;
 
-	printf("=> CPU resumed\n");
+	printf("[MCU] resumed\n");
 
 	return true;
 }

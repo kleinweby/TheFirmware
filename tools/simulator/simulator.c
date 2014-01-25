@@ -38,17 +38,11 @@
 
 #include <mcu.h>
 #include <gdb.h>
-#include <flash.h>
+#include <elf.h>
 
 bool mcu_flash_file(mcu_t mcu, const char* filename)
 {
-	for (mem_dev_t dev = mcu->mem_devs; dev != NULL; dev = dev->next) {
-		if (dev->class == mem_class_flash && dev->type == flash_mem_type) {
-			return flash_dev_load_bin((flash_dev_t)dev, filename);
-		}
-	}
-
-	return false;
+	return elf_load(mcu, filename);
 }
 
 int main(int argc, char** argv) {
