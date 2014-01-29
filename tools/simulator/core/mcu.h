@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <ev.h>
 
 typedef struct mcu* mcu_t;
 typedef struct mcu_callbacks* mcu_callbacks_t;
@@ -51,8 +52,12 @@ struct mcu {
 	mcu_callbacks_t callbacks;
 
 	bool unlocked;
+
+	struct ev_loop *loop;
+	ev_idle idle;
 };
 
+bool mcu_init(mcu_t mcu, struct ev_loop* loop);
 bool mcu_is_halted(mcu_t mcu);
 halt_reason_t mcu_halt_reason(mcu_t mcu);
 bool mcu_halt(mcu_t mcu, halt_reason_t reason);

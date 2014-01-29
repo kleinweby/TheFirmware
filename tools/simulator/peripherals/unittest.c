@@ -60,6 +60,9 @@ struct unittest_dev {
 	int32_t current_test;
 	int32_t total_tests;
 
+	int32_t tests_skipped;
+	int32_t tests_failed;
+
 	char* desc;
 	uint32_t status;
 	char* status_desc;
@@ -147,6 +150,12 @@ static bool unittest_dev_read32(mcu_t mcu, mem_dev_t _mem_dev, uint32_t addr, ui
 	return true;
 }
 
+static bool unittest_done(unittest_dev_t mem_dev)
+{
+	printf("%d run, %d skipped, "COLOR_RED"%d failed\n"COLOR_RESET, mem_dev->total_tests, mem_dev->tests_skipped, mem_dev->tests_failed);
+	exit(mem_dev->tests_failed > 0 ? -1 : 0);
+}
+
 static bool unittest_dev_write32(mcu_t mcu, mem_dev_t _mem_dev, uint32_t addr, uint32_t temp)
 {
 	unittest_dev_t mem_dev = (unittest_dev_t)_mem_dev;
@@ -157,6 +166,8 @@ static bool unittest_dev_write32(mcu_t mcu, mem_dev_t _mem_dev, uint32_t addr, u
 		case TOTAL_TESTS_OFFSET:
 			mem_dev->total_tests = temp;
 			mem_dev->current_test = 0;
+			mem_dev->tests_failed = 0;
+			mem_dev->tests_skipped = 0;
 			unittest_update_progress(mem_dev);
 			mcu_reset(mcu);
 			break;
@@ -171,19 +182,21 @@ static bool unittest_dev_write32(mcu_t mcu, mem_dev_t _mem_dev, uint32_t addr, u
 			mem_dev->status = temp;
 			unittest_update_progress(mem_dev);
 
-			if (temp == STATUS_SKIPPED || temp == STATUS_PASSED) {
+			if (temp == STATUS_SKIPPED || temp == STATUS_PASSED || temp == STATUS_FAILED) {
 				mem_dev->current_test++;
+
+				if (temp == STATUS_SKIPPED)
+					mem_dev->tests_skipped++;
+				else if (temp == STATUS_FAILED)
+					mem_dev->tests_failed++;
 
 				if (mem_dev->current_test < mem_dev->total_tests) {
 					mem_dev->desc = NULL;
 					mcu_reset(mcu);
 				}
 				else {
-					exit(0);
+					unittest_done(mem_dev);
 				}
-			}
-			else if (temp == STATUS_FAILED) {
-				exit(-1);
 			}
 			break;
 		case STATUS_DESC_OFFSET:

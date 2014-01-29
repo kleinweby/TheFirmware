@@ -25,6 +25,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <ev.h>
 
 // Some of these registers are unused
 // as these are remapped. We don't care about
@@ -108,4 +109,4 @@ struct mcu_cortex_m0p {
 	processor_mode_t processor_mode;
 };
 
-mcu_t mcu_cortex_m0p_create(size_t ramsize);
+mcu_t mcu_cortex_m0p_create(struct ev_loop *loop, size_t ramsize);

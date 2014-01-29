@@ -26,6 +26,24 @@
 
 #include <stdio.h>
 
+#define FIXUP_MCU(a, b) ((mcu_t)((uintptr_t)a - __builtin_offsetof(struct mcu, b)))
+
+static void idle_cb (struct ev_loop *loop, ev_idle *w, int revents)
+{
+	mcu_t mcu = FIXUP_MCU(w, idle);
+
+	mcu_runloop(mcu);
+}
+
+bool mcu_init(mcu_t mcu, struct ev_loop* loop)
+{
+	mcu->loop = loop;
+
+	ev_idle_init(&mcu->idle, idle_cb);
+
+	return true;
+}
+
 #define DECLARE_MEM_OP(name, type) \
 bool mcu_##name(mcu_t mcu, uint32_t addr, type value) \
 { \
@@ -156,6 +174,7 @@ bool mcu_halt(mcu_t mcu, halt_reason_t reason)
 	mcu->state = mcu_halted;
 	mcu->halt_reason = reason;
 
+	ev_idle_stop(mcu->loop, &mcu->idle);
 	printf("[MCU] halted\n");
 
 	for (mcu_callbacks_t callbacks = mcu->callbacks; callbacks != NULL; callbacks = callbacks->next)
@@ -170,7 +189,7 @@ bool mcu_resume(mcu_t mcu)
 		return true;
 
 	mcu->state = mcu_running;
-
+	ev_idle_start(mcu->loop, &mcu->idle);
 	printf("[MCU] resumed\n");
 
 	return true;

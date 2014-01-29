@@ -33,6 +33,7 @@
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
+#include <ev.h>
 
 #include <time.h>
 
@@ -46,6 +47,8 @@ bool mcu_flash_file(mcu_t mcu, const char* filename)
 }
 
 int main(int argc, char** argv) {
+	struct ev_loop *loop = EV_DEFAULT;
+
 	bool wait_for_gdb = false;
 	int gdb_port = 1234;
 	const char* firmware_file = NULL;
@@ -65,17 +68,22 @@ int main(int argc, char** argv) {
 			case 'f':
 				firmware_file = optarg;
 				break;
+			case '?':
+				printf("%s - MCU Simulator\n", argv[0]);
+				printf("  -g wait for debugger when mcu halts\n");
+				printf("  -G wait for debugger to attach\n");
+				break;
 		}
 	}
 
-	mcu = mcu_cortex_m0p_create(8 * 1024);
+	mcu = mcu_cortex_m0p_create(loop, 8 * 1024);
 
 	if (!mcu) {
 		printf("Could not create mcu\n");
 		return -1;
 	}
 
-	gdb = gdb_create(gdb_port, mcu);
+	gdb = gdb_create(loop, gdb_port, mcu);
 
 	if (!gdb) {
 		printf("Could not create gdb\n");
@@ -97,23 +105,7 @@ int main(int argc, char** argv) {
 	if (!wait_for_gdb)
 		mcu_resume(mcu);
 
-	int i = 0;
-	clock_t start = clock();
-
-	while (true) {
-		gdb_runloop(gdb);
-		mcu_runloop(mcu);
-		i++;
-		// printf("step\n");
-	}
-
-	clock_t end = clock();
-	uint32_t elapsed = (end - start)/ (CLOCKS_PER_SEC / 1000000);
-	uint64_t instructions_per_second = 1000000 * i / elapsed;
-
-	printf("Exit [pc=0x%04x]: %u instructions, %fms elapsed, %llu instr/s\n", mcu_read_reg(mcu, REG_PC), i, elapsed/1000.f, instructions_per_second);
-
-	printf("Bla");
+	ev_run(loop, 0);
 
 	return 0;
 }

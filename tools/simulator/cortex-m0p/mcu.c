@@ -43,7 +43,7 @@ enum {
 	CPSR_Q = (1<<27)
 };
 
-mcu_t mcu_cortex_m0p_create(size_t ramsize)
+mcu_t mcu_cortex_m0p_create(struct ev_loop *loop, size_t ramsize)
 {
 	mcu_cortex_m0p_t mcu = calloc(1, sizeof(struct mcu_cortex_m0p));
 
@@ -52,6 +52,7 @@ mcu_t mcu_cortex_m0p_create(size_t ramsize)
 		return NULL;
 	}
 
+	mcu_init((mcu_t)mcu, loop);
 	mcu->mcu.instrs16 = mcu_instr16_cortex_m0p;
 	mcu->mcu.instrs32 = mcu_instr32_cortex_m0p;
 

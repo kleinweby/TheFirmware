@@ -25,9 +25,8 @@
 #pragma once
 
 #include <mcu.h>
+#include <ev.h>
 
 typedef struct gdb* gdb_t;
 
-gdb_t gdb_create(int port, mcu_t mcu);
-
-bool gdb_runloop(gdb_t gdb);
+gdb_t gdb_create(struct ev_loop* loop, int port, mcu_t mcu);

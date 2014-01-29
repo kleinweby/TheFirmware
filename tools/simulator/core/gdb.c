@@ -32,22 +32,30 @@
 #include <sys/ioctl.h>
 #include <sys/select.h>
 #include <unistd.h>
+#include <errno.h>
+#include <ctype.h>
 
 struct gdb {
 	mcu_t mcu;
 
-	int socket_fd;
+	ev_io socket_io;
+
 	int gdb_fd;
 
 	// Receiving
 	char* rev_buffer;
 	size_t rev_buffer_filled;
 	size_t rev_buffer_length;
+	ev_io recv_io;
 
 	// Sending
 	char packet_checksum;
+	ev_io send_io;
 
 	struct mcu_callbacks mcu_callbacks;
+
+	//
+	struct ev_loop* loop;
 };
 
 #if 0
@@ -56,11 +64,16 @@ struct gdb {
 #define gdb_debug(...)
 #endif
 
+#define FIXUP_GDB(a, b) ((gdb_t)((uintptr_t)a - __builtin_offsetof(struct gdb, b)))
+
 static const int GDB_BUF = 255;
 
 static void gdb_mcu_did_halt(mcu_t mcu, halt_reason_t reason, void* context);
+static void gdb_accept_callback(struct ev_loop *loop, ev_io *w, int revents);
+static void gdb_read_callback(struct ev_loop *loop, ev_io *w, int revents);
+static void gdb_write_callback(struct ev_loop *loop, ev_io *w, int revents);
 
-gdb_t gdb_create(int port, mcu_t mcu)
+gdb_t gdb_create(struct ev_loop* loop, int port, mcu_t mcu)
 {
 	static int on = 1;
 
@@ -73,11 +86,17 @@ gdb_t gdb_create(int port, mcu_t mcu)
 	}
 
 	gdb->mcu = mcu;
+	gdb->loop = loop;
 
-	gdb->socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (gdb->socket_fd < 0) {
-		perror("socket");
-		return NULL;
+	{
+		int fd  = socket(AF_INET, SOCK_STREAM, 0);
+
+		if (fd < 0) {
+			perror("socket");
+			return NULL;
+		}
+
+		ev_io_init(&gdb->socket_io, gdb_accept_callback, fd, EV_READ);
 	}
 
 	// if (ioctl(gdb->socket_fd, FIONBIO, (char *)&on) < 0) {
@@ -90,18 +109,18 @@ gdb_t gdb_create(int port, mcu_t mcu)
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
  	addr.sin_port        = htons(port);
 
- 	if (bind(gdb->socket_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+ 	if (bind(gdb->socket_io.fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
  		perror("bind");
  		return NULL;
  	}
 
 
-	if (setsockopt(gdb->socket_fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) { 
+	if (setsockopt(gdb->socket_io.fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) { 
     	perror("setsockopt"); 
     	return NULL;
     }
 
-    if (listen(gdb->socket_fd, 5) < 0) {
+    if (listen(gdb->socket_io.fd, 5) < 0) {
     	perror("listen");
     	return NULL;
     }
@@ -121,14 +140,28 @@ gdb_t gdb_create(int port, mcu_t mcu)
 
    	mcu_add_callbacks(mcu, &gdb->mcu_callbacks);
 
+   	ev_io_init(&gdb->recv_io, gdb_read_callback, gdb->gdb_fd, EV_READ);
+   	ev_io_init(&gdb->send_io, gdb_write_callback, gdb->gdb_fd, EV_WRITE);
+
+   	ev_io_start(gdb->loop, &gdb->socket_io);
+
 	return gdb;
+}
+
+static void gdb_client_close(gdb_t gdb)
+{
+	printf("gdb disconnected\n");
+	close(gdb->gdb_fd);
+	gdb->gdb_fd = -1;
+	ev_io_stop(gdb->loop, &gdb->recv_io);
+	ev_io_stop(gdb->loop, &gdb->send_io);
+	gdb->rev_buffer_filled = 0;
 }
 
 static void gdb_client_error(gdb_t gdb)
 {
 	perror("gdb-client");
-	close(gdb->gdb_fd);
-	gdb->gdb_fd = -1;
+	gdb_client_close(gdb);
 }
 
 static bool gdb_send_ack(gdb_t gdb) {
@@ -158,7 +191,7 @@ static bool gdb_send_nack(gdb_t gdb) {
 static bool gdb_send_packet_begin(gdb_t gdb) {
 	gdb->packet_checksum = 0;
 
-	gdb_debug("gdb-send: $");
+	gdb_debug("[gdb] > $");
 
 	if (write(gdb->gdb_fd, "$", 1) < 1) {
 		gdb_client_error(gdb);
@@ -292,18 +325,20 @@ static bool gdb_handle_packet(gdb_t gdb, char* packet, size_t len) {
 			checksum += *buf;
 
 		if (buf >= packet + len) {
-			printf("Packet does not contain checksum!");
+			printf("Packet does not contain checksum!\n");
 			gdb_send_nack(gdb);
 			return false;
 		}
 
 		// mark end of message here and setp over it
 		*buf++ = '\0';
+
+		char checksum_buf[] = { buf[0], buf[1], '\0' };
 		
-		char recv_checksum = strtol(buf, NULL, 16);
+		char recv_checksum = strtol(checksum_buf, NULL, 16);
 
 		if (recv_checksum != checksum) {
-			printf("Packet checksum %02x does not match %02x", checksum, recv_checksum);
+			printf("Packet checksum %02x does not match %02x\n", checksum, recv_checksum);
 			gdb_send_nack(gdb);
 			return false;
 		}
@@ -436,7 +471,6 @@ static bool gdb_handle_packet(gdb_t gdb, char* packet, size_t len) {
 			mcu_unlock(gdb->mcu);
 
 			for (; length > 0; length--, packet++, addr++) {
-				printf("write %x: %x\n", addr, *packet);
 				if (!gdb_mcu_write_byte(gdb->mcu, addr, *packet)) {
 					sucess = false;
 					break;
@@ -475,38 +509,19 @@ static void gdb_mcu_did_halt(mcu_t mcu, halt_reason_t reason, void* context)
 	}
 }
 
-bool gdb_runloop(gdb_t gdb)
+static void gdb_accept_callback(struct ev_loop *loop, ev_io *w, int revents)
 {
-	struct fd_set set;
-	struct timeval timeout;
-	int max_fd = gdb->socket_fd > gdb->gdb_fd ? gdb->socket_fd : gdb->gdb_fd;
+	gdb_t gdb = FIXUP_GDB(w, socket_io);
 
-	FD_ZERO(&set);
-	FD_SET(gdb->socket_fd, &set);
-	if (gdb->gdb_fd >= 0)
-		FD_SET(gdb->gdb_fd, &set);
-
-	bzero((char *) &timeout, sizeof(timeout));
-
-	if (mcu_is_halted(gdb->mcu)) {
-		timeout.tv_sec = 5 * 60;
-	}
-
-	if (select(max_fd + 1, &set, NULL, NULL, &timeout) < 0) {
-		perror("select");
-		return false;
-	}
-
-	// New client
-	if (FD_ISSET(gdb->socket_fd, &set)) {
+	if (revents & EV_READ) {
 		struct sockaddr_in addr;
 		socklen_t addr_len = sizeof(addr);
 
-		int fd = accept(gdb->socket_fd, (struct sockaddr *)&addr, &addr_len);
+		int fd = accept(gdb->socket_io.fd, (struct sockaddr *)&addr, &addr_len);
 
 		if (fd < 0) {
 			perror("accept");
-			return false;
+			return;
 		}
 
 		// Reject connection
@@ -515,80 +530,99 @@ bool gdb_runloop(gdb_t gdb)
 		} 
 		else {
 			gdb->gdb_fd = fd;
+
+			ev_io_set(&gdb->recv_io, fd, EV_READ);
+			ev_io_set(&gdb->send_io, fd, EV_WRITE);
+
+			ev_io_start(gdb->loop, &gdb->recv_io);
+
 			printf("Connected to gdb client\n");
 		}
 	}
+}
 
-	// Message from gdb
-	if (gdb->gdb_fd >= 0 && FD_ISSET(gdb->gdb_fd, &set)) {
-		bool hasPacket = false;
-		bool hasBreak = false;
+static void gdb_read_callback(struct ev_loop *loop, ev_io *w, int revents)
+{
+	gdb_t gdb = FIXUP_GDB(w, recv_io);
+
+	if (revents & EV_READ) {
 		ssize_t len;
-		char* packetStart;
-		char* packetEnd;
+		bool hasBreak = false;
 
 		len = read(gdb->gdb_fd, gdb->rev_buffer + gdb->rev_buffer_filled, gdb->rev_buffer_length - gdb->rev_buffer_filled - 1);
-		if (len < 0) {
+		if (len == 0) {
+			gdb_client_close(gdb);
+		}
+		else if (len < 0) {
+			if (errno == EAGAIN)
+				return;
+
 			gdb_client_error(gdb);
-			return false;
+			return;
 		}
 
 		gdb->rev_buffer_filled += len;
 		gdb->rev_buffer[gdb->rev_buffer_filled] = '\0';
 
-		packetStart = strchr(gdb->rev_buffer, '$');
-		for (packetEnd = packetStart; packetStart && packetEnd < gdb->rev_buffer + gdb->rev_buffer_filled; packetEnd++)
-			if (*packetEnd == '#')
-				break;
-
-		// We got an packet
-		if (packetStart && packetEnd && *packetEnd++ != '\0' && *packetEnd++ != '\0')
-			hasPacket = true;
-
-		// Look for a break 0x03 after the packet
-		for (char* b = packetEnd; packetEnd && *b != '$' && *b != '\0'; b++) {
-			if (*b == 0x03) {
+		// Try to find a packet start
+		for (char* b = gdb->rev_buffer; b < gdb->rev_buffer + gdb->rev_buffer_filled; b++) {
+			if (*b == 0x03) 
 				hasBreak = true;
+			else if (*b == '$') { // Packet start
+				// We now move the beginning of the packet to the beginning of the buffer
+				gdb->rev_buffer_filled -= b - gdb->rev_buffer;
+				memmove(gdb->rev_buffer, b, gdb->rev_buffer_filled);
 				break;
-			}
+			} 
 		}
 
-		// Look for a break 0x03 before the packet
-		char* end = packetStart ?: (gdb->rev_buffer + gdb->rev_buffer_filled);
-		for (char* b = gdb->rev_buffer; b < end && *b != '\0'; b++) {
-			if (*b == 0x03) {
-				hasBreak = true;
-				break;
+		// We have a packet
+		if (*gdb->rev_buffer == '$') {
+			char* end = gdb->rev_buffer;
+
+			for (; *end != '#' && end < gdb->rev_buffer + gdb->rev_buffer_filled; end++)
+				;
+
+			// The packet is not fully in the buffer
+			if (*end != '#')
+				return;
+
+			// '#' + two checksum bytes
+			end += 3;
+
+			// end is no longer valid
+			if (end > gdb->rev_buffer + gdb->rev_buffer_filled)
+				return;
+
+			gdb_debug("[gdb] < ");
+			for (char* b = gdb->rev_buffer; b < end; b++) {
+				unsigned char c = *b;
+				if (isprint(c))
+					gdb_debug("%c", c);
+				else
+					gdb_debug("\\0x%02X", c);
 			}
+			gdb_debug("\n");
+
+			gdb_handle_packet(gdb, gdb->rev_buffer, end - gdb->rev_buffer);
+
+			// remove the handled packet
+			gdb->rev_buffer_filled -= end - gdb->rev_buffer;
+			memmove(gdb->rev_buffer, end, gdb->rev_buffer_filled);
+
+			for (char *b = gdb->rev_buffer ; *b != '$' && b < gdb->rev_buffer + gdb->rev_buffer_filled; b++)
+				if (*b == 0x03)
+					hasBreak = true;
 		}
 
-		if (hasPacket) {
-			*++packetEnd = '\0';
-
-			gdb_debug("gdb-packet: %s\n", packetStart);
-
-			gdb_handle_packet(gdb, packetStart, packetEnd - packetStart);
-
-			gdb->rev_buffer_filled -= packetEnd - gdb->rev_buffer;
-			memmove(gdb->rev_buffer, packetEnd, gdb->rev_buffer_filled + 1 /* \0 */);
-		}
-		// Overflow
-		else if (gdb->rev_buffer_filled >= gdb->rev_buffer_length - 1) {
-			printf("Overflow\n");
-			if (gdb->rev_buffer != packetStart) {
-				gdb->rev_buffer_filled -= packetStart - gdb->rev_buffer;
-				memmove(gdb->rev_buffer, packetStart, gdb->rev_buffer_filled);
-			}
-			else {
-				gdb->rev_buffer_filled = 0;
-			}
-		}
-
-
-		if (hasBreak) {
+		if (hasBreak)
 			mcu_halt(gdb->mcu, HAL_TRAP);
-		}
 	}
+}
 
-	return gdb->socket_fd >= 0;
+static void gdb_write_callback(struct ev_loop *loop, ev_io *w, int revents)
+{
+	gdb_t gdb = FIXUP_GDB(w, send_io);
+
+	#pragma unused(gdb)
 }
