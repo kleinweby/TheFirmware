@@ -80,7 +80,7 @@ SECTIONS
     .text : ALIGN(4) {
         PROVIDE_HIDDEN(_tests = .);
 
-        KEEP(*(SORT(.tests.*)))
+        KEEP(*(.tests.*))
         KEEP(*(.tests))
 
         PROVIDE_HIDDEN(_tests_length = . - _tests);

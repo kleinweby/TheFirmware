@@ -46,3 +46,8 @@ void test_do(test_type type)
 		arch_test_pass(0);
 	}
 }
+
+void test_fail(const char* reason)
+{
+	arch_test_fail(reason);
+}

@@ -25,6 +25,7 @@
 #include "bootstrap.h"
 
 #include <arch.h>
+#include <irq.h>
 
 #include <stdint.h>
 
@@ -34,6 +35,8 @@ void bootstrap()
 {
 	arch_early_init();
 	test_do(TEST_AFTER_ARCH_EARLY_INIT);
+
+	irq_init();
 
 	arch_late_init();
 	test_do(TEST_AFTER_ARCH_LATE_INIT);

@@ -12,3 +12,4 @@ end
 parse 'arch/build'
 parse 'core/build'
 parse 'platform/build'
+parse 'tests/build'

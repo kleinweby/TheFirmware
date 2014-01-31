@@ -22,20 +22,50 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "irq.h" 
+#include <irq.h>
 
+#include <stddef.h>
 
-void irq_register(uint8_t irq_number, irq_handler_t handler)
+struct irq_entry {
+	irq_handler_t handler;
+};
+
+typedef struct irq_entry irq_entry_t;
+
+struct {
+	irq_entry_t entries[NUMBER_OF_IRQS];
+} irq;
+
+void irq_init()
 {
-
+	for (uint8_t i = 0; i < NUMBER_OF_IRQS; i++)
+		irq.entries[i].handler = NULL;
 }
 
-void irq_unregister(uint8_t irq_number, irq_handler_t handler)
+bool irq_register(uint8_t irq_number, irq_handler_t handler)
 {
+	if (irq.entries[irq_number].handler || irq_number >= NUMBER_OF_IRQS)
+		return false;
 
+	irq.entries[irq_number].handler = handler;
+
+	return true;
+}
+
+bool irq_unregister(uint8_t irq_number, irq_handler_t handler)
+{
+	if (irq.entries[irq_number].handler != handler)
+		return false;
+
+	irq.entries[irq_number].handler = NULL;
+
+	return true;
 }
 
 void do_irq(uint8_t irq_number)
 {
-	
+	if (!irq.entries[irq_number].handler)
+		return do_irq(1);
+
+	irq.entries[irq_number].handler();
 }
