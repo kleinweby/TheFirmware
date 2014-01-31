@@ -301,21 +301,10 @@ static bool gdb_mcu_fetch_byte(mcu_t mcu, uint32_t addr, char* c)
 	return true;
 }
 
-static bool gdb_handle_packet(gdb_t gdb, char* packet, size_t len) {
-
-	switch (*packet++) {
-		case '$':
-			break;
-		case '+':
-		case '-':
-			if (*packet++ != '$')
-				return true;
-			break;
-		default:
-			gdb_debug("Packet does not start with '$'\n");
-			gdb_send_nack(gdb);
-			return false;
-	}
+static bool gdb_handle_packet(gdb_t gdb, char* packet, size_t len)
+{
+	packet++;
+	len--;
 
 	{
 		char checksum = 0;

@@ -365,6 +365,7 @@ static void mcu_fetch_error(void* _mcu, uint32_t addr)
 {
 	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
 
+	printf("Fetch error at %x\n", addr);
 	mcu_halt((mcu_t)mcu, HALT_HARD_FAULT);
 }
 
@@ -372,6 +373,7 @@ static void mcu_write_error(void* _mcu, uint32_t addr)
 {
 	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
 
+	printf("Write error at %x\n", addr);
 	mcu_halt((mcu_t)mcu, HALT_HARD_FAULT);
 }
 
@@ -430,8 +432,8 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.mask = 0xFE00,
 		.instr = 0x1800,
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
-			uint8_t src = (instr >> 0) & 0x7;
-        	uint8_t dest  = (instr >> 3) & 0x7;
+        	uint8_t dest  = (instr >> 0) & 0x7;
+			uint8_t src = (instr >> 3) & 0x7;
         	uint8_t src2  = (instr >> 6) & 0x7;
 
         	trace_instr16("adds r%u,r%u,r%u\n", dest, src, src2);
