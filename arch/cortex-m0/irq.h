@@ -49,4 +49,6 @@
 
 #define NUMBER_OF_IRQS 24
 
+#define IRQ_HANDLER_MISSING IRQ_HARDFAULT
+
 #include_next <irq.h>

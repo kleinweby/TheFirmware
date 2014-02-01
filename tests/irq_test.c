@@ -64,6 +64,19 @@ DECLARE_TEST("unregister irq handler", TEST_AFTER_ARCH_LATE_INIT, test_irq_unreg
 
 static void test_irq_unregister_unkown_handler() {
 	test_assert(irq_unregister(IRQ1, irq_handler) == false, "IRQ handler unregistraion should not succeed");
+	test_assert(irq_unregister(NUMBER_OF_IRQS, irq_handler) == false, "NUMBER_OF_IRQS IRQ handler unregistraion should not succeed");
 }
 
 DECLARE_TEST("unregister unkown irq handler", TEST_AFTER_ARCH_LATE_INIT, test_irq_unregister_unkown_handler);
+
+static void test_irq_missing_handler() {
+	test_assert(irq_register(IRQ_HANDLER_MISSING, irq_handler) == true, "IRQ handler registraion faild");
+
+	handler_called = false;
+
+	do_irq(IRQ0);
+
+	test_assert(handler_called == true, "missing IRQ handler was not called");
+}
+
+DECLARE_TEST("missing irq handler", TEST_AFTER_ARCH_LATE_INIT, test_irq_missing_handler);

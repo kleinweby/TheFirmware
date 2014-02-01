@@ -152,7 +152,12 @@ static bool unittest_dev_read32(mcu_t mcu, mem_dev_t _mem_dev, uint32_t addr, ui
 
 static bool unittest_done(unittest_dev_t mem_dev)
 {
-	printf("%d run, %d skipped, "COLOR_RED"%d failed\n"COLOR_RESET, mem_dev->total_tests, mem_dev->tests_skipped, mem_dev->tests_failed);
+	if (mem_dev->tests_failed > 0)
+		printf(COLOR_RED);
+	else
+		printf(COLOR_GREEN);
+
+	printf("%d run, %d skipped, %d failed\n"COLOR_RESET, mem_dev->total_tests, mem_dev->tests_skipped, mem_dev->tests_failed);
 	exit(mem_dev->tests_failed > 0 ? -1 : 0);
 }
 

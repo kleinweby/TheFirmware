@@ -54,7 +54,7 @@ bool irq_register(uint8_t irq_number, irq_handler_t handler)
 
 bool irq_unregister(uint8_t irq_number, irq_handler_t handler)
 {
-	if (irq.entries[irq_number].handler != handler)
+	if (irq.entries[irq_number].handler != handler || irq_number >= NUMBER_OF_IRQS)
 		return false;
 
 	irq.entries[irq_number].handler = NULL;
@@ -62,10 +62,21 @@ bool irq_unregister(uint8_t irq_number, irq_handler_t handler)
 	return true;
 }
 
+#define likely(x)      __builtin_expect(!!(x), 1)
+#define unlikely(x)    __builtin_expect(!!(x), 0)
+
 void do_irq(uint8_t irq_number)
 {
-	if (!irq.entries[irq_number].handler)
-		return do_irq(1);
-
-	irq.entries[irq_number].handler();
+	if (likely(irq.entries[irq_number].handler)) {
+		irq.entries[irq_number].handler();
+	}
+	else {
+		// Handler is missing for handler missing irq, woops
+		if (irq_number == IRQ_HANDLER_MISSING) {
+			while (1)
+				;
+		}
+		else
+			return do_irq(IRQ_HANDLER_MISSING);
+	}
 }
