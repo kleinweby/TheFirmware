@@ -1,11 +1,8 @@
 #!/bin/bash
 
 # Find base dir
-pushd `dirname $0`/../.. > /dev/null
-BASEDIR=`pwd`
-popd > /dev/null
+DIR="$( cd "$( dirname "$(type -p $0)" )" && pwd )"
 
-. $BASEDIR/tools/env.sh
+eval $($DIR/../env.sh -p)
 
-./configure.rb -b $FIRMWARE_BOARD || exit 1
-Toolchain/ninja-build/ninja || exit 1
+./test.sh || exit 1
