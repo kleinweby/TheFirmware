@@ -1,4 +1,4 @@
-var :cflags, ["-I#{path('.')}"]
+var :include_paths, ["-I#{path('.')}"]
 
 file '*.c'
 

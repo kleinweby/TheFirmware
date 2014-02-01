@@ -321,7 +321,7 @@ class Configure < BuildConfiguration
     while not t.nil?
       additional.unshift(t)
       self._objects += t._objects
-      var :define, "-DTARGET_#{t.name.upcase}=1"
+      var :define, "-DTARGET_#{t.name.upcase.gsub /-/, '_'}=1"
 
       if t.base.nil?
         break

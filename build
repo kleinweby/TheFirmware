@@ -1,4 +1,5 @@
-var :cflags, [ '$define', '-fno-builtin', '-Wall', '-Werror', "-I#{path('.')}", '-Wno-deprecated-register', "--sysroot=#{path('./Toolchain/arm.toolchain/')}"]
+var :include_paths, [ "-I#{path('.')}" ]
+var :cflags, [ '$define', '$include_paths', '-fno-builtin', '-Wall', '-Werror',  '-Wno-deprecated-register', "--sysroot=#{path('./Toolchain/arm.toolchain/')}"]
 var :cxxflags, [ '$cflags', '-fno-exceptions', '-fno-rtti', '-fno-unwind-tables', '-Wno-c++98-compat-pedantic']
 var :ldflags, [ "-nostdlib", '-lgcc' ]
 

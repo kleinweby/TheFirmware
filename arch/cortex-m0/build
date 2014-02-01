@@ -4,7 +4,8 @@ target 'cortex-m0', :abstract => true do
   	var :cxx, 'arm-none-eabi-clang++'
   	var :ld, 'arm-none-eabi-clang'
 
-	var :cflags, ['-mcpu=cortex-m0', '-mthumb', "-I#{path('.')}"]
+  	var :include_paths, "-I#{path('.')}"
+	var :cflags, ['-mcpu=cortex-m0', '-mthumb']
 	var :ldflags, ['-mcpu=cortex-m0', '-mthumb']
 
 	file 'startup.c'

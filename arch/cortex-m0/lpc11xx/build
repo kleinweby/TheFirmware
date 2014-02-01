@@ -6,7 +6,8 @@ target 'lpc11xx', :base => 'cortex-m0' do
 
   var :linker_file, path('./link.ld')
 
-  var :cflags, ['-mcpu=cortex-m0', '-mthumb', "-I#{path('./CMSIS/inc')}", "-I#{path('.')}"]
+  var :include_pahts, [ "-I#{path('./CMSIS/inc')}", "-I#{path('.')}" ]
+  var :cflags, ['-mcpu=cortex-m0', '-mthumb']
   var :ldflags, ['-mcpu=cortex-m0', '-mthumb']
 
   file '*.c'

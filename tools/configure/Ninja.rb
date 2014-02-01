@@ -7,18 +7,14 @@ class NinjaBase
 		self.parent = parent
 	end
 
-	def var(name, value = nil, prefix=false)
+	def var(name, value = nil, override = false)
 		if value.nil?
 			self.vars[name.to_sym]
 		else
-			value = value.join(" ") if value.is_a? Enumerable
+			value = [ value ] unless value.is_a? Enumerable
 
-			if self.vars[name.to_sym]
-				if prefix
-					self.vars[name.to_sym] = value + " " + self.vars[name.to_sym]
-				else
-					self.vars[name.to_sym] += " " + value
-				end
+			if !override and self.vars[name.to_sym]
+				self.vars[name.to_sym] += value
 			else
 				self.vars[name.to_sym] = value
 			end
@@ -28,12 +24,63 @@ class NinjaBase
 	def to_ninja(indentation = 0)
 		str = ""
 
-		self.vars.each do |k,v|
+		vars = self.vars.map do |k,v|
+			v.reverse! if k.to_s.end_with? '_paths'
+
+			v = v.map do |v|
+				v.to_s
+			end
+
+			refs = v.map do |v|
+				v[1..v.length].to_sym if v.start_with? "$"
+			end.compact
+
+			v = v.join(" ")
+
 			if declares_parent_var k
 				v = "$#{k} #{v}"
 			end
 
-			str += self.format_line "#{k} = #{v}", indentation
+			[k, {
+				:values => v,
+				:refs => refs
+			}]
+		end
+
+		changed = true
+		while changed
+			changed = false
+			seen_keys = []
+
+			vars.each_index do |idx|
+				k = vars[idx][0]
+				refs = vars[idx][1][:refs]
+
+				missing_refs = refs - seen_keys
+
+				missing_refs.each do |missing|
+					new_idx = vars.find_index do |var|
+						var[0] == missing
+					end
+
+					unless new_idx.nil?
+						t = vars[new_idx]
+						vars.delete_at new_idx
+						vars.insert idx, t
+						seen_keys << missing
+						changed = true
+					end
+				end
+
+				seen_keys << k
+			end
+		end
+
+		vars.each do |t|
+			k = t[0]
+			v = t[1]
+
+			str += self.format_line "#{k} = #{v[:values]}", indentation
 		end
 
 		str
@@ -183,7 +230,7 @@ class Ninja < NinjaBase
 		defs = self.defs.map do |d|
 			if d.is_a? Ninja
 				d.vars.each do |k,v|
-					var k, v, true
+					var k, v
 				end
 
 				d.defs
