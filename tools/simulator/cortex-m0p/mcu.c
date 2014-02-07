@@ -1054,9 +1054,11 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 			reg_t src  = (instr >> 3) & 0x7;
 			reg_t dest = (instr >> 0) & 0x7;
 
-			trace_instr16("cpy r%u,r%u\n", dest, src);
+			uint32_t val = mcu_read_reg(mcu, src);
 
-			mcu_write_reg(mcu, dest, mcu_read_reg(mcu, src));
+			trace_instr16("cpy r%u,r%u\t\t; val = %x\n", dest, src, val);
+
+			mcu_write_reg(mcu, dest, val);
 			
 			return true;
 		}
@@ -2001,10 +2003,10 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 			reg_t src    = (instr >> 3) & 0x7;
 			uint32_t imm = ((instr >> 6) & 0x1F) << 2;
 
-			trace_instr16("str r%u,[r%u,#0x%X]\n", dest, src, imm);
-
 			uint32_t addr = mcu_read_reg(mcu, src) + imm;
 			uint32_t val = mcu_read_reg(mcu, dest);
+
+			trace_instr16("str r%u,[r%u,#0x%X]\t; r%u = %x, addr = %x\n", dest, src, imm, dest, val, addr);
 
 			if (!mcu_write32(mcu, addr, val)) {
 				mcu_write_error(mcu, addr);
@@ -2024,10 +2026,10 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 			reg_t src1   = (instr >> 3) & 0x7;
 			reg_t src2   = (instr >> 6) & 0x7;
 
-			trace_instr16("str r%u,[r%u,r%u]\n", dest, src1, src2);
-
 			uint32_t addr = mcu_read_reg(mcu, src1) + mcu_read_reg(mcu, src2);
 			uint32_t val = mcu_read_reg(mcu, dest);
+
+			trace_instr16("str r%u,[r%u,r%u]\t; r%u = %x, addr = %x\n", dest, src1, src2, dest, val, addr);
 
 			if (!mcu_write32(mcu, addr, val)) {
 				mcu_write_error(mcu, val);
@@ -2046,10 +2048,10 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 			reg_t dest   = (instr >> 8) & 0x7;
 			uint32_t imm = ((instr >> 0) & 0xFF) << 2;
 
-			trace_instr16("str r%u,[SP,#0x%X]\n", dest, imm);
-
 			uint32_t addr = mcu_read_reg(mcu, REG_SP) + imm;
 			uint32_t val = mcu_read_reg(mcu, dest);
+
+			trace_instr16("str r%u,[SP,#0x%X]\t; r%u = %x, addr = %x\n", dest, imm, dest, val, addr);
 
 			if (!mcu_write32(mcu, addr, val)) {
 				mcu_write_error(mcu, addr);
@@ -2257,7 +2259,7 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.mask = 0xFF80,
 		.instr = 0xB080,
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
-			uint32_t imm = ((instr >> 0) & 0x1F) << 2;
+			uint32_t imm = ((instr >> 0) & 0x7F) << 2;
 
 			trace_instr16("sub SP,#0x%02X\n", imm);
 
