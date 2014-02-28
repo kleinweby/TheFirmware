@@ -5,3 +5,4 @@ doc/
 FirmwareInfo.cc.rake-defs
 FirmwareInfo.cc
 build.ninja
+tools/simulator/simulator
