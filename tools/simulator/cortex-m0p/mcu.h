@@ -51,7 +51,7 @@ typedef enum {
 	REG_SP   = 13,
 	REG_LR   = 14,
 	REG_PC   = 15,
-	
+
 	REG_XPSR = 16,
 
 	REG_CONTROL,
@@ -67,6 +67,7 @@ typedef enum {
 
 typedef enum {
 	HALT_STOPPED = 0,
+	HALT_SLEEP = -1,
 
 	HALT_HARD_FAULT,
 	HALT_UNKOWN_INSTRUCTION,

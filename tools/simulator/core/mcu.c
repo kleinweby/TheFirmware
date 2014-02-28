@@ -175,10 +175,13 @@ bool mcu_halt(mcu_t mcu, halt_reason_t reason)
 	mcu->halt_reason = reason;
 
 	ev_idle_stop(mcu->loop, &mcu->idle);
-	printf("[MCU] halted\n");
+
+	if (reason >= 0)
+		printf("[MCU] halted\n");
 
 	for (mcu_callbacks_t callbacks = mcu->callbacks; callbacks != NULL; callbacks = callbacks->next)
-		callbacks->mcu_did_halt(mcu, reason, callbacks->context);
+		if (callbacks->mcu_did_halt)
+			callbacks->mcu_did_halt(mcu, reason, callbacks->context);
 
 	return true;
 }

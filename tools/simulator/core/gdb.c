@@ -115,8 +115,8 @@ gdb_t gdb_create(struct ev_loop* loop, int port, mcu_t mcu)
  	}
 
 
-	if (setsockopt(gdb->socket_io.fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) { 
-    	perror("setsockopt"); 
+	if (setsockopt(gdb->socket_io.fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) {
+    	perror("setsockopt");
     	return NULL;
     }
 
@@ -323,7 +323,7 @@ static bool gdb_handle_packet(gdb_t gdb, char* packet, size_t len)
 		*buf++ = '\0';
 
 		char checksum_buf[] = { buf[0], buf[1], '\0' };
-		
+
 		char recv_checksum = strtol(checksum_buf, NULL, 16);
 
 		if (recv_checksum != checksum) {
@@ -393,7 +393,7 @@ static bool gdb_handle_packet(gdb_t gdb, char* packet, size_t len)
 		{
 			reg_t reg = strtol(packet, &packet, 16);
 
-			packet++; // = 
+			packet++; // =
 			uint32_t val = strtol(packet, NULL, 16);
 
 			// When gdb sets the pc to 0x0, it actually means
@@ -490,7 +490,8 @@ static void gdb_mcu_did_halt(mcu_t mcu, halt_reason_t reason, void* context)
 {
 	gdb_t gdb = (gdb_t)context;
 
-	if (gdb->gdb_fd >= 0) {
+  // Don't tell gdb when the mcu only entered a sleep state
+	if (reason >= 0 && gdb->gdb_fd >= 0) {
 		gdb_send_packet_begin(gdb);
 		gdb_send_packet_str(gdb, "S");
 		gdb_send_packet_hex(gdb, reason, 1);
@@ -516,7 +517,7 @@ static void gdb_accept_callback(struct ev_loop *loop, ev_io *w, int revents)
 		// Reject connection
 		if (gdb->gdb_fd >= 0) {
 			close(fd);
-		} 
+		}
 		else {
 			gdb->gdb_fd = fd;
 
@@ -555,14 +556,14 @@ static void gdb_read_callback(struct ev_loop *loop, ev_io *w, int revents)
 
 		// Try to find a packet start
 		for (char* b = gdb->rev_buffer; b < gdb->rev_buffer + gdb->rev_buffer_filled; b++) {
-			if (*b == 0x03) 
+			if (*b == 0x03)
 				hasBreak = true;
 			else if (*b == '$') { // Packet start
 				// We now move the beginning of the packet to the beginning of the buffer
 				gdb->rev_buffer_filled -= b - gdb->rev_buffer;
 				memmove(gdb->rev_buffer, b, gdb->rev_buffer_filled);
 				break;
-			} 
+			}
 		}
 
 		// We have a packet

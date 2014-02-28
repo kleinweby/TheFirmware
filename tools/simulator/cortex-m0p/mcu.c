@@ -283,7 +283,6 @@ bool mcu_instr_step(mcu_t mcu)
 
 static void mcu_update_nflag(void* _mcu, uint32_t c)
 {
-	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
 	uint32_t cpsr = mcu_read_reg(_mcu, REG_APSR);
 
 	if( c & (1 << 31))
@@ -296,7 +295,6 @@ static void mcu_update_nflag(void* _mcu, uint32_t c)
 
 static void mcu_update_zflag(void* _mcu, uint32_t c)
 {
-	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
 	uint32_t cpsr = mcu_read_reg(_mcu, REG_APSR);
 
 	if (c == 0)
@@ -309,15 +307,14 @@ static void mcu_update_zflag(void* _mcu, uint32_t c)
 
 static void mcu_update_cflag_bit(void* _mcu, uint32_t val)
 {
-	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
 	uint32_t cpsr = mcu_read_reg(_mcu, REG_APSR);
 
 	if (val)
-    	cpsr |= CPSR_C;
-    else
-    	cpsr &= ~CPSR_C;
+  	cpsr |= CPSR_C;
+  else
+  	cpsr &= ~CPSR_C;
 
-    mcu_write_reg(_mcu, REG_APSR, cpsr);
+  mcu_write_reg(_mcu, REG_APSR, cpsr);
 }
 
 static void mcu_update_cflag(void* _mcu, uint32_t a, uint32_t b, uint32_t c)
@@ -327,23 +324,22 @@ static void mcu_update_cflag(void* _mcu, uint32_t a, uint32_t b, uint32_t c)
 	uint32_t temp;
 
 	// carry in
-    temp = (a & 0x7FFFFFFF) + (b & 0x7FFFFFFF) + c;
-    //carry out
-    temp = (temp >> 31) + (a>>31) + (b >> 31);
-    mcu_update_cflag_bit(mcu, temp & 2);
+  temp = (a & 0x7FFFFFFF) + (b & 0x7FFFFFFF) + c;
+  //carry out
+  temp = (temp >> 31) + (a>>31) + (b >> 31);
+  mcu_update_cflag_bit(mcu, temp & 2);
 }
 
 static void mcu_update_vflag_bit(void* _mcu, uint32_t val)
 {
-	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
 	uint32_t cpsr = mcu_read_reg(_mcu, REG_APSR);
 
 	if (val)
-    	cpsr |= CPSR_V;
-    else
-    	cpsr &= ~CPSR_V;
+  	cpsr |= CPSR_V;
+  else
+  	cpsr &= ~CPSR_V;
 
-    mcu_write_reg(_mcu, REG_APSR, cpsr);
+  mcu_write_reg(_mcu, REG_APSR, cpsr);
 }
 
 static void mcu_update_vflag(void* _mcu, uint32_t a, uint32_t b, uint32_t c)
@@ -351,14 +347,14 @@ static void mcu_update_vflag(void* _mcu, uint32_t a, uint32_t b, uint32_t c)
 	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
 
 	uint32_t temp1;
-    uint32_t temp2;
+  uint32_t temp2;
 
-    temp1 = (a & 0x7FFFFFFF) + (b & 0x7FFFFFFF) + c; //carry in
-    temp1 >>= 31; //carry in in lsbit
-    temp2 = (temp1 & 1) + (( a>> 31) & 1) + ((b >> 31) & 1); //carry out
-    temp2 >>= 1; //carry out in lsbit
-    temp1 = (temp1 ^ temp2) & 1; //if carry in != carry out then signed overflow
-    mcu_update_vflag_bit(mcu, temp1);
+  temp1 = (a & 0x7FFFFFFF) + (b & 0x7FFFFFFF) + c; //carry in
+  temp1 >>= 31; //carry in in lsbit
+  temp2 = (temp1 & 1) + (( a>> 31) & 1) + ((b >> 31) & 1); //carry out
+  temp2 >>= 1; //carry out in lsbit
+  temp1 = (temp1 ^ temp2) & 1; //if carry in != carry out then signed overflow
+  mcu_update_vflag_bit(mcu, temp1);
 }
 
 static void mcu_fetch_error(void* _mcu, uint32_t addr)
@@ -386,19 +382,19 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.instr = 0x1C00,
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			uint8_t dest = (instr >> 0) & 0x7;
-        	uint8_t src  = (instr >> 3) & 0x7;
-        	uint8_t b  = (instr >> 6) & 0x7;
+    	uint8_t src  = (instr >> 3) & 0x7;
+    	uint8_t b  = (instr >> 6) & 0x7;
 
-        	trace_instr16("adds r%u,r%u,#0x%X\n", dest, src, b);
+    	trace_instr16("adds r%u,r%u,#0x%X\n", dest, src, b);
 
-        	uint32_t a = mcu_read_reg(mcu, src);
-        	uint32_t c = a + b;
+    	uint32_t a = mcu_read_reg(mcu, src);
+    	uint32_t c = a + b;
 
-        	mcu_write_reg(mcu, dest, c);
-            mcu_update_nflag(mcu, c);
-            mcu_update_zflag(mcu, c);
-            mcu_update_cflag(mcu, a, b, 0);
-            mcu_update_vflag(mcu, a, b, 0);
+    	mcu_write_reg(mcu, dest, c);
+        mcu_update_nflag(mcu, c);
+        mcu_update_zflag(mcu, c);
+        mcu_update_cflag(mcu, a, b, 0);
+        mcu_update_vflag(mcu, a, b, 0);
 
 			return true;
 		}
@@ -410,18 +406,18 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.instr = 0x3000,
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			uint8_t reg = (instr >> 8) & 0x7;
-        	uint8_t b  = (instr >> 0) & 0xFF;
+    	uint8_t b  = (instr >> 0) & 0xFF;
 
-        	trace_instr16("adds r%u,#0x%02X\n", reg, b);
+    	trace_instr16("adds r%u,#0x%02X\n", reg, b);
 
-        	uint32_t a = mcu_read_reg(mcu, reg);
-        	uint32_t c = a + b;
+    	uint32_t a = mcu_read_reg(mcu, reg);
+    	uint32_t c = a + b;
 
-        	mcu_write_reg(mcu, reg, c);
-            mcu_update_nflag(mcu, c);
-            mcu_update_zflag(mcu, c);
-            mcu_update_cflag(mcu, a, b, 0);
-            mcu_update_vflag(mcu, a, b, 0);
+    	mcu_write_reg(mcu, reg, c);
+      mcu_update_nflag(mcu, c);
+      mcu_update_zflag(mcu, c);
+      mcu_update_cflag(mcu, a, b, 0);
+      mcu_update_vflag(mcu, a, b, 0);
 
 			return true;
 		}
@@ -432,21 +428,21 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.mask = 0xFE00,
 		.instr = 0x1800,
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
-        	uint8_t dest  = (instr >> 0) & 0x7;
+    	uint8_t dest  = (instr >> 0) & 0x7;
 			uint8_t src = (instr >> 3) & 0x7;
-        	uint8_t src2  = (instr >> 6) & 0x7;
+    	uint8_t src2  = (instr >> 6) & 0x7;
 
-        	trace_instr16("adds r%u,r%u,r%u\n", dest, src, src2);
+    	trace_instr16("adds r%u,r%u,r%u\n", dest, src, src2);
 
-        	uint32_t a = mcu_read_reg(mcu, src);
-        	uint32_t b = mcu_read_reg(mcu, src2);
-        	uint32_t c = a + b;
+    	uint32_t a = mcu_read_reg(mcu, src);
+    	uint32_t b = mcu_read_reg(mcu, src2);
+    	uint32_t c = a + b;
 
-        	mcu_write_reg(mcu, dest, c);
-            mcu_update_nflag(mcu, c);
-            mcu_update_zflag(mcu, c);
-            mcu_update_cflag(mcu, a, b, 0);
-            mcu_update_vflag(mcu, a, b, 0);
+    	mcu_write_reg(mcu, dest, c);
+      mcu_update_nflag(mcu, c);
+      mcu_update_zflag(mcu, c);
+      mcu_update_cflag(mcu, a, b, 0);
+      mcu_update_vflag(mcu, a, b, 0);
 
 			return true;
 		}
@@ -462,25 +458,25 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 			}
 
 			reg_t reg = ((instr >> 0) & 0x7) | ((instr >> 4) & 0x8);
-        	reg_t src2  = (instr >> 3) & 0xF;
+    	reg_t src2  = (instr >> 3) & 0xF;
 
-        	trace_instr16("add r%u,r%u\n", reg, src2);
+    	trace_instr16("add r%u,r%u\n", reg, src2);
 
-        	uint32_t a = mcu_read_reg(mcu, reg);
-        	uint32_t b = mcu_read_reg(mcu, src2);
-        	uint32_t c = a + b;
+    	uint32_t a = mcu_read_reg(mcu, reg);
+    	uint32_t b = mcu_read_reg(mcu, src2);
+    	uint32_t c = a + b;
 
-        	if (reg == REG_PC) {
-        		if ((c & 1) == 0) {
-        			printf("add pc,... produced arm address, arm mode not supported!\n");
-        			return false;
-        		}
+    	if (reg == REG_PC) {
+    		if ((c & 1) == 0) {
+    			printf("add pc,... produced arm address, arm mode not supported!\n");
+    			return false;
+    		}
 
-        		c &= ~1; // Is this needed? c&1 would catch all cases wouldn't it?
-        		c += 2; // PC is special
-        	}
+    		c &= ~1; // Is this needed? c&1 would catch all cases wouldn't it?
+    		c += 2; // PC is special
+    	}
 
-        	mcu_write_reg(mcu, reg, c);
+    	mcu_write_reg(mcu, reg, c);
 
 			return true;
 		}
@@ -496,10 +492,10 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 
 			trace_instr16("add r%u,PC,#0x%02X\n", dest, imm);
 
-        	uint32_t a = mcu_read_reg(mcu, REG_PC);
-        	uint32_t c = (a & (~3) ) + imm;
+    	uint32_t a = mcu_read_reg(mcu, REG_PC);
+    	uint32_t c = (a & (~3) ) + imm;
 
-        	mcu_write_reg(mcu, dest, c);
+    	mcu_write_reg(mcu, dest, c);
 
 			return true;
 		}
@@ -515,10 +511,10 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 
 			trace_instr16("add r%u,SP,#0x%02X\n", dest, imm);
 
-        	uint32_t a = mcu_read_reg(mcu, REG_SP);
-        	uint32_t c = a + imm;
+    	uint32_t a = mcu_read_reg(mcu, REG_SP);
+    	uint32_t c = a + imm;
 
-        	mcu_write_reg(mcu, dest, c);
+    	mcu_write_reg(mcu, dest, c);
 
 			return true;
 		}
@@ -533,10 +529,10 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 
 			trace_instr16("add SP,#0x%02X\n", imm);
 
-        	uint32_t a = mcu_read_reg(mcu, REG_SP);
-        	uint32_t c = a + imm;
+    	uint32_t a = mcu_read_reg(mcu, REG_SP);
+    	uint32_t c = a + imm;
 
-        	mcu_write_reg(mcu, REG_SP, c);
+    	mcu_write_reg(mcu, REG_SP, c);
 
 			return true;
 		}
@@ -552,13 +548,13 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 
 			trace_instr16("ands r%u,r%u\n", reg, src2);
 
-        	uint32_t a = mcu_read_reg(mcu, reg);
-        	uint32_t b = mcu_read_reg(mcu, src2);
-        	uint32_t c = a & b;
+    	uint32_t a = mcu_read_reg(mcu, reg);
+    	uint32_t b = mcu_read_reg(mcu, src2);
+    	uint32_t c = a & b;
 
-        	mcu_write_reg(mcu, reg, c);
-        	mcu_update_nflag(mcu, c);
-        	mcu_update_zflag(mcu, c);
+    	mcu_write_reg(mcu, reg, c);
+    	mcu_update_nflag(mcu, c);
+    	mcu_update_zflag(mcu, c);
 
 			return true;
 		}
@@ -575,33 +571,33 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 
 			trace_instr16("asrs r%u,r%u,#0x%X\n", dest, src, shift);
 
-        	uint32_t a = mcu_read_reg(mcu, src);
+    	uint32_t a = mcu_read_reg(mcu, src);
 
-        	if (shift == 0) {
-        		if (a & (1 << 31)) {
-        			mcu_update_cflag_bit(mcu, 1);
-        			a = ~0;
-        		}
-        		else {
-        			mcu_update_cflag_bit(mcu, 0);
-        			a = 0;
-        		}
-        	}
-        	else {
-        		mcu_update_cflag_bit(mcu, a & (1 << (shift - 1)));
+    	if (shift == 0) {
+    		if (a & (1 << 31)) {
+    			mcu_update_cflag_bit(mcu, 1);
+    			a = ~0;
+    		}
+    		else {
+    			mcu_update_cflag_bit(mcu, 0);
+    			a = 0;
+    		}
+    	}
+    	else {
+    		mcu_update_cflag_bit(mcu, a & (1 << (shift - 1)));
 
-        		uint32_t b = a & (1 << 31);
+    		uint32_t b = a & (1 << 31);
 
-        		a >>= shift;
+    		a >>= shift;
 
-        		// Sign
-        		if (b)
-        			a |= (~0) << (32 - shift);
-        	}
+    		// Sign
+    		if (b)
+    			a |= (~0) << (32 - shift);
+    	}
 
-        	mcu_write_reg(mcu, dest, a);
-        	mcu_update_nflag(mcu, a);
-        	mcu_update_zflag(mcu, a);
+    	mcu_write_reg(mcu, dest, a);
+    	mcu_update_nflag(mcu, a);
+    	mcu_update_zflag(mcu, a);
 
 			return true;
 		}
@@ -617,37 +613,37 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 
 			trace_instr16("asrs r%u,r%u\n", reg, shift_reg);
 
-        	uint32_t a     = mcu_read_reg(mcu, reg);
-        	uint32_t shift = mcu_read_reg(mcu, shift_reg) & 0xFF;
+    	uint32_t a     = mcu_read_reg(mcu, reg);
+    	uint32_t shift = mcu_read_reg(mcu, shift_reg) & 0xFF;
 
-        	if (shift == 0) {
-        		// NOP
-        	}
-        	else if (shift < 32) {
-        		mcu_update_cflag_bit(mcu, a & (1 << (shift - 1)));
+    	if (shift == 0) {
+    		// NOP
+    	}
+    	else if (shift < 32) {
+    		mcu_update_cflag_bit(mcu, a & (1 << (shift - 1)));
 
-        		uint32_t b = a & (1 << 31);
+    		uint32_t b = a & (1 << 31);
 
-        		a >>= shift;
+    		a >>= shift;
 
-        		// Sign
-        		if (b)
-        			a |= (~0) << (32 - shift);
-        	}
-        	else {
-        		if (a & (1 << 31)) {
-        			mcu_update_cflag_bit(mcu, 1);
-        			a = ~0;
-        		}
-        		else {
-        			mcu_update_cflag_bit(mcu, 0);
-        			a = 0;
-        		}
-        	}
+    		// Sign
+    		if (b)
+    			a |= (~0) << (32 - shift);
+    	}
+    	else {
+    		if (a & (1 << 31)) {
+    			mcu_update_cflag_bit(mcu, 1);
+    			a = ~0;
+    		}
+    		else {
+    			mcu_update_cflag_bit(mcu, 0);
+    			a = 0;
+    		}
+    	}
 
-        	mcu_write_reg(mcu, reg, a);
-        	mcu_update_nflag(mcu, a);
-        	mcu_update_zflag(mcu, a);
+    	mcu_write_reg(mcu, reg, a);
+    	mcu_update_nflag(mcu, a);
+    	mcu_update_zflag(mcu, a);
 
 			return true;
 		}
@@ -828,6 +824,8 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.instr = 0xBE00,
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			uint32_t a  = (instr >> 0) & 0xFF;
+
+#pragma unused(a)
 
 			mcu_halt(mcu, HAL_TRAP);
 
@@ -2408,8 +2406,7 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 		.mask = 0xFFFF,
 		.instr = 0xBF30,
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
-			// TODO do actually wait here
-
+			mcu_halt(mcu, HALT_SLEEP);
 			return true;
 		}
 	},
@@ -2552,15 +2549,15 @@ struct mcu_instr32 mcu_instr32_cortex_m0p[] = {
 
 			imm = (!(j1 ^ sign) << 23) | (!(j2 ^ sign) << 22) | (((instr >> 16) & 0x3FF) << 12) | ((instr & 0x7FF) << 1);
 
-            if(sign)
-            	imm |= 0xFF000000; //sign extend
+      if(sign)
+    		imm |= 0xFF000000; //sign extend
 
-            addr = imm + mcu_read_reg(mcu, REG_PC);
+      addr = imm + mcu_read_reg(mcu, REG_PC);
 
-            trace_instr32("bl 0x%08X ; @0x%08x\n", imm, addr - 3);
+      trace_instr32("bl 0x%08X ; @0x%08x\n", imm, addr - 3);
 
-            mcu_write_reg(mcu, REG_LR, (mcu_read_reg(mcu, REG_PC) - 2) | 1);
-            mcu_write_reg(mcu, REG_PC, addr);
+      mcu_write_reg(mcu, REG_LR, (mcu_read_reg(mcu, REG_PC) - 2) | 1);
+      mcu_write_reg(mcu, REG_PC, addr);
 
 			return true;
 		}

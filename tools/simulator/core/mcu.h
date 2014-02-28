@@ -60,6 +60,13 @@ struct mcu {
 bool mcu_init(mcu_t mcu, struct ev_loop* loop);
 bool mcu_is_halted(mcu_t mcu);
 halt_reason_t mcu_halt_reason(mcu_t mcu);
+
+/// Halts the cpu and disables processing instructions
+///
+/// @param reason specifies the reason the mcu was halted
+///		if the reason is less than 0, it is considered a silent halt
+///		which is used for cpu sleeping states
+///
 bool mcu_halt(mcu_t mcu, halt_reason_t reason);
 bool mcu_resume(mcu_t mcu);
 
