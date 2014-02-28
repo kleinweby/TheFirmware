@@ -28,6 +28,8 @@
 LINKER_SYMBOL(tests, struct test*);
 LINKER_SYMBOL(tests_length, uint32_t);
 
+#if TESTS_SUPPORTED
+
 void test_do(test_type type)
 {
 	uint32_t count = tests_length/sizeof(struct test);
@@ -51,3 +53,5 @@ void test_fail(const char* reason)
 {
 	arch_test_fail(reason);
 }
+
+#endif

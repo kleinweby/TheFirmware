@@ -43,7 +43,17 @@ struct test test_##_func __attribute__ ((section (".tests." # _func))) = { \
 	.func = _func \
 };
 
+#ifdef TESTS_SUPPORTED
 void test_do(test_type type);
 void test_fail(const char* reason);
 
 #define test_assert(expr, desc) if (!(expr)) { test_fail(desc); }
+
+#else
+
+static void test_do(test_type type) {};
+static void test_fail(const char* reason) {};
+
+#define test_assert(expr, desc) 
+
+#endif
