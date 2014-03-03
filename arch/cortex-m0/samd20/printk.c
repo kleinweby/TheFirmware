@@ -638,7 +638,7 @@ void printk_init(uint32_t baud)
 	generate the desired baud rate */
 
 	uint16_t bval = 0;
-	_sercom_get_async_baud_val(9600, system_gclk_chan_get_hz(gclk_index), &bval);
+	_sercom_get_async_baud_val(baud, system_gclk_chan_get_hz(gclk_index), &bval);
 	hw->BAUD.reg = bval;
 
 // 9600

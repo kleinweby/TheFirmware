@@ -39,7 +39,7 @@ void bootstrap()
 	arch_early_init();
 	test_do(TEST_AFTER_ARCH_EARLY_INIT);
 
-	printk_init(9600);
+	printk_init(38400);
 	irq_init();
 
 	log(LOG_LEVEL_INFO, "Starting up TheFirmware...");
