@@ -22,40 +22,52 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
+#pragma once
 
+#include <list.h>
+#include <scheduler.h>
 #include <arch.h>
-#include <irq.h>
 
 #include <stdint.h>
+#include <stdarg.h>
 
-#include <test.h>
-#include <log.h>
-#include <printk.h>
-#include <malloc.h>
-#include <scheduler.h>
+typedef enum {
+	THREAD_STATE_UNKOWN  = 0,
+	THREAD_STATE_RUNNING = 1,
+	THREAD_STATE_STOPPED = 2,
+	THREAD_STATE_BLOCKED = 3
+} thread_state_t;
 
-void bootstrap()
+struct thread {
+	list_entry_t thread_list_entry;
+
+	thread_state_t state;
+	stack_t stack;
+	const char* name;
+
+	scheduler_thread_data_t scheduler_data;
+};
+
+typedef struct thread* thread_t;
+typedef void (*entry_func)();
+
+extern list_t* thread_list;
+
+/// Initialize the thread subsystem
+///
+void thread_init();
+
+thread_t thread_create(const char* name, size_t stack_size, stack_t stack);
+
+void thread_set_function(thread_t thread, entry_func func, uint8_t argc, ...);
+void thread_set_function_v(thread_t thread, entry_func func, uint8_t argc, va_list args);
+
+static inline void thread_set_stack(thread_t thread, stack_t stack)
 {
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
-
-	printk_init(38400);
-	irq_init();
-
-	log(LOG_LEVEL_INFO, "Starting up TheFirmware...");
-
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
-
-	size_t free_mem = get_free_size();
-
-	log(LOG_LEVEL_INFO, "Bootstrap complete. (%u.%04u KiB free)", free_mem/1024, free_mem%1024);
-
-	while(1)
-		__asm("WFI");
+	thread->stack = stack;
 }
 
-void test_example1() {
-
+static inline stack_t thread_get_stack(const thread_t thread)
+{
+	return thread->stack;
 }

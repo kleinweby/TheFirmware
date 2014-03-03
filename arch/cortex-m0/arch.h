@@ -22,40 +22,10 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
-
-#include <arch.h>
-#include <irq.h>
+#pragma once
 
 #include <stdint.h>
 
-#include <test.h>
-#include <log.h>
-#include <printk.h>
-#include <malloc.h>
-#include <scheduler.h>
+typedef uint32_t* stack_t;
 
-void bootstrap()
-{
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
-
-	printk_init(38400);
-	irq_init();
-
-	log(LOG_LEVEL_INFO, "Starting up TheFirmware...");
-
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
-
-	size_t free_mem = get_free_size();
-
-	log(LOG_LEVEL_INFO, "Bootstrap complete. (%u.%04u KiB free)", free_mem/1024, free_mem%1024);
-
-	while(1)
-		__asm("WFI");
-}
-
-void test_example1() {
-
-}
+#include_next <arch.h>

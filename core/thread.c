@@ -22,40 +22,56 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
-
-#include <arch.h>
-#include <irq.h>
-
-#include <stdint.h>
-
-#include <test.h>
-#include <log.h>
-#include <printk.h>
+#include <thread.h>
 #include <malloc.h>
-#include <scheduler.h>
+#include <log.h>
 
-void bootstrap()
+list_t _thread_list;
+list_t* thread_list = &_thread_list;
+
+void thread_init()
 {
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
-
-	printk_init(38400);
-	irq_init();
-
-	log(LOG_LEVEL_INFO, "Starting up TheFirmware...");
-
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
-
-	size_t free_mem = get_free_size();
-
-	log(LOG_LEVEL_INFO, "Bootstrap complete. (%u.%04u KiB free)", free_mem/1024, free_mem%1024);
-
-	while(1)
-		__asm("WFI");
+	list_init(thread_list);
 }
 
-void test_example1() {
+thread_t thread_create(const char* name, size_t stack_size, stack_t stack)
+{
+	thread_t thread = malloc_raw(sizeof(struct thread));
 
+	if (!thread)
+		return NULL;
+
+	thread->state = THREAD_STATE_STOPPED;
+	thread->name = name;
+
+	list_append(thread_list, &thread->thread_list_entry);
+	log(LOG_LEVEL_DEBUG, "created thread %s", name);
+
+	return thread;
+}
+
+void thread_set_function(thread_t thread, entry_func func, uint8_t argc, ...)
+{
+	va_list args;
+	va_start(args, argc);
+	thread_set_function_v(thread, func, argc, args);
+	va_end(args);
+}
+
+void thread_set_function_v(thread_t thread, entry_func func, uint8_t argc, va_list args)
+{
+	// Prepare stack
+	*thread->stack-- = (uint32_t)0x01000000L; // PSR
+	*thread->stack-- = (uint32_t)func;
+	*thread->stack   = (uint32_t)0xFFFFFFFEL; // ?
+  thread->stack -= 5; // ?
+
+  if (argc > 0) {
+  	// Only get the first argument for now
+  	*thread->stack = va_arg(args, uint32_t);
+  	thread->stack -= 8;
+  }
+  else {
+  	thread->stack -= 8;
+  }
 }
