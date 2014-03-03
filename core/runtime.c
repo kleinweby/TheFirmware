@@ -23,9 +23,12 @@
 //
 
 #include "runtime.h"
+#include <log.h>
 
 void _assert_handler(const char* function, const char* file, uint32_t line, const char* expr, const char* msg)
 {
+	_log(file, line, LOG_LEVEL_ERROR, "assertion '%s' failed: %s", expr, msg);
+
 	while(1)
 		;
 }

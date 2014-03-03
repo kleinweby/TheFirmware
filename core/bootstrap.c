@@ -41,7 +41,7 @@ void bootstrap()
 	printk_init(9600);
 	irq_init();
 
-	log(LOG_LEVEL_INFO, "Starting up TheFirmware...\r\n");
+	log(LOG_LEVEL_INFO, "Starting up TheFirmware...");
 
 	arch_late_init();
 	test_do(TEST_AFTER_ARCH_LATE_INIT);

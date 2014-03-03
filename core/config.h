@@ -22,40 +22,12 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <log.h>
+#pragma once
 
-#include <printk.h>
-#include <string.h>
-
-void _logv(const char* file, int line, log_level_t log_level, const char* message, va_list args)
-{
-	const char* level_str;
-
-	switch(log_level) {
-		case LOG_LEVEL_DEBUG:
-			level_str = "\033[0;32m[D]\033[0m";
-			break;
-		case LOG_LEVEL_VERBOSE:
-			level_str = "\033[0;32m[V]\033[0m";
-			break;
-		case LOG_LEVEL_INFO:
-			level_str = "\033[0;34m[I]\033[0m";
-			break;
-		case LOG_LEVEL_WARN:
-			level_str = "\033[1;33m[W]\033[0m";
-			break;
-		case LOG_LEVEL_ERROR:
-			level_str = "\033[1;31m[E]\033[0m";
-			break;
-	}
-
-	if (file) {
-		fprintf(debug_serial, "\033[1;30m%s:%d %s ", file, line, level_str);
-	}
-	else {
-		fprintf(debug_serial, "%s ", level_str);
-	}
-
-	vfprintf(debug_serial, message, args);
-	printk("\r\n");
-}
+/// when 1 log calls will also print the file and line number that log call was
+/// made.
+///
+/// @note Enabling this can enlargen the binary quit a bit, as strings for all
+/// file names must be stored
+///
+#define LOG_SOURCE_LOCATION 1

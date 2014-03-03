@@ -22,9 +22,10 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once 
+#pragma once
 
 #include <stdarg.h>
+#include <config.h>
 
 typedef enum {
 	LOG_LEVEL_DEBUG = 0,
@@ -47,4 +48,8 @@ static inline void _log(const char* file, int line, log_level_t log_level, const
 	}
 }
 
+#if LOG_SOURCE_LOCATION
 #define log(log_level, message, ...) _log(__FILE__, __LINE__, log_level, message, #__VA_ARGS__ )
+#else
+#define log(log_level, message, ...) _log(NULL, 0, log_level, message, #__VA_ARGS__ )
+#endif //LOG_SOURCE_LOCATION
