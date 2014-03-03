@@ -35,7 +35,7 @@ typedef enum {
 	LOG_LEVEL_ERROR = 4,
 } log_level_t;
 
-static const log_level_t min_log_level = LOG_LEVEL_VERBOSE;
+static const log_level_t min_log_level = LOG_LEVEL_DEBUG;
 
 void _logv(const char* file, int line, log_level_t log_level, const char* message, va_list args);
 
@@ -49,7 +49,7 @@ static inline void _log(const char* file, int line, log_level_t log_level, const
 }
 
 #if LOG_SOURCE_LOCATION
-#define log(log_level, message, ...) _log(__FILE__, __LINE__, log_level, message, #__VA_ARGS__ )
+#define log(log_level, message, ...) _log(__FILE__, __LINE__, log_level, message, ##__VA_ARGS__ )
 #else
-#define log(log_level, message, ...) _log(NULL, 0, log_level, message, #__VA_ARGS__ )
+#define log(log_level, message, ...) _log(NULL, 0, log_level, message, ##__VA_ARGS__ )
 #endif //LOG_SOURCE_LOCATION
