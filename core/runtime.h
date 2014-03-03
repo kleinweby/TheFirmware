@@ -51,7 +51,13 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 
 #define NO_RETURN  __attribute__ ((noreturn))
 
+#define OFFSET_PTR(ptr, offset) ((void*)((uintptr_t)ptr - offset))
+
 #define WEAK __attribute__ ((weak))
-#define ALIAS(f) __attribute__ ((weak, alias (#f)))
+#define ALIAS(f) __attribute__ ((alias (#f)))
 #define LINKER_SYMBOL(name, type) extern void _##name(); static const type name = (type)&_##name
+
+#define container_of(ptr, type, member) ({                  \
+    const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
+    (type *)( (char *)__mptr - offsetof(type,member) );})
 

@@ -25,6 +25,8 @@
 #include <test.h>
 #include <irq.h>
 
+#ifdef TESTS_SUPPORTED
+
 static bool handler_called = false;
 
 static void irq_handler() {
@@ -80,3 +82,5 @@ static void test_irq_missing_handler() {
 }
 
 DECLARE_TEST("missing irq handler", TEST_AFTER_ARCH_LATE_INIT, test_irq_missing_handler);
+
+#endif // TESTS_SUPPORTED

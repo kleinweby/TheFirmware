@@ -22,34 +22,27 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
+#include "printk.h"
 
-#include <arch.h>
-#include <irq.h>
-
-#include <stdint.h>
-
-#include <test.h>
-#include <log.h>
-#include <printk.h>
-
-void bootstrap()
+static int write_op(file_t f, const void* buf, size_t nbytes)
 {
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
-
-	printk_init(9600);
-	irq_init();
-
-	log(LOG_LEVEL_INFO, "Starting up TheFirmware...\r\n");
-
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
-
-	while(1)
-		__asm("WFI");
+  return 0;
 }
 
-void test_example1() {
+static const struct file_operations ops = {
+  .write = write_op,
+};
 
+static struct file _debug_serial = {
+  .ops = &ops,
+};
+
+file_t debug_serial = &_debug_serial;
+
+void printk_init(uint32_t baud)
+{
+}
+
+void printk(const char* str)
+{
 }

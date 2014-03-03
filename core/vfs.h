@@ -22,34 +22,29 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
-
-#include <arch.h>
-#include <irq.h>
+#pragma once
 
 #include <stdint.h>
+#include <stddef.h>
 
-#include <test.h>
-#include <log.h>
-#include <printk.h>
+// TODO: move to appropiated header
+typedef uint32_t off_t;
 
-void bootstrap()
-{
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
+typedef struct file* file_t;
 
-	printk_init(9600);
-	irq_init();
+struct file_operations;
 
-	log(LOG_LEVEL_INFO, "Starting up TheFirmware...\r\n");
+struct file {
+  off_t pos;
+  const struct file_operations* ops;
+};
 
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
+struct file_operations {
+  int (*read)(file_t file, void* buf, size_t nbytes);
+  int (*write)(file_t file, const void* buf, size_t nbytes);
+  int (*flush)(file_t file);
+};
 
-	while(1)
-		__asm("WFI");
-}
-
-void test_example1() {
-
-}
+int read(file_t file, void* buf, size_t nbytes);
+int write(file_t file, const void* buf, size_t nbytes);
+int flush(file_t file);

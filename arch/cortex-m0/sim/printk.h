@@ -22,34 +22,12 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
-
-#include <arch.h>
-#include <irq.h>
+#pragma once
 
 #include <stdint.h>
+#include <vfs.h>
 
-#include <test.h>
-#include <log.h>
-#include <printk.h>
+extern file_t debug_serial;
 
-void bootstrap()
-{
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
-
-	printk_init(9600);
-	irq_init();
-
-	log(LOG_LEVEL_INFO, "Starting up TheFirmware...\r\n");
-
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
-
-	while(1)
-		__asm("WFI");
-}
-
-void test_example1() {
-
-}
+void printk_init(uint32_t baud);
+void printk(const char* str);

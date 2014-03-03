@@ -590,39 +590,39 @@ void printk_init(uint32_t baud)
 	system_gclk_chan_enable(gclk_index);
 	sercom_set_gclk_generator(GCLK_GENERATOR_0, false);
 
-	/* USART mode with external or internal clock must be selected first by writing 0x0 
+	/* USART mode with external or internal clock must be selected first by writing 0x0
 	or 0x1 to the Operating Mode bit group in the Control A register (CTRLA.MODE) */
 
 	hw->CTRLA.bit.MODE = 0x1; // Internal
 
-	/* Communication mode (asynchronous or synchronous) must be selected by writing to 
+	/* Communication mode (asynchronous or synchronous) must be selected by writing to
 	the Communication Mode bit in the Control A register (CTRLA.CMODE) */
 
  	// is default no setting needed
 	// USART_TRANSFER_ASYNCHRONOUSLY = 0
 
-	/* SERCOM pad to use for the receiver must be selected by writing to the Receive 
+	/* SERCOM pad to use for the receiver must be selected by writing to the Receive
 	Data Pinout bit group in the Control A register (CTRLA.RXPO) */
 	hw->CTRLA.bit.RXPO = 0x3;
 
-	/* SERCOM pads to use for the transmitter and external clock must be selected by 
+	/* SERCOM pads to use for the transmitter and external clock must be selected by
 	writing to the Transmit Data Pinout bit in the Control A register (CTRLA.TXPO) */
 	hw->CTRLA.bit.TXPO = 0x1;
 
-	/* Character size must be selected by writing to the Character Size bit group 
+	/* Character size must be selected by writing to the Character Size bit group
 	in the Control B register (CTRLB.CHSIZE) */
 
 	hw->CTRLB.reg |= SERCOM_USART_CTRLB_CHSIZE(0);
 // USART_CHARACTER_SIZE_8BIT = SERCOM_USART_CTRLB_CHSIZE(0)
 
-	/* MSB- or LSB-first data transmission must be selected by writing to the Data 
+	/* MSB- or LSB-first data transmission must be selected by writing to the Data
 	Order bit in the Control A register (CTRLA.DORD) */
 
 	hw->CTRLA.reg |= SERCOM_USART_CTRLA_DORD;
 // USART_DATAORDER_LSB = SERCOM_USART_CTRLA_DORD
 
-	/* When parity mode is to be used, even or odd parity must be selected by writing 
-	to the Parity Mode bit in the Control B register (CTRLB.PMODE) and enabled by 
+	/* When parity mode is to be used, even or odd parity must be selected by writing
+	to the Parity Mode bit in the Control B register (CTRLB.PMODE) and enabled by
 	writing 0x1 to the Frame Format bit group in the Control A register (CTRLA.FORM) */
 
 	hw->CTRLA.reg |= SERCOM_USART_CTRLA_FORM(0);
@@ -634,7 +634,7 @@ void printk_init(uint32_t baud)
 	// Default
 // USART_STOPBITS_1 = 0
 
-	/* When using an internal clock, the Baud register (BAUD) must be written to 
+	/* When using an internal clock, the Baud register (BAUD) must be written to
 	generate the desired baud rate */
 
 	uint16_t bval = 0;
@@ -643,7 +643,7 @@ void printk_init(uint32_t baud)
 
 // 9600
 
-	/* The transmitter and receiver can be enabled by writing ones to the Receiver 
+	/* The transmitter and receiver can be enabled by writing ones to the Receiver
 	Enable and Transmitter Enable bits in the Control B register (CTRLB.RXEN and CTRLB.TXEN) */
 	hw->CTRLB.bit.RXEN = 1;
 	hw->CTRLB.bit.TXEN = 1;
@@ -667,6 +667,24 @@ void putchar(char c)
 		/* Wait until data is sent */
 	}
 }
+
+static int write_op(file_t f, const void* buf, size_t nbytes)
+{
+	for (size_t n = 0; n < nbytes; n++, buf++)
+		putchar(*(char*)buf);
+
+	return nbytes;
+}
+
+static const struct file_operations ops = {
+	.write = write_op,
+};
+
+static struct file _debug_serial = {
+	.ops = &ops,
+};
+
+file_t debug_serial = &_debug_serial;
 
 void printk(const char* str)
 {

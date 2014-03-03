@@ -26,6 +26,8 @@
 #include <irq.h>
 #include <list.h>
 
+#ifdef TESTS_SUPPORTED
+
 #define assert_list(list, msg,...) do { \
 	list_entry_t* entries[] = {__VA_ARGS__}; \
 	uint32_t count = sizeof(entries)/sizeof(entries[0]); \
@@ -133,3 +135,5 @@ static void test_list_append_same() {
 }
 
 DECLARE_TEST("test list append same", TEST_AFTER_ARCH_LATE_INIT, test_list_append_same);
+
+#endif // TESTS_SUPPORTED

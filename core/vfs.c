@@ -22,34 +22,34 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
+#include <vfs.h>
 
-#include <arch.h>
-#include <irq.h>
+static const int ERR_NOT_SUPPORTED = -1;
 
-#include <stdint.h>
-
-#include <test.h>
-#include <log.h>
-#include <printk.h>
-
-void bootstrap()
+int read(file_t file, void* buf, size_t nbytes)
 {
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
+  if (file->ops->read) {
+    return file->ops->read(file, buf, nbytes);
+  }
 
-	printk_init(9600);
-	irq_init();
-
-	log(LOG_LEVEL_INFO, "Starting up TheFirmware...\r\n");
-
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
-
-	while(1)
-		__asm("WFI");
+  return ERR_NOT_SUPPORTED;
 }
 
-void test_example1() {
+int write(file_t file, const void* buf, size_t nbytes)
+{
+  if (file->ops->write) {
+    return file->ops->write(file, buf, nbytes);
+  }
 
+  return ERR_NOT_SUPPORTED;
+}
+
+int flush(file_t file)
+{
+  if (file->ops->flush) {
+    return file->ops->flush(file);
+  }
+
+  // not an error, if unsupported by the backend
+  return 0;
 }

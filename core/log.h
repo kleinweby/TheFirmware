@@ -22,34 +22,29 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
+#pragma once 
 
-#include <arch.h>
-#include <irq.h>
+#include <stdarg.h>
 
-#include <stdint.h>
+typedef enum {
+	LOG_LEVEL_DEBUG = 0,
+	LOG_LEVEL_VERBOSE = 1,
+	LOG_LEVEL_INFO = 2,
+	LOG_LEVEL_WARN = 3,
+	LOG_LEVEL_ERROR = 4,
+} log_level_t;
 
-#include <test.h>
-#include <log.h>
-#include <printk.h>
+static const log_level_t min_log_level = LOG_LEVEL_VERBOSE;
 
-void bootstrap()
-{
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
+void _logv(const char* file, int line, log_level_t log_level, const char* message, va_list args);
 
-	printk_init(9600);
-	irq_init();
-
-	log(LOG_LEVEL_INFO, "Starting up TheFirmware...\r\n");
-
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
-
-	while(1)
-		__asm("WFI");
+static inline void _log(const char* file, int line, log_level_t log_level, const char* message, ...) {
+	if (log_level >= min_log_level) {
+		va_list args;
+		va_start(args, message);
+		_logv(file, line, log_level, message, args);
+		va_end(args);
+	}
 }
 
-void test_example1() {
-
-}
+#define log(log_level, message, ...) _log(__FILE__, __LINE__, log_level, message, #__VA_ARGS__ )
