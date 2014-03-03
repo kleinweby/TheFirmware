@@ -22,7 +22,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once 
+#pragma once
 
 #include <stddef.h>
 
@@ -38,7 +38,7 @@ typedef struct {
 } list_t;
 
 
-static inline list_entry_t* list_next(list_t* list, list_entry_t* entry)
+static inline list_entry_t* list_next(const list_t* list, list_entry_t* entry)
 {
 	list_entry_t* next = entry->next;
 
@@ -99,5 +99,3 @@ static inline void list_entry_init(list_entry_t* entry)
 	for (pos = (list)->head; \
 		pos != NULL; \
 		pos = list_next((list), pos))
-
-
