@@ -12,13 +12,13 @@ MEMORY
 
 SECTIONS
 {
-    /* MAIN TEXT SECTION */    
+    /* MAIN TEXT SECTION */
     .text : ALIGN(4)
     {
         FILL(0xff)
         __vectors_start__ = ABSOLUTE(.) ;
         KEEP(*(.isr_vector))
-        
+
         /* Global Section Table */
         . = ALIGN(4) ;
         __section_table_start = .;
@@ -33,41 +33,41 @@ SECTIONS
         __bss_section_table_end = .;
         __section_table_end = . ;
         /* End of Global Section Table */
-        
+
 
         *(.after_vectors*)
-        
+
     } >MFlash
 
-    .text : ALIGN(4)    
+    .text : ALIGN(4)
     {
          *(.text*)
         *(.rodata .rodata.*)
         . = ALIGN(4);
-        
+
         /* C++ constructors etc */
         . = ALIGN(4);
         KEEP(*(.init))
-        
+
         . = ALIGN(4);
         __preinit_array_start = .;
         KEEP (*(.preinit_array))
         __preinit_array_end = .;
-        
+
         . = ALIGN(4);
         __init_array_start = .;
         KEEP (*(SORT(.init_array.*)))
         KEEP (*(.init_array))
         __init_array_end = .;
-        
+
         KEEP(*(.fini));
-        
+
         . = ALIGN(4);
         KEEP (*crtbegin.o(.ctors))
         KEEP (*(EXCLUDE_FILE (*crtend.o) .ctors))
         KEEP (*(SORT(.ctors.*)))
         KEEP (*crtend.o(.ctors))
-        
+
         . = ALIGN(4);
         KEEP (*crtbegin.o(.dtors))
         KEEP (*(EXCLUDE_FILE (*crtend.o) .dtors))
@@ -90,25 +90,25 @@ SECTIONS
 
     /*
      * for exception handling/unwind - some Newlib functions (in common
-     * with C++ and STDC++) use this. 
+     * with C++ and STDC++) use this.
      */
     .ARM.extab : ALIGN(4)
     {
     	*(.ARM.extab* .gnu.linkonce.armextab.*)
     } > MFlash
     __exidx_start = .;
-    
+
     .ARM.exidx : ALIGN(4)
     {
     	*(.ARM.exidx* .gnu.linkonce.armexidx.*)
     } > MFlash
     __exidx_end = .;
-    
+
     _etext = .;
-        
-    
+
+
     /* MAIN DATA SECTION */
-    
+
 
     .uninit_RESERVED : ALIGN(4)
     {
@@ -117,7 +117,7 @@ SECTIONS
         _end_uninit_RESERVED = .;
     } > RamLoc
 
-	
+
 	/* Main DATA section (RamLoc8) */
 	.data : ALIGN(4)
 	{
@@ -140,17 +140,18 @@ SECTIONS
         _ebss = .;
         PROVIDE(end = .);
     } > RamLoc
-        
-    
+
+
     /* DEFAULT NOINIT SECTION */
     .noinit (NOLOAD): ALIGN(4)
     {
         _noinit = .;
-        *(.noinit*) 
+        *(.noinit*)
          . = ALIGN(4) ;
         _end_noinit = .;
     } > RamLoc
-    
-    PROVIDE(_pvHeapStart = .);
+
+    PROVIDE(_HeapStart = .);
     PROVIDE(_vStackTop = __top_RamLoc - 0);
+    PROVIDE(_HeapEnd = _vStackTop - 1024);
 }

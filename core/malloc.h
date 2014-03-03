@@ -22,7 +22,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once 
+#pragma once
 
 #include "stddef.h"
 
@@ -47,3 +47,13 @@ void* malloc_raw(size_t size);
 /// Frees memory allocated by free_raw
 ///
 void free_raw(void* ptr, size_t size);
+
+///
+/// Returns the number of free bytes
+///
+size_t get_free_size();
+
+///
+/// Initializes the malloc subsystem
+///
+void malloc_init(void* start, void* end);

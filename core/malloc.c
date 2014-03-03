@@ -135,3 +135,19 @@ void free_raw(void* _ptr, size_t size)
 		}
 	}
 }
+
+size_t get_free_size()
+{
+	size_t size = 0;
+
+	for (struct free_header* ptr = free_head; ptr != NULL; ptr = ptr->next) {
+		size += ptr->size;
+	}
+
+	return size;
+}
+
+void malloc_init(void* start, void* end)
+{
+	free_raw(start, end - start);
+}

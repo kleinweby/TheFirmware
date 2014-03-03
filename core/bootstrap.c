@@ -32,6 +32,7 @@
 #include <test.h>
 #include <log.h>
 #include <printk.h>
+#include <malloc.h>
 
 void bootstrap()
 {
@@ -45,6 +46,10 @@ void bootstrap()
 
 	arch_late_init();
 	test_do(TEST_AFTER_ARCH_LATE_INIT);
+
+	size_t free_mem = get_free_size();
+
+	log(LOG_LEVEL_INFO, "Bootstrap complete. (%u KiB free)", free_mem/1024);
 
 	while(1)
 		__asm("WFI");

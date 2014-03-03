@@ -25,6 +25,7 @@
 #include <irq.h>
 #include <bootstrap.h>
 #include <runtime.h>
+#include <malloc.h>
 
 #include <stdint.h>
 
@@ -124,9 +125,13 @@ static void do_irq_reset(void)
 	bootstrap();
 }
 
+LINKER_SYMBOL(HeapStart, void*);
+LINKER_SYMBOL(HeapEnd, void*);
+
 void arch_early_init()
 {
-	// UART is already possible
+	// Setup malloc
+  malloc_init((void*)HeapStart, (void*)HeapEnd);
 }
 
 void arch_late_init()
