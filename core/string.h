@@ -31,3 +31,4 @@ size_t fprintf(file_t file, const char* format, ...);
 size_t vfprintf(file_t file, const char* format, va_list args);
 
 int isdigit(int c);
+size_t strlen(const char* str);
