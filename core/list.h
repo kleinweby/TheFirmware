@@ -84,6 +84,26 @@ static inline void list_append(list_t* list, list_entry_t* entry)
 	}
 }
 
+static inline void list_lrotate(list_t* list)
+{
+	list->head = list->head->next;
+}
+
+static inline void list_rrotate(list_t* list)
+{
+	list->head = list->head->prev;
+}
+
+static inline list_entry_t* list_first(list_t* list)
+{
+	return list->head;
+}
+
+static inline list_entry_t* list_last(list_t* list)
+{
+	return list->head->prev;
+}
+
 static inline void list_init(list_t* list)
 {
 	list->head = NULL;
