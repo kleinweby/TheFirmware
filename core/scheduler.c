@@ -44,6 +44,7 @@ stack_t schedule(stack_t stack)
   thread_set_stack(scheduler.current_thread, stack);
 
   scheduler_lock();
+  assert(!list_is_empty(&scheduler.running_queue), "No task to run");
   list_lrotate(&scheduler.running_queue);
   scheduler.current_thread = container_of(list_first(&scheduler.running_queue), struct thread, scheduler_data.queue_entry);
   scheduler_unlock();
