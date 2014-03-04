@@ -33,6 +33,7 @@
 #include <log.h>
 #include <printk.h>
 #include <malloc.h>
+#include <thread.h>
 #include <scheduler.h>
 
 void bootstrap()
@@ -48,14 +49,19 @@ void bootstrap()
 	arch_late_init();
 	test_do(TEST_AFTER_ARCH_LATE_INIT);
 
+	thread_init();
+	scheduler_init();
+
+	// yield to the scheduler to complete the setup of the main thread.
+	// this will return immeaditly as we do have no other thread defined
+	yield();
+
 	size_t free_mem = get_free_size();
 
 	log(LOG_LEVEL_INFO, "Bootstrap complete. (%u.%04u KiB free)", free_mem/1024, free_mem%1024);
 
+	test_do(TEST_IN_MAIN_TASK);
+
 	while(1)
 		__asm("WFI");
-}
-
-void test_example1() {
-
 }

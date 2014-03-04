@@ -32,7 +32,6 @@
 void arch_early_init();
 
 /// Should do final initialization of the arch
-/// and setup the main thread which shall return to the calling function
 ///
 /// Things expected to work after this call:
 ///   - timers

@@ -152,6 +152,5 @@ SECTIONS
     } > RamLoc
 
     PROVIDE(_HeapStart = .);
-    PROVIDE(_vStackTop = __top_RamLoc - 0);
-    PROVIDE(_HeapEnd = _vStackTop - 1024);
+    PROVIDE(_MainStackTop = __top_RamLoc - 0);
 }

@@ -31,3 +31,9 @@
 /// file names must be stored
 ///
 #define LOG_SOURCE_LOCATION 1
+
+/// Defines the default stack size of the main stack
+#define STACK_SIZE_MAIN 1024
+
+/// Defines the default stack size of the isr stack
+#define STACK_SIZE_ISR 800

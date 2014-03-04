@@ -22,16 +22,19 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <arch.h>
 #include <irq.h>
 #include <bootstrap.h>
 #include <runtime.h>
 #include <malloc.h>
 #include <thread.h>
 #include <scheduler.h>
+#include <config.h>
 
 #include <stdint.h>
 
-extern void _vStackTop(void);
+LINKER_SYMBOL(HeapStart, void*);
+LINKER_SYMBOL(MainStackTop, void*);
 
 extern unsigned int __data_section_table;
 extern unsigned int __data_section_table_end;
@@ -46,7 +49,7 @@ static void do_irq_reset(void);
 extern void (* const g_pfnVectors[])(void);
 __attribute__ ((section(".isr_vector")))
 void (* const g_pfnVectors[])(void) = {
-  &_vStackTop,
+  &_MainStackTop,
   do_irq_reset,
   arch_handle_irq, // NMI
   arch_handle_irq, // HardFault
@@ -84,87 +87,79 @@ void (* const g_pfnVectors[])(void) = {
 
 static __attribute__ ((section(".after_vectors")))
 void data_init(unsigned int romstart, unsigned int start, unsigned int len) {
-	unsigned int *pulDest = (unsigned int*) start;
-	unsigned int *pulSrc = (unsigned int*) romstart;
-	unsigned int loop;
-	for (loop = 0; loop < len; loop = loop + 4)
-		*pulDest++ = *pulSrc++;
+  unsigned int *pulDest = (unsigned int*) start;
+  unsigned int *pulSrc = (unsigned int*) romstart;
+  unsigned int loop;
+  for (loop = 0; loop < len; loop = loop + 4)
+  *pulDest++ = *pulSrc++;
 }
 
 static __attribute__ ((section(".after_vectors")))
 void bss_init(unsigned int start, unsigned int len) {
-	unsigned int *pulDest = (unsigned int*) start;
-	unsigned int loop;
-	for (loop = 0; loop < len; loop = loop + 4)
-		*pulDest++ = 0;
+  unsigned int *pulDest = (unsigned int*) start;
+  unsigned int loop;
+  for (loop = 0; loop < len; loop = loop + 4)
+  *pulDest++ = 0;
 }
 
 static void do_irq_reset(void)
 {
-	//
-    // Copy the data sections from flash to SRAM.
-    //
-	unsigned int LoadAddr, ExeAddr, SectionLen;
-	unsigned int *SectionTableAddr;
+  //
+  // Copy the data sections from flash to SRAM.
+  //
+  unsigned int LoadAddr, ExeAddr, SectionLen;
+  unsigned int *SectionTableAddr;
 
-	// Load base address of Global Section Table
-	SectionTableAddr = &__data_section_table;
+  // Load base address of Global Section Table
+  SectionTableAddr = &__data_section_table;
 
-    // Copy the data sections from flash to SRAM.
-	while (SectionTableAddr < &__data_section_table_end) {
-		LoadAddr = *SectionTableAddr++;
-		ExeAddr = *SectionTableAddr++;
-		SectionLen = *SectionTableAddr++;
-		data_init(LoadAddr, ExeAddr, SectionLen);
-	}
-	// At this point, SectionTableAddr = &__bss_section_table;
-	// Zero fill the bss segment
-	while (SectionTableAddr < &__bss_section_table_end) {
-		ExeAddr = *SectionTableAddr++;
-		SectionLen = *SectionTableAddr++;
-		bss_init(ExeAddr, SectionLen);
-	}
+  // Copy the data sections from flash to SRAM.
+  while (SectionTableAddr < &__data_section_table_end) {
+    LoadAddr = *SectionTableAddr++;
+    ExeAddr = *SectionTableAddr++;
+    SectionLen = *SectionTableAddr++;
+    data_init(LoadAddr, ExeAddr, SectionLen);
+  }
+  // At this point, SectionTableAddr = &__bss_section_table;
+  // Zero fill the bss segment
+  while (SectionTableAddr < &__bss_section_table_end) {
+    ExeAddr = *SectionTableAddr++;
+    SectionLen = *SectionTableAddr++;
+    bss_init(ExeAddr, SectionLen);
+  }
 
-	bootstrap();
+  bootstrap();
 }
-
-LINKER_SYMBOL(HeapStart, void*);
-LINKER_SYMBOL(HeapEnd, void*);
 
 void arch_early_init()
 {
-	// Setup malloc
-  malloc_init((void*)HeapStart, (void*)HeapEnd);
+  // Setup malloc
+  malloc_init((void*)HeapStart, (void*)MainStackTop - STACK_SIZE_MAIN);
 }
 
 void arch_late_init()
 {
-	// Now we switch the used stack from msp to psp
+  // Now we switch the used stack from msp to psp
   __asm volatile (
-      // Move to psp
-      "mrs r1, MSP\n"
-      "msr PSP, r1\n"
-      "movs r1, #2\n"
-      "msr CONTROL, r1\n"
-      :
-      :
-      : "r1"
+    // Move to psp
+    "mrs r1, MSP\n"
+    "msr PSP, r1\n"
+    "movs r1, #2\n"
+    "msr CONTROL, r1\n"
+    :
+    :
+    : "r1"
   );
 
-  thread_init();
-  scheduler_init();
-
-  uint32_t* isr_stack = malloc_raw(sizeof(uint32_t) * 200);
+  uint8_t* isr_stack = malloc_raw(STACK_SIZE_ISR);
 
   // Now create isr stack
   __asm volatile (
-      "MSR MSP, %0 \n"
-      :
-      : "r"(&isr_stack[199])
-      :
+    "MSR MSP, %0 \n"
+    :
+    : "r"(&isr_stack[STACK_SIZE_ISR - 1])
+    :
   );
-
-  yield();
 }
 
 void arch_yield()
@@ -174,34 +169,34 @@ void arch_yield()
 
 static void arch_handle_irq(void)
 {
-	register uint32_t irq;
+  register uint32_t irq;
 
-	__asm volatile ("mrs %0, IPSR\n" : "=r" (irq) );
+  __asm volatile ("mrs %0, IPSR\n" : "=r" (irq) );
 
-	do_irq(irq);
+  do_irq(irq);
 }
 
 static void arch_handle_pendsv(void)
 {
-	__asm volatile (
+  __asm volatile (
     "PUSH   {lr}                      \n" // Save lr
 
-		//
-		// Save state
-		//
+    //
+    // Save state
+    //
 
-		// Get saved stack pointer
-		"MRS    r3,  PSP                  \n"
+    // Get saved stack pointer
+    "MRS    r3,  PSP                  \n"
 
-		// Make room to save the registers
-		"SUBS   r3,  #32                  \n"
+    // Make room to save the registers
+    "SUBS   r3,  #32                  \n"
     "MOV    r0,  r3                   \n" // r0 is argument
 
-		// Push r4-r7 to the stack
-		"STMIA  r3!, {r4-r7}              \n"
+    // Push r4-r7 to the stack
+    "STMIA  r3!, {r4-r7}              \n"
 
-		// Push r8-r11
-		"MOV    r4,  r8                   \n"
+    // Push r8-r11
+    "MOV    r4,  r8                   \n"
     "MOV    r5,  r9                   \n"
     "MOV    r6,  r10                  \n"
     "MOV    r7,  r11                  \n"
@@ -210,14 +205,14 @@ static void arch_handle_pendsv(void)
     // Call schedule
     "bl     %[schedule]               \n"
 
-		//
-		// Restore state
-		//
+    //
+    // Restore state
+    //
 
-		// Return stack is in r0
+    // Return stack is in r0
 
-		// Pop r8-r11
-		"ADDS    r0,  #16                  \n" // Adjust stack
+    // Pop r8-r11
+    "ADDS    r0,  #16                  \n" // Adjust stack
     "LDMIA   r0!, {r4-r7}              \n"
     "MOV     r8,  r4                   \n"
     "MOV     r9,  r5                   \n"
@@ -234,19 +229,19 @@ static void arch_handle_pendsv(void)
     // Restore stack pointer
     "MSR     PSP, r0                   \n"
 
-		//
-		// Exit
-		//
-		"CPSIE   i                         \n" // Always enable interrupts
+    //
+    // Exit
+    //
+    "CPSIE   i                         \n" // Always enable interrupts
     "POP     {pc}                      \n" // Restore lr and return
 
     :
     : [schedule]"i"(schedule)
     :
-	);
+  );
 
-	// We'll never geht here
-	unreachable();
+  // We'll never geht here
+  unreachable();
 }
 
 // static void arch_handle_irq(void) __attribute__((naked));
