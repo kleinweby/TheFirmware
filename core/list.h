@@ -25,6 +25,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdbool.h>
 
 typedef struct list_entry list_entry_t;
 
@@ -37,6 +38,11 @@ typedef struct {
 	list_entry_t* head;
 } list_t;
 
+
+static inline bool list_is_empty(const list_t* list)
+{
+	return list->head == NULL;
+}
 
 static inline list_entry_t* list_next(const list_t* list, list_entry_t* entry)
 {
@@ -86,12 +92,14 @@ static inline void list_append(list_t* list, list_entry_t* entry)
 
 static inline void list_lrotate(list_t* list)
 {
-	list->head = list->head->next;
+	if (!list_is_empty(list))
+		list->head = list->head->next;
 }
 
 static inline void list_rrotate(list_t* list)
 {
-	list->head = list->head->prev;
+	if (!list_is_empty(list))
+		list->head = list->head->prev;
 }
 
 static inline list_entry_t* list_first(list_t* list)
@@ -101,6 +109,9 @@ static inline list_entry_t* list_first(list_t* list)
 
 static inline list_entry_t* list_last(list_t* list)
 {
+	if (list_is_empty(list))
+		return NULL;
+
 	return list->head->prev;
 }
 
