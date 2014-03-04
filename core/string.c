@@ -241,8 +241,9 @@ size_t vfprintf(file_t f, const char* format, va_list args)
 					case 's':
 					{
 						char* str = va_arg(args, char*) ?: "(null)";
+						size_t l = strlen(str);
 
-						res = write(f, str, strlen(str));
+						res = write(f, str, l);
 						if (res < 0)
 							return len;
 						len += res;

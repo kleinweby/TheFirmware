@@ -44,6 +44,12 @@ thread_t thread_create(const char* name, size_t stack_size, stack_t stack)
 	thread->state = THREAD_STATE_STOPPED;
 	thread->name = name;
 
+	if (stack_size > 0) {
+		uint8_t* stack = malloc_raw(stack_size);
+		thread->stack = (stack_t)&stack[stack_size-4];
+	}
+
+	list_entry_init(&thread->thread_list_entry);
 	list_append(thread_list, &thread->thread_list_entry);
 
 	scheduler_thread_data_init(thread);
