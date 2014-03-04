@@ -25,16 +25,50 @@
 #include <scheduler.h>
 #include <thread.h>
 
-static thread_t current_thread;
+static struct {
+  thread_t current_thread;
+  list_t running_queue;
+} scheduler;
 
 void scheduler_init()
 {
-  current_thread = thread_create("main", 0, NULL);
+  list_init(&scheduler.running_queue);
+
+  scheduler.current_thread = thread_create("main", 0, NULL);
+  thread_wakeup(scheduler.current_thread);
+  yield();
 }
 
 stack_t schedule(stack_t stack)
 {
-  thread_set_stack(current_thread, stack);
+  thread_set_stack(scheduler.current_thread, stack);
 
-  return thread_get_stack(current_thread);
+  list_lrotate(&scheduler.running_queue);
+  scheduler.current_thread = container_of(list_first(&scheduler.running_queue), struct thread, scheduler_data.queue_entry);
+
+  return thread_get_stack(scheduler.current_thread);
+}
+
+thread_t scheduler_current_thread()
+{
+  return scheduler.current_thread;
+}
+
+void scheduler_thread_data_init(thread_t thread)
+{
+  list_entry_init(&thread->scheduler_data.queue_entry);
+}
+
+void scheduler_thread_changed_state(thread_t thread, thread_state_t old_state, thread_state_t new_state)
+{
+  if (old_state == THREAD_STATE_RUNNING && new_state != THREAD_STATE_RUNNING) {
+    list_delete(&scheduler.running_queue, &thread->scheduler_data.queue_entry);
+
+    // The current thread is no longer running, reschedule is mandetory
+    if (thread == scheduler.current_thread)
+      yield();
+  }
+  else if (old_state != THREAD_STATE_RUNNING && new_state == THREAD_STATE_RUNNING) {
+    list_append(&scheduler.running_queue, &thread->scheduler_data.queue_entry);
+  }
 }

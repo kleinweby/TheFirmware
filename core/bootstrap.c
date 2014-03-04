@@ -52,10 +52,6 @@ void bootstrap()
 	thread_init();
 	scheduler_init();
 
-	// yield to the scheduler to complete the setup of the main thread.
-	// this will return immeaditly as we do have no other thread defined
-	yield();
-
 	size_t free_mem = get_free_size();
 
 	log(LOG_LEVEL_INFO, "Bootstrap complete. (%u.%04u KiB free)", free_mem/1024, free_mem%1024);

@@ -27,17 +27,42 @@
 #include <stdint.h>
 #include <arch.h>
 #include <runtime.h>
+#include <list.h>
 
-struct scheduler_thread_data {
-
-};
-
-typedef struct scheduler_thread_data scheduler_thread_data_t;
-
+/// Initializes the scheduler and transforms the current context into the main
+/// thread.
 void scheduler_init();
 
+/// Takes a stack for the current thread, saves it and returns the stack of the
+/// new thread to run.
+///
+/// Should be called by the arch primitive which is called by arch_yield.
+///
+/// @Note to force a rescheduling, call yield.
+///
 stack_t schedule(stack_t stack);
 
 // Yield control to the scheduler which may give another thread a change to run
 //
 void yield() ALIAS(arch_yield);
+
+
+struct scheduler_thread_data {
+  list_entry_t queue_entry;
+};
+typedef struct scheduler_thread_data scheduler_thread_data_t;
+
+#include <thread.h>
+
+/// Get the current running thread
+thread_t scheduler_current_thread();
+
+/// Initializes the scheduler_thread_data for a new thread
+///
+void scheduler_thread_data_init(thread_t thread);
+
+//
+// Callback functions to let the scheduler know changed to a thread
+//
+
+void scheduler_thread_changed_state(thread_t thread, thread_state_t old_state, thread_state_t new_state);

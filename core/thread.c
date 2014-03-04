@@ -45,6 +45,8 @@ thread_t thread_create(const char* name, size_t stack_size, stack_t stack)
 	thread->name = name;
 
 	list_append(thread_list, &thread->thread_list_entry);
+
+	scheduler_thread_data_init(thread);
 	log(LOG_LEVEL_DEBUG, "created thread %s", name);
 
 	return thread;
@@ -74,4 +76,27 @@ void thread_set_function_v(thread_t thread, entry_func func, uint8_t argc, va_li
   else {
   	thread->stack -= 8;
   }
+}
+
+static void thread_set_state(thread_t thread, thread_state_t state)
+{
+	thread_state_t old_state = thread->state;
+	thread->state = state;
+
+	scheduler_thread_changed_state(thread, old_state, state);
+}
+
+void thread_block()
+{
+	thread_set_state(scheduler_current_thread(), THREAD_STATE_BLOCKED);
+}
+
+void thread_stop(thread_t thread)
+{
+	thread_set_state(thread, THREAD_STATE_STOPPED);
+}
+
+void thread_wakeup(thread_t thread)
+{
+	thread_set_state(thread, THREAD_STATE_RUNNING);
 }

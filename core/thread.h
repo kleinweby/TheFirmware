@@ -25,7 +25,6 @@
 #pragma once
 
 #include <list.h>
-#include <scheduler.h>
 #include <arch.h>
 
 #include <stdint.h>
@@ -38,6 +37,11 @@ typedef enum {
 	THREAD_STATE_BLOCKED = 3
 } thread_state_t;
 
+typedef struct thread* thread_t;
+typedef void (*entry_func)();
+
+#include <scheduler.h>
+
 struct thread {
 	list_entry_t thread_list_entry;
 
@@ -48,8 +52,6 @@ struct thread {
 	scheduler_thread_data_t scheduler_data;
 };
 
-typedef struct thread* thread_t;
-typedef void (*entry_func)();
 
 extern list_t* thread_list;
 
@@ -71,3 +73,20 @@ static inline stack_t thread_get_stack(const thread_t thread)
 {
 	return thread->stack;
 }
+
+/// Blocks the current thread.
+///
+/// This call will only resume when another thread or an interrupt  woke it up
+/// with thread_wakeup
+///
+void thread_block();
+
+/// Stops a given thread.
+///
+/// Basicly the same as thread_block, but can be done to other threads
+void thread_stop(thread_t thread);
+
+/// Wakes up a given thread.
+///
+/// Does nothing if the thread is not blocked or stopped.
+void thread_wakeup(thread_t thread);
