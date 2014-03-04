@@ -42,6 +42,16 @@ void scheduler_init();
 ///
 stack_t schedule(stack_t stack);
 
+/// Lock access to the scheduler
+static inline void scheduler_lock() {
+  arch_disable_irqs();
+}
+
+/// Unlock access to the scheduler
+static inline void scheduler_unlock() {
+  arch_enable_irqs();
+}
+
 // Yield control to the scheduler which may give another thread a change to run
 //
 void yield() ALIAS(arch_yield);

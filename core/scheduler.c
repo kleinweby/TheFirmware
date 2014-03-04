@@ -43,8 +43,10 @@ stack_t schedule(stack_t stack)
 {
   thread_set_stack(scheduler.current_thread, stack);
 
+  scheduler_lock();
   list_lrotate(&scheduler.running_queue);
   scheduler.current_thread = container_of(list_first(&scheduler.running_queue), struct thread, scheduler_data.queue_entry);
+  scheduler_unlock();
 
   return thread_get_stack(scheduler.current_thread);
 }
@@ -61,6 +63,8 @@ void scheduler_thread_data_init(thread_t thread)
 
 void scheduler_thread_changed_state(thread_t thread, thread_state_t old_state, thread_state_t new_state)
 {
+  scheduler_lock();
+
   if (old_state == THREAD_STATE_RUNNING && new_state != THREAD_STATE_RUNNING) {
     list_delete(&scheduler.running_queue, &thread->scheduler_data.queue_entry);
 
@@ -71,4 +75,6 @@ void scheduler_thread_changed_state(thread_t thread, thread_state_t old_state, t
   else if (old_state != THREAD_STATE_RUNNING && new_state == THREAD_STATE_RUNNING) {
     list_append(&scheduler.running_queue, &thread->scheduler_data.queue_entry);
   }
+
+  scheduler_unlock();
 }
