@@ -30,7 +30,7 @@
 /// @note Enabling this can enlargen the binary quit a bit, as strings for all
 /// file names must be stored
 ///
-#define LOG_SOURCE_LOCATION 1
+#define LOG_SOURCE_LOCATION 0
 
 /// Defines the default stack size of the main stack
 #define STACK_SIZE_MAIN 1024

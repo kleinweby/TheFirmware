@@ -39,7 +39,7 @@ void _logv(const char* file, int line, log_level_t log_level, const char* messag
 			level_str = "\033[0;32m[V]\033[0m";
 			break;
 		case LOG_LEVEL_INFO:
-			level_str = "\033[0;34m[I]\033[0m";
+			level_str = "\033[0;36m[I]\033[0m";
 			break;
 		case LOG_LEVEL_WARN:
 			level_str = "\033[1;33m[W]\033[0m";
