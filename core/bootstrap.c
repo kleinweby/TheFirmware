@@ -54,7 +54,7 @@ void bootstrap()
 
 	size_t free_mem = get_free_size();
 
-	log(LOG_LEVEL_INFO, "Bootstrap complete. (%u.%04u KiB free)", free_mem/1024, free_mem%1024);
+	log(LOG_LEVEL_INFO, "Bootstrap complete. (%u free)", free_mem);
 
 	test_do(TEST_IN_MAIN_TASK);
 
