@@ -7,7 +7,7 @@ MEMORY
 }
   /* Define a symbol for the top of each memory region */
   __top_MFlash16 = 0x0 + 0x8000;
-  __top_RamLoc8 = 0x10000000 + 0x2000;
+  __top_RamLoc = 0x10000000 + 0x2000;
 
 SECTIONS
 {
