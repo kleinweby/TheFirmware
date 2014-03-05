@@ -39,12 +39,14 @@ typedef enum {
 
 typedef struct thread* thread_t;
 typedef void (*entry_func)();
+typedef uint8_t tid_t;
 
 #include <scheduler.h>
 
 struct thread {
 	list_entry_t thread_list_entry;
 
+	tid_t tid;
 	thread_state_t state;
 	stack_t stack;
 	const char* name;

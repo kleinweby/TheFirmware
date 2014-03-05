@@ -28,10 +28,12 @@
 
 list_t _thread_list;
 list_t* thread_list = &_thread_list;
+tid_t next_tid;
 
 void thread_init()
 {
 	list_init(thread_list);
+	next_tid = 1;
 }
 
 thread_t thread_create(const char* name, size_t stack_size, stack_t stack)
@@ -43,6 +45,7 @@ thread_t thread_create(const char* name, size_t stack_size, stack_t stack)
 
 	thread->state = THREAD_STATE_STOPPED;
 	thread->name = name;
+	thread->tid = next_tid++;
 
 	if (stack_size > 0) {
 		uint8_t* stack = malloc_raw(stack_size);
@@ -53,7 +56,7 @@ thread_t thread_create(const char* name, size_t stack_size, stack_t stack)
 	list_append(thread_list, &thread->thread_list_entry);
 
 	scheduler_thread_data_init(thread);
-	log(LOG_LEVEL_DEBUG, "created thread %s", name);
+	log(LOG_LEVEL_DEBUG, "created thread tid=%d, name=%s", thread->tid, name);
 
 	return thread;
 }
