@@ -25,6 +25,7 @@
 #pragma once
 
 #include <stdlib.h>
+#include <stdint.h>
 
 typedef struct ram_dev* ram_dev_t;
 static const uint32_t ram_mem_type = 1;

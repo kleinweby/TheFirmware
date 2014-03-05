@@ -25,6 +25,7 @@
 #pragma once
 
 #include <stdlib.h>
+#include <stdint.h>
 
 typedef struct unittest_dev* unittest_dev_t;
 static const uint32_t unittest_mem_type = 0xFF;

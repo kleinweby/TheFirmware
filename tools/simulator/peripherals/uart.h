@@ -25,6 +25,7 @@
 #pragma once
 
 #include <stdlib.h>
+#include <stdint.h>
 
 typedef struct uart_dev* uart_dev_t;
 static const uint32_t uart_mem_type = 1;
