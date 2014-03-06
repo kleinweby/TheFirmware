@@ -8,7 +8,7 @@ target 'cortex-m0', :abstract => true do
 	var :cflags, ['-mcpu=cortex-m0', '-mthumb']
 	var :ldflags, ['-mcpu=cortex-m0', '-mthumb']
 
-	file 'arch.c'
+	file '*.c'
 end
 
 parse '*/build'

@@ -23,8 +23,7 @@
 //
 
 #include "printk.h"
-
-#define DONT_USE_CMSIS_INIT 1
+#include <clock.h>
 
 #include "samd20.h"
 #include <stdbool.h>
@@ -43,78 +42,9 @@ SercomUsart* hw = &SERCOM3->USART;
 
 #define SYSTEM_PINMUX_GPIO    (1 << 7)
 
-enum gclk_generator {
-	/** GCLK generator channel 0. */
-	GCLK_GENERATOR_0,
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 0)
-	/** GCLK generator channel 1. */
-	GCLK_GENERATOR_1,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 1)
-	/** GCLK generator channel 2. */
-	GCLK_GENERATOR_2,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 2)
-	/** GCLK generator channel 3. */
-	GCLK_GENERATOR_3,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 3)
-	/** GCLK generator channel 4. */
-	GCLK_GENERATOR_4,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 4)
-	/** GCLK generator channel 5. */
-	GCLK_GENERATOR_5,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 5)
-	/** GCLK generator channel 6. */
-	GCLK_GENERATOR_6,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 6)
-	/** GCLK generator channel 7. */
-	GCLK_GENERATOR_7,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 7)
-	/** GCLK generator channel 8. */
-	GCLK_GENERATOR_8,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 8)
-	/** GCLK generator channel 9. */
-	GCLK_GENERATOR_9,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 9)
-	/** GCLK generator channel 10. */
-	GCLK_GENERATOR_10,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 10)
-	/** GCLK generator channel 11. */
-	GCLK_GENERATOR_11,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 11)
-	/** GCLK generator channel 12. */
-	GCLK_GENERATOR_12,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 12)
-	/** GCLK generator channel 13. */
-	GCLK_GENERATOR_13,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 13)
-	/** GCLK generator channel 14. */
-	GCLK_GENERATOR_14,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 14)
-	/** GCLK generator channel 15. */
-	GCLK_GENERATOR_15,
-#endif
-#if defined(__DOXYGEN__) || (GCLK_GEN_NUM_MSB > 15)
-	/** GCLK generator channel 16. */
-	GCLK_GENERATOR_16,
-#endif
-};
-
 struct system_gclk_chan_config {
 	/** Generic Clock Generator source channel. */
-	enum gclk_generator source_generator;
+	gclock_generator_t source_generator;
 	/** If \c true the clock configuration will be locked until the device is
 	 *  reset. */
 	bool write_lock;
@@ -126,7 +56,7 @@ static inline void system_gclk_chan_get_config_defaults(
 	/* Sanity check arguments */
 
 	/* Default configuration values */
-	config->source_generator = GCLK_GENERATOR_0;
+	config->source_generator = GCLOCK_GENERATOR_0;
 	config->write_lock       = false;
 }
 
@@ -374,14 +304,14 @@ struct _sercom_conf {
 	/* Status of gclk generator initialization. */
 	bool generator_is_set;
 	/* Sercom gclk generator used. */
-	enum gclk_generator generator_source;
+	gclock_generator_t generator_source;
 };
 
 static struct _sercom_conf _sercom_config;
 #  define SERCOM_GCLK_ID SERCOM0_GCLK_ID_SLOW
 
 int sercom_set_gclk_generator(
-		const enum gclk_generator generator_source,
+		const gclock_generator_t generator_source,
 		const bool force_change)
 {
 	/* Check if valid option. */
@@ -407,157 +337,8 @@ int sercom_set_gclk_generator(
 	return 01;
 }
 
-static inline bool system_gclk_is_syncing(void)
-{
-	if (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY) {
-		return true;
-	}
-
-	return false;
-}
-
-struct _system_clock_dfll_config {
-	uint32_t control;
-	uint32_t val;
-	uint32_t mul;
-};
-
-/**
- * \internal
- * \brief XOSC-specific data container
- */
-struct _system_clock_xosc_config {
-	uint32_t frequency;
-};
-
-struct _system_clock_module {
-	volatile struct _system_clock_dfll_config dfll;
-	volatile struct _system_clock_xosc_config xosc;
-	volatile struct _system_clock_xosc_config xosc32k;
-};
-
-/**
- * \internal
- * \brief Internal module instance to cache configuration values
- */
-static struct _system_clock_module _system_clock_inst = {
-		.dfll = {
-			.control     = 0,
-			.val     = 0,
-			.mul     = 0,
-		},
-		.xosc = {
-			.frequency   = 0,
-		},
-		.xosc32k = {
-			.frequency   = 0,
-		},
-	};
-
 uint32_t system_gclk_chan_get_hz(
 		const uint8_t channel);
-
-enum system_clock_source {
-	/** Internal 8MHz RC oscillator */
-	SYSTEM_CLOCK_SOURCE_OSC8M    = GCLK_SOURCE_OSC8M,
-	/** Internal 32kHz RC oscillator */
-	SYSTEM_CLOCK_SOURCE_OSC32K   = GCLK_SOURCE_OSC32K,
-	/** External oscillator */
-	SYSTEM_CLOCK_SOURCE_XOSC     = GCLK_SOURCE_XOSC ,
-	/** External 32kHz oscillator */
-	SYSTEM_CLOCK_SOURCE_XOSC32K  = GCLK_SOURCE_XOSC32K,
-	/** Digital Frequency Locked Loop (DFLL) */
-	SYSTEM_CLOCK_SOURCE_DFLL     = GCLK_SOURCE_DFLL48M,
-	/** Internal Ultra Low Power 32kHz oscillator */
-	SYSTEM_CLOCK_SOURCE_ULP32K   = GCLK_SOURCE_OSCULP32K,
-};
-
-static inline void _system_dfll_wait_for_sync(void)
-{
-	while (!(SYSCTRL->PCLKSR.reg & SYSCTRL_PCLKSR_DFLLRDY)) {
-		/* Wait for DFLL sync */
-	}
-}
-
-uint32_t system_clock_source_get_hz(
-		const enum system_clock_source clock_source)
-{
-	switch (clock_source) {
-	case SYSTEM_CLOCK_SOURCE_XOSC:
-		return _system_clock_inst.xosc.frequency;
-
-	case SYSTEM_CLOCK_SOURCE_OSC8M:
-		return 8000000UL >> SYSCTRL->OSC8M.bit.PRESC;
-
-	case SYSTEM_CLOCK_SOURCE_OSC32K:
-		return 32768UL;
-
-	case SYSTEM_CLOCK_SOURCE_ULP32K:
-		return 32768UL;
-
-	case SYSTEM_CLOCK_SOURCE_XOSC32K:
-		return _system_clock_inst.xosc32k.frequency;
-
-	case SYSTEM_CLOCK_SOURCE_DFLL:
-
-		/* Check if the DFLL has been configured */
-		if (!(_system_clock_inst.dfll.control & SYSCTRL_DFLLCTRL_ENABLE))
-			return 0;
-
-		/* Make sure that the DFLL module is ready */
-		_system_dfll_wait_for_sync();
-
-		/* Check if operating in closed loop mode */
-		if (_system_clock_inst.dfll.control & SYSCTRL_DFLLCTRL_MODE) {
-			return system_gclk_chan_get_hz(SYSCTRL_GCLK_ID_DFLL48) *
-					(_system_clock_inst.dfll.mul & 0xffff);
-		}
-
-		return 48000000UL;
-
-	default:
-		return 0;
-	}
-}
-
-uint32_t system_gclk_gen_get_hz(
-		const uint8_t generator)
-{
-	while (system_gclk_is_syncing()) {
-		/* Wait for synchronization */
-	};
-
-	/* Select the appropriate generator */
-	*((uint8_t*)&GCLK->GENCTRL.reg) = generator;
-	while (system_gclk_is_syncing()) {
-		/* Wait for synchronization */
-	};
-
-	/* Get the frequency of the source connected to the GCLK generator */
-	uint32_t gen_input_hz = system_clock_source_get_hz(
-			(enum system_clock_source)GCLK->GENCTRL.bit.SRC);
-
-	*((uint8_t*)&GCLK->GENCTRL.reg) = generator;
-
-	uint8_t divsel = GCLK->GENCTRL.bit.DIVSEL;
-
-	/* Select the appropriate generator division register */
-	*((uint8_t*)&GCLK->GENDIV.reg) = generator;
-	while (system_gclk_is_syncing()) {
-		/* Wait for synchronization */
-	};
-
-	uint32_t divider = GCLK->GENDIV.bit.DIV;
-
-	/* Check if the generator is using fractional or binary division */
-	if (!divsel && divider > 1) {
-		gen_input_hz /= divider;
-	} else if (divsel) {
-		gen_input_hz >>= (divider+1);
-	}
-
-	return gen_input_hz;
-}
 
 uint32_t system_gclk_chan_get_hz(
 		const uint8_t channel)
@@ -569,7 +350,7 @@ uint32_t system_gclk_chan_get_hz(
 	gen_id = GCLK->CLKCTRL.bit.GEN;
 
 	/* Return the clock speed of the associated GCLK generator */
-	return system_gclk_gen_get_hz(gen_id);
+	return gclock_get_generator(gen_id);
 }
 
 void printk_init(uint32_t baud)
@@ -586,10 +367,10 @@ void printk_init(uint32_t baud)
 
 	struct system_gclk_chan_config gclk_chan_conf;
 	system_gclk_chan_get_config_defaults(&gclk_chan_conf);
-	gclk_chan_conf.source_generator = GCLK_GENERATOR_0;
+	gclk_chan_conf.source_generator = GCLOCK_GENERATOR_0;
 	system_gclk_chan_set_config(gclk_index, &gclk_chan_conf);
 	system_gclk_chan_enable(gclk_index);
-	sercom_set_gclk_generator(GCLK_GENERATOR_0, false);
+	sercom_set_gclk_generator(GCLOCK_GENERATOR_0, false);
 
 	/* USART mode with external or internal clock must be selected first by writing 0x0
 	or 0x1 to the Operating Mode bit group in the Control A register (CTRLA.MODE) */
