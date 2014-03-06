@@ -173,6 +173,12 @@ static void arch_handle_irq(void)
 
   __asm volatile ("mrs %0, IPSR\n" : "=r" (irq) );
 
+  // Adjust the irq number, to avoid having many reserved irqs
+  if (irq > 11)
+    irq -= 7;
+  if (irq > 5)
+    irq -= 2;
+
   do_irq(irq);
 }
 
