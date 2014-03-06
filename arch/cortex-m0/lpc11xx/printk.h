@@ -25,6 +25,9 @@
 #pragma once
 
 #include "stdint.h"
+#include <vfs.h>
+
+extern file_t debug_serial;
 
 void printk_init(uint32_t baud);
 void printk(const char* str);

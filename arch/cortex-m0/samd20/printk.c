@@ -28,6 +28,7 @@
 
 #include "samd20.h"
 #include <stdbool.h>
+#include <string.h>
 
 #define EDBG_CDC_MODULE              SERCOM3
 #define EDBG_CDC_SERCOM_MUX_SETTING  USART_RX_3_TX_2_XCK_3
@@ -688,7 +689,5 @@ file_t debug_serial = &_debug_serial;
 
 void printk(const char* str)
 {
-	while (*str != '\0') {
-		putchar(*str++);
-	}
+	write(debug_serial, str, strlen(str));
 }

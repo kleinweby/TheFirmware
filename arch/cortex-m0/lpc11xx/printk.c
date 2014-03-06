@@ -26,6 +26,7 @@
 
 #include "LPC11xx.h"
 #include "system_LPC11xx.h"
+#include <string.h>
 
 #define IER_RBR         (0x01<<0)
 #define IER_THRE        (0x01<<1)
@@ -49,30 +50,30 @@ enum {
 
 void printk_init(uint32_t baud)
 {
-    // Configure RX PIN
-    LPC_IOCON->PIO1_6 &= ~0x07;
-    LPC_IOCON->PIO1_6 |= 0x01;
-    // Configure TX PIN
-    LPC_IOCON->PIO1_7 &= ~0x07;	
-    LPC_IOCON->PIO1_7 |= 0x01;
+  // Configure RX PIN
+  LPC_IOCON->PIO1_6 &= ~0x07;
+  LPC_IOCON->PIO1_6 |= 0x01;
+  // Configure TX PIN
+  LPC_IOCON->PIO1_7 &= ~0x07;
+  LPC_IOCON->PIO1_7 |= 0x01;
 
-    // Enable Clock (divider 1)
-    LPC_SYSCON->SYSAHBCLKCTRL |= (1<<12);
-    LPC_SYSCON->UARTCLKDIV = 0x1;  
+  // Enable Clock (divider 1)
+  LPC_SYSCON->SYSAHBCLKCTRL |= (1<<12);
+  LPC_SYSCON->UARTCLKDIV = 0x1;
 
-    // 8 bits, no Parity, 1 Stop bit
-    LPC_UART->LCR = 0x83;
+  // 8 bits, no Parity, 1 Stop bit
+  LPC_UART->LCR = 0x83;
 
-    // Configure Baudrate
-    {
-        uint32_t fdiv = ((SystemCoreClock/LPC_SYSCON->UARTCLKDIV)/16)/baud;
+  // Configure Baudrate
+  {
+      uint32_t fdiv = ((SystemCoreClock/LPC_SYSCON->UARTCLKDIV)/16)/baud;
 
-        LPC_UART->DLM = fdiv / 256;                         
-        LPC_UART->DLL = fdiv % 256;
-        LPC_UART->FDR = 0x10; // Default
-    }
+      LPC_UART->DLM = fdiv / 256;
+      LPC_UART->DLL = fdiv % 256;
+      LPC_UART->FDR = 0x10; // Default
+  }
 
-    LPC_UART->LCR = 0x03;       /* DLAB = 0 */
+  LPC_UART->LCR = 0x03;       /* DLAB = 0 */
   LPC_UART->FCR = 0x07;     /* Enable and reset TX and RX FIFO. */
 
   /* Read to clear the line status. */
@@ -91,11 +92,27 @@ void printk_init(uint32_t baud)
 //   NVIC_EnableIRQ(UART_IRQn);
 }
 
+static int write_op(file_t f, const void* buf, size_t nbytes)
+{
+  for (size_t i = 0; i < nbytes; i++, buf++) {
+    while ( !(LPC_UART->LSR & LSR_THRE) )
+      ;
+    LPC_UART->THR = *(char*)buf;
+  }
+  return 0;
+}
+
+static const struct file_operations ops = {
+  .write = write_op,
+};
+
+static struct file _debug_serial = {
+  .ops = &ops,
+};
+
+file_t debug_serial = &_debug_serial;
+
 void printk(const char* str)
 {
-	for(; *str != '\0'; str++) {
-    	while ( !(LPC_UART->LSR & LSR_THRE) )
-        	;
-    	LPC_UART->THR = *str;
-	}
+	write(debug_serial, str, strlen(str));
 }
