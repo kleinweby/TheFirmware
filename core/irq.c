@@ -23,6 +23,7 @@
 //
 
 #include <irq.h>
+#include <runtime.h>
 
 #include <stddef.h>
 
@@ -71,12 +72,8 @@ void do_irq(uint8_t irq_number)
 		irq.entries[irq_number].handler();
 	}
 	else {
-		// Handler is missing for handler missing irq, woops
-		if (irq_number == IRQ_HANDLER_MISSING) {
-			while (1)
-				;
-		}
-		else
-			return do_irq(IRQ_HANDLER_MISSING);
+		assert(irq_number != IRQ_HANDLER_MISSING, "IRQ missing handler is missing");
+
+		return do_irq(IRQ_HANDLER_MISSING);
 	}
 }
