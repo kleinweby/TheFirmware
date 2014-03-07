@@ -41,6 +41,16 @@ int isdigit(int c)
 	return false;
 }
 
+bool isalpha(char c) {
+	if (c >= 'a' && c <= 'z')
+		return true;
+
+	if (c >= 'A' && c <= 'Z')
+		return true;
+
+	return false;
+}
+
 size_t strlen(const char* str)
 {
 	size_t i = 0;
@@ -270,4 +280,59 @@ size_t vfprintf(file_t f, const char* format, va_list args)
 	}
 
 	return len;
+}
+
+int readline(file_t file, char* buffer, size_t len)
+{
+	int i;
+
+	for (i = 0; i < len - 1;) {
+		char c;
+
+		if (read(file, &c, 1) != 1)
+			return -1;
+
+		if (c == '\r' || c == '\n') {
+			buffer[i++] = '\0';
+			char* str = "\r\n";
+			write(file, str, strlen(str));
+			break;
+		}
+		// Backspace
+		else if (c == 0x7F) {
+			if (i > 0) {
+				i--;
+				char* str = "\033[1D\033[K";
+				write(file, str, strlen(str));
+			}
+		}
+		// Ctrl-C
+		else if (c == 0x03) {
+			char* str = "\r\n";
+			write(file, str, strlen(str));
+			return 0;
+		}
+		// Received control sequence
+		else if (c == 0x1B) {
+			if (read(file, &c, 1) != 1)
+				return -1;
+
+			// Parameter to follow
+			// just read them away
+			if (c == '[') {
+				while (!isalpha(c)) {
+					if (read(file, &c, 1) != 1)
+						return -1;
+				}
+			}
+		}
+		else {
+			write(file, &c, 1);
+			buffer[i++] = c;
+		}
+	}
+
+	buffer[i+1] = '\0';
+
+	return i;
 }

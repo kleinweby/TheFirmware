@@ -32,3 +32,5 @@ size_t vfprintf(file_t file, const char* format, va_list args);
 
 int isdigit(int c);
 size_t strlen(const char* str);
+
+int readline(file_t file, char* buffer, size_t len);

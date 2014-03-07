@@ -439,6 +439,45 @@ void sync()
 	}
 }
 
+int getchar(char* c)
+{
+	while (!(hw->INTFLAG.reg & SERCOM_USART_INTFLAG_RXC))
+		;
+
+	sync();
+
+	/* Read out the status code and mask away all but the 3 LSBs*/
+	int error_code = (uint8_t)(hw->STATUS.reg & SERCOM_USART_STATUS_MASK);
+
+	/* Check if an error has occurred during the receiving */
+	if (error_code) {
+		/* Check which error occurred */
+		if (error_code & SERCOM_USART_STATUS_FERR) {
+			/* Clear flag by writing a 1 to it and
+			 * return with an error code */
+			hw->STATUS.reg = SERCOM_USART_STATUS_FERR;
+
+			return -1;
+		} else if (error_code & SERCOM_USART_STATUS_BUFOVF) {
+			/* Clear flag by writing a 1 to it and
+			 * return with an error code */
+			hw->STATUS.reg = SERCOM_USART_STATUS_BUFOVF;
+
+			return -1;
+		} else if (error_code & SERCOM_USART_STATUS_PERR) {
+			/* Clear flag by writing a 1 to it and
+			 * return with an error code */
+			hw->STATUS.reg = SERCOM_USART_STATUS_PERR;
+
+			return -1;
+		}
+	}
+
+	*c = hw->DATA.reg;
+
+	return 0;
+}
+
 void putchar(char c)
 {
 	sync();
@@ -450,6 +489,19 @@ void putchar(char c)
 	}
 }
 
+static int read_op(file_t f, void* buf, size_t nbytes)
+{
+	size_t n;
+
+	for (n = 0; n < nbytes; n++, buf++) {
+		if (getchar(buf) < 0) {
+			break;
+		}
+	}
+
+	return n;
+}
+
 static int write_op(file_t f, const void* buf, size_t nbytes)
 {
 	for (size_t n = 0; n < nbytes; n++, buf++)
@@ -459,6 +511,7 @@ static int write_op(file_t f, const void* buf, size_t nbytes)
 }
 
 static const struct file_operations ops = {
+	.read = read_op,
 	.write = write_op,
 };
 

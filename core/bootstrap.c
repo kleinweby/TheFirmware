@@ -35,6 +35,7 @@
 #include <malloc.h>
 #include <thread.h>
 #include <scheduler.h>
+#include <string.h>
 
 void bootstrap()
 {
@@ -57,6 +58,21 @@ void bootstrap()
 	log(LOG_LEVEL_INFO, "Bootstrap complete. (%u free)", free_mem);
 
 	test_do(TEST_IN_MAIN_TASK);
+
+	while (1) {
+		char buf[60];
+		char* str = "> ";
+		write(debug_serial, str, strlen(str));
+
+		if (readline(debug_serial, buf, 60) < 0) {
+			str = "error reading\r\n";
+			write(debug_serial, str, strlen(str));
+		}
+		else {
+			str = "got it!\r\n";
+			write(debug_serial, str, strlen(str));
+		}
+	}
 
 	while(1)
 		__asm("WFI");
