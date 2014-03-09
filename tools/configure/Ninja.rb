@@ -84,7 +84,7 @@ class NinjaBase
 		end
 
 		str
-	end 
+	end
 
 	def format_line(line, indent = 0)
 		prefix = '  ' * indent

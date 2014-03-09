@@ -1,0 +1,58 @@
+Index: autoconf/config.sub
+===================================================================
+--- autoconf/config.sub	(revision 203251)
++++ autoconf/config.sub	(working copy)
+@@ -1354,7 +1354,7 @@
+ 	      | -os2* | -vos* | -palmos* | -uclinux* | -nucleus* \
+ 	      | -morphos* | -superux* | -rtmk* | -rtmk-nova* | -windiss* \
+ 	      | -powermax* | -dnix* | -nx6 | -nx7 | -sei* | -dragonfly* \
+-	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -es*)
++	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -es* | -thefirmware*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+ 	-qnx*)
+Index: include/llvm/ADT/Triple.h
+===================================================================
+--- include/llvm/ADT/Triple.h	(revision 203251)
++++ include/llvm/ADT/Triple.h	(working copy)
+@@ -111,6 +111,7 @@
+     CNK,        // BG/P Compute-Node Kernel
+     Bitrig,
+     AIX,
++    TheFirmware,
+     CUDA,       // NVIDIA CUDA
+     NVCL        // NVIDIA OpenCL
+   };
+Index: lib/Support/Triple.cpp
+===================================================================
+--- lib/Support/Triple.cpp	(revision 203251)
++++ lib/Support/Triple.cpp	(working copy)
+@@ -137,6 +137,7 @@
+   case CNK: return "cnk";
+   case Bitrig: return "bitrig";
+   case AIX: return "aix";
++  case TheFirmware: return "thefirmware";
+   case CUDA: return "cuda";
+   case NVCL: return "nvcl";
+   }
+@@ -294,6 +295,7 @@
+     .StartsWith("cnk", Triple::CNK)
+     .StartsWith("bitrig", Triple::Bitrig)
+     .StartsWith("aix", Triple::AIX)
++    .StartsWith("thefirmware", Triple::TheFirmware)
+     .StartsWith("cuda", Triple::CUDA)
+     .StartsWith("nvcl", Triple::NVCL)
+     .Default(Triple::UnknownOS);
+Index: projects/sample/autoconf/config.sub
+===================================================================
+--- projects/sample/autoconf/config.sub	(revision 203251)
++++ projects/sample/autoconf/config.sub	(working copy)
+@@ -1354,7 +1354,7 @@
+ 	      | -os2* | -vos* | -palmos* | -uclinux* | -nucleus* \
+ 	      | -morphos* | -superux* | -rtmk* | -rtmk-nova* | -windiss* \
+ 	      | -powermax* | -dnix* | -nx6 | -nx7 | -sei* | -dragonfly* \
+-	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -es*)
++	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -es* | -thefirmware*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+ 	-qnx*)

@@ -1,7 +1,7 @@
 var :include_paths, [ "-I#{path('.')}" ]
-var :cflags, [ '$define', '-Xclang', '-fcolor-diagnostics', '$include_paths', '-fno-builtin', '-Wall', '-Werror',  '-Wno-deprecated-register', '-Wno-unused-function', "--sysroot=#{path('./Toolchain/arm.toolchain/')}"]
+var :cflags, [ '$define', '-integrated-as', '-Xclang', '-fcolor-diagnostics', '$include_paths', '-fno-builtin', '-Wall', '-Werror',  '-Wno-deprecated-register', '-Wno-unused-function', "--sysroot=#{path('./Toolchain/arm.toolchain/')}"]
 var :cxxflags, [ '$cflags', '-fno-exceptions', '-fno-rtti', '-fno-unwind-tables', '-Wno-c++98-compat-pedantic']
-var :ldflags, [ "-nostdlib", '-lgcc' ]
+var :ldflags, [ "-nostdlib", '-lgcc']
 
 if options.debug
   var :define, [ '-DDEBUG=1' ]
