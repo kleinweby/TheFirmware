@@ -50,6 +50,7 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 #define unimplemented() assert(false, "Unimplemented")
 
 #define NO_RETURN  __attribute__ ((noreturn))
+#define NONNULL(...) __attribute__((nonnull (__VA_ARGS__)))
 
 #define OFFSET_PTR(ptr, offset) ((void*)((uintptr_t)ptr - offset))
 

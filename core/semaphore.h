@@ -21,21 +21,32 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+/// @file semaphore.h
+/// @defgroup semaphore
+/// @{
 
 #pragma once
 
 #include <stdint.h>
 #include <list.h>
+#include <runtime.h>
 
 typedef struct semaphore* semaphore_t;
 
+/// @internal
 struct semaphore {
+  /// The current value of the semaphore
   int8_t value;
+  /// A list of waiting threads. Should be woken in the order they arrived.
   list_t queue;
 };
 
 /// Creates a new heap allocated sempahore
 ///
+/// @param initial_value Initial value that the semaphore holds
+///
+/// @returns a newly allocated semaphore
+/// @retval NULL if allocation failed
 semaphore_t semaphore_create(int8_t initial_value);
 
 /// Initializes a semaphore at a given location
@@ -52,3 +63,5 @@ void semaphore_signal(semaphore_t semaphore);
 
 /// Wait on a semaphore if needed indefinitly
 void semaphore_wait(semaphore_t semaphore);
+
+/// @}
