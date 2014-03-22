@@ -21,10 +21,14 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+/// @file timer.h
+/// @defgroup timer Timer
+/// @{
 
 #pragma once
 
 #include <stdint.h>
+#include <list.h>
 #include <runtime.h>
 
 typedef struct timer* timer_t;
@@ -32,22 +36,46 @@ typedef struct timer* timer_t;
 // will overflow approx. every 24days
 typedef int32_t millitime_t;
 
-typedef void (*timer_handler_t)(millitime_t elapsed_time);
+typedef void (*timer_handler_t)(timer_t timer, millitime_t elapsed_time);
+typedef void (*timer_managedhandler_t)(timer_t timer, void* context);
 
+/// Struct containg all operations on a timer
+/// @internal
 struct timer_ops {
+  /// @see timer_set(timer_t timer, militime_t)
   void (*set)(timer_t timer, millitime_t time);
+
+  /// @see timer_get(timer_t timer)
   millitime_t (*get)(timer_t timer);
+
+  /// @see timer_remaining(timer_t timer)
   millitime_t (*remaining)(timer_t timter);
 
+  /// @see timer_enable(timer_t timer)
   void (*enable)(timer_t timer);
+
+  /// @see timer_disable(timer_t timer)
   void (*disable)(timer_t timer);
 };
 
+/// Struct descriping a timer
+/// @internal
 struct timer {
   const struct timer_ops* ops;
   timer_handler_t handler;
+  list_t managed_timeouts;
 };
 
+/// Sets the time in with the timer should fire
+///
+/// @note Setting the firetime will enable the timer.
+///
+/// @note A timer may not support all of the millitime_t range, if so
+/// the timer will clamp the specified time into its capabilities. Therefore
+/// you need to always check the actual time elapsed.
+///
+/// @param timer Timer to set the fire time
+/// @param time time in miliseconds in which the timer should fire
 static inline void timer_set(timer_t timer, millitime_t time)
 {
   assert(time > 0, "Setting a timers time to a negative ammount makes no sense");
@@ -77,3 +105,23 @@ static inline void timer_disable(timer_t timer)
 
 void timer_set_handler(timer_t timer, timer_handler_t handler);
 timer_handler_t timer_get_handler(timer_t timer);
+
+/// Schedules a call to timer_handler after a specified timeout.
+///
+/// Puts the timer in the managed mode if not already.
+///
+/// @param timer to operate on
+/// @param timeout time after which the handler should be called
+/// @param repeat true if the timer_handler should be called repeatilly
+/// @param handler handler to call
+/// @param context context passed to the handler
+void timer_managed_schedule(timer_t timer, millitime_t timeout, bool repeat, timer_managedhandler_t handler, void* context);
+
+/// Removes a given timer.
+///
+/// @param timer Timer to operate on
+/// @param handler Handler to remove
+/// @param context Context it was registered with
+void timer_managed_cancel(timer_t timer, timer_managedhandler_t handler, void* context);
+
+/// @}

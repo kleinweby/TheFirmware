@@ -36,4 +36,4 @@
 #define STACK_SIZE_MAIN 1024
 
 /// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 800
+#define STACK_SIZE_ISR 1024

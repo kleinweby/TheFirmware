@@ -126,7 +126,16 @@ static inline void list_entry_init(list_entry_t* entry)
 	entry->prev = NULL;
 }
 
+#define LIST_ENTRY_INIT {.next = NULL, .prev = NULL}
+
 #define list_foreach(pos, list) \
 	for (pos = (list)->head; \
 		pos != NULL; \
 		pos = list_next((list), pos))
+
+#define list_foreach_contained(pos, list, type, member) \
+	list_entry_t* entry = (list)->head; \
+	for (pos = container_of(entry, type, member); \
+		entry != NULL; \
+		entry = list_next((list), entry), pos = container_of(entry, type, member))
+		

@@ -36,11 +36,24 @@
 #include <thread.h>
 #include <scheduler.h>
 #include <string.h>
+#include <systick.h>
+
+void test(timer_t timer, void* context)
+{
+	log(LOG_LEVEL_INFO, "Got %s :)", context);
+}
+
+void error()
+{
+	assert(false, "some error");
+}
 
 void bootstrap()
 {
 	arch_early_init();
 	test_do(TEST_AFTER_ARCH_EARLY_INIT);
+
+	irq_register(IRQ_HARDFAULT, error);
 
 	printk_init(38400);
 	irq_init();
@@ -59,21 +72,27 @@ void bootstrap()
 
 	test_do(TEST_IN_MAIN_TASK);
 
-	while (1) {
-		char buf[60];
-		char* str = "> ";
-		write(debug_serial, str, strlen(str));
+	timer_t timer = systick_get_timer();
 
-		if (readline(debug_serial, buf, 60) < 0) {
-			str = "error reading\r\n";
-			write(debug_serial, str, strlen(str));
-		}
-		else {
-			str = "got it!\r\n";
-			write(debug_serial, str, strlen(str));
-		}
-	}
+	timer_managed_schedule(timer, 1000, true, test, "1 second");
+	timer_managed_schedule(timer, 2000, true, test, "2 second");
+	timer_managed_schedule(timer, 5000, true, test, "5 second");
+
+	// while (1) {
+	// 	char buf[60];
+	// 	char* str = "> ";
+	// 	write(debug_serial, str, strlen(str));
+	//
+	// 	if (readline(debug_serial, buf, 60) < 0) {
+	// 		str = "error reading\r\n";
+	// 		write(debug_serial, str, strlen(str));
+	// 	}
+	// 	else {
+	// 		str = "got it!\r\n";
+	// 		write(debug_serial, str, strlen(str));
+	// 	}
+	// }
 
 	while(1)
-		__asm("WFI");
+		; //__asm("WFI");
 }

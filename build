@@ -7,7 +7,8 @@ if options.debug
   var :define, [ '-DDEBUG=1' ]
   var :cflags, [ '-ggdb' ]
 else
-  var :cflags, [ '-Os' ]
+  var :cflags, [ '-Os', '-ffunction-sections', '-fdata-sections' ]
+  var :ldflags, [ '-Wl,--gc-sections']
 end
 
 parse 'arch/build'

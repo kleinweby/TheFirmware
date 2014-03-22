@@ -22,14 +22,191 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
+/// TODO: there are many possible cases where a proper firering of a timer may be
+/// delayed
+///
+
 #include <timer.h>
+#include <malloc.h>
+#include <scheduler.h>
+#include <log.h>
+
+static void timer_managedhandler(timer_t timer, millitime_t elapsed_time);
 
 void timer_set_handler(timer_t timer, timer_handler_t handler)
 {
+  assert(timer->handler != timer_managedhandler, "Attempt to change timer handler while it is beeing managed");
+
   timer->handler = handler;
 }
 
 timer_handler_t timer_get_handler(timer_t timer)
 {
   return timer->handler;
+}
+
+struct timer_managed_timeout {
+  list_entry_t entry;
+  millitime_t remaining;
+  millitime_t reset_time;
+  timer_managedhandler_t handler;
+  void* context;
+};
+
+static void timer_managed_recalculate(timer_t timer)
+{
+  struct timer_managed_timeout* t = container_of(list_first(&timer->managed_timeouts), struct timer_managed_timeout, entry);
+
+  if (t)
+    timer_set(timer, t->remaining);
+  else
+    timer_disable(timer);
+}
+
+static void timer_managed_update_first(timer_t timer)
+{
+  // struct timer_managed_timeout* t = container_of(list_first(&timer->managed_timeouts), struct timer_managed_timeout, entry);
+  //
+  // if (t) {
+  //   log(LOG_LEVEL_INFO, "get %u remaining %u", timer_get(timer), timer_remaining(timer));
+  //   millitime_t elapsed = timer_get(timer) - timer_remaining(timer);
+  //   t->remaining -= elapsed;
+  //   timer_set(timer, t->remaining);
+  // }
+}
+
+static void timer_managed_insert(timer_t timer, struct timer_managed_timeout* timeout)
+{
+  assert(timer, "Timer can not be NULL");
+  assert(timeout, "Timeout can not be NULL");
+
+  if (list_is_empty(&timer->managed_timeouts)) {
+    log(LOG_LEVEL_INFO, "Insert %p with remaining %u", timeout, timeout->remaining);
+    list_append(&timer->managed_timeouts, &timeout->entry);
+    timer_managed_recalculate(timer);
+    return;
+  }
+
+  timer_managed_update_first(timer);
+
+  struct timer_managed_timeout* t;
+  list_foreach_contained(t, &timer->managed_timeouts, struct timer_managed_timeout, entry) {
+    if (timeout->remaining <= t->remaining) {
+      if (&t->entry == list_first(&timer->managed_timeouts)) {
+        log(LOG_LEVEL_INFO, "Insert first %p with remaining %u", timeout, timeout->remaining);
+        list_insert_before(&t->entry, &timeout->entry);
+        list_rrotate(&timer->managed_timeouts);
+
+        timer_managed_recalculate(timer);
+      }
+      else {
+        log(LOG_LEVEL_INFO, "Insert %p with remaining %u", timeout, timeout->remaining);
+        list_insert_before(&t->entry, &timeout->entry);
+      }
+      t->remaining -= timeout->remaining;
+      return;
+    }
+    timeout->remaining -= t->remaining;
+  }
+
+  log(LOG_LEVEL_INFO, "Insert %p with remaining %u", timeout, timeout->remaining);
+  list_append(&timer->managed_timeouts, &timeout->entry);
+}
+
+void timer_managed_schedule(timer_t timer, millitime_t timeout, bool repeat, timer_managedhandler_t handler, void* context)
+{
+  assert(timer, "Timer can not be NULL");
+  assert(timeout > 0, "Timeout can not be negative");
+  assert(handler, "Timeout requires a handler");
+
+  scheduler_lock();
+  if (timer_get_handler(timer) != timer_managedhandler) {
+    list_init(&timer->managed_timeouts);
+    timer_set_handler(timer, timer_managedhandler);
+  }
+
+  struct timer_managed_timeout *managed_timeout = malloc_raw(sizeof(struct timer_managed_timeout));
+
+  list_entry_init(&managed_timeout->entry);
+  managed_timeout->remaining = timeout;
+  managed_timeout->reset_time = repeat ? timeout : 0;
+  managed_timeout->handler = handler;
+  managed_timeout->context = context;
+
+  timer_managed_insert(timer, managed_timeout);
+  scheduler_unlock();
+}
+
+void timer_managed_cancel(timer_t timer, timer_managedhandler_t handler, void* context)
+{
+  assert(timer, "Timer can not be NULL");
+  assert(handler, "Handler can not be NULL");
+
+  scheduler_lock();
+
+  struct timer_managed_timeout* t;
+  list_foreach_contained(t, &timer->managed_timeouts, struct timer_managed_timeout, entry) {
+    if (t->handler == handler && t->context == context) {
+      bool first = false;
+
+      if (&t->entry == list_first(&timer->managed_timeouts)) {
+        first = true;
+        timer_managed_update_first(timer);
+      }
+
+      struct timer_managed_timeout* next = container_of(list_next(&timer->managed_timeouts, &t->entry), struct timer_managed_timeout, entry);
+
+      if (next) {
+        next->remaining += t->remaining;
+      }
+
+      list_delete(&timer->managed_timeouts, &t->entry);
+      free_raw(t, sizeof(struct timer_managed_timeout));
+
+      if (first)
+        timer_managed_recalculate(timer);
+      break;
+    }
+  }
+
+  scheduler_unlock();
+}
+
+static void timer_managedhandler(timer_t timer, millitime_t elapsed_time)
+{
+  assert(timer, "Timer can not be NULL");
+
+  scheduler_lock();
+  struct timer_managed_timeout* t = container_of(list_first(&timer->managed_timeouts), struct timer_managed_timeout, entry);
+
+  if (t) {
+    t->remaining -= elapsed_time;
+    scheduler_unlock();
+
+    while (t->remaining <= 0) {
+      scheduler_lock();
+      bool free_it = true;
+      list_delete(&timer->managed_timeouts, &t->entry);
+
+      if (t->reset_time > 0) {
+        t->remaining = t->reset_time;
+        log(LOG_LEVEL_INFO, "Reschedule with %u", t->remaining);
+        timer_managed_insert(timer, t);
+        free_it = false;
+      }
+
+      scheduler_unlock();
+      t->handler(timer, t->context);
+      if (free_it)
+        free_raw(t, sizeof(struct timer_managed_timeout));
+
+      t = container_of(list_first(&timer->managed_timeouts), struct timer_managed_timeout, entry);
+    }
+
+    timer_managed_recalculate(timer);
+  }
+  else {
+    scheduler_unlock();
+  }
 }

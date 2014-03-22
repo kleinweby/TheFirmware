@@ -27,30 +27,46 @@
 #include <printk.h>
 #include <string.h>
 
+#if 0
+#define COLOR_RESET "\033[0m"
+#define COLOR_CYAN "\033[0;32m"
+#define COLOR_GREEN "\033[0;36m"
+#define COLOR_YELLOW "\033[1;33m"
+#define COLOR_RED "\033[1;31m"
+#define COLOR_GRAY "\033[1;30m"
+#else
+#define COLOR_RESET ""
+#define COLOR_CYAN ""
+#define COLOR_GREEN ""
+#define COLOR_YELLOW ""
+#define COLOR_RED ""
+#define COLOR_GRAY ""
+#endif
+
 void _logv(const char* file, int line, log_level_t log_level, const char* message, va_list args)
 {
 	const char* level_str;
 
 	switch(log_level) {
 		case LOG_LEVEL_DEBUG:
-			level_str = "\033[0;32m[D]\033[0m";
+			level_str = COLOR_CYAN"[D]"COLOR_RESET;
 			break;
 		case LOG_LEVEL_VERBOSE:
-			level_str = "\033[0;32m[V]\033[0m";
+			level_str = COLOR_CYAN"[V]"COLOR_RESET;
 			break;
 		case LOG_LEVEL_INFO:
-			level_str = "\033[0;36m[I]\033[0m";
+			level_str = COLOR_GREEN"[I]"COLOR_RESET;
 			break;
 		case LOG_LEVEL_WARN:
-			level_str = "\033[1;33m[W]\033[0m";
+			level_str = COLOR_YELLOW"[W]"COLOR_RESET;
 			break;
 		case LOG_LEVEL_ERROR:
-			level_str = "\033[1;31m[E]\033[0m";
+			level_str = COLOR_RED"[E]"COLOR_RESET;
 			break;
 	}
 
 	if (file) {
-		fprintf(debug_serial, "\033[1;30m%s:%d %s ", file, line, level_str);
+		fprintf(debug_serial, COLOR_GRAY"%s:%d %s ", file, line, level_str);
 	}
 	else {
 		fprintf(debug_serial, "%s ", level_str);

@@ -29,6 +29,8 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 {
 	_log(file, line, LOG_LEVEL_ERROR, "assertion '%s' failed: %s", expr, msg);
 
+	__asm volatile ("bkpt 0x0");
+
 	while(1)
 		;
 }

@@ -25,6 +25,7 @@
 #include <systick.h>
 #include <irq.h>
 #include <clock.h>
+#include <log.h>
 
 struct systick_regs {
 	volatile uint32_t CTRL;
@@ -85,6 +86,7 @@ static void systick_set(timer_t _timer, millitime_t time)
 
   systick_regs->LOAD = (clock)/1000 * time;
   systick_regs->VAL = 0;
+	// log(LOG_LEVEL_INFO, "Set systick to %u", time);
   systick_enable(_timer);
 }
 
@@ -112,7 +114,7 @@ static struct systick systick = {
 static void systick_handle_irq(void)
 {
   if (systick.timer.handler)
-  systick.timer.handler(systick_get(&systick.timer));
+  systick.timer.handler(&systick.timer, systick_get(&systick.timer));
 }
 
 timer_t systick_get_timer()

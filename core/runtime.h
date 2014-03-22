@@ -28,6 +28,8 @@
 #include "stddef.h"
 #include "stdbool.h"
 
+#define NO_RETURN  __attribute__ ((noreturn))
+
 /// Handles Assertions by stopping/restarting the cpu
 ///
 /// @param function The function in with the assertion occoured (May be NULL)
@@ -35,13 +37,13 @@
 /// @param line The line in which the asseriton occoured
 /// @param expr A symbolic string of the expression
 /// @param msg A additional message for this expression (May be NULL)
-void _assert_handler(const char* function, const char* file, uint32_t line, const char* expr, const char* msg);
+void _assert_handler(const char* function, const char* file, uint32_t line, const char* expr, const char* msg) NO_RETURN;
 
 /// Assert a assumption in code
 ///
 /// @param expr Expression to assert
 /// @param ... message to display
-#define assert(expr,...) (__builtin_expect(!(expr), 0) ? _assert_handler(__FILE__, __FUNCTION__, __LINE__, #expr, ##__VA_ARGS__) : (void)0)
+#define assert(expr,...) (__builtin_expect(!(expr), 0) ? _assert_handler(__FUNCTION__, __FILE__, __LINE__, #expr, ##__VA_ARGS__) : (void)0)
 
 /// Hint that the following code is never executed
 #define unreachable() __builtin_unreachable()
@@ -49,7 +51,6 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 /// Denotes a unimplemented code path
 #define unimplemented() assert(false, "Unimplemented")
 
-#define NO_RETURN  __attribute__ ((noreturn))
 #define NONNULL(...) __attribute__((nonnull (__VA_ARGS__)))
 
 #define OFFSET_PTR(ptr, offset) ((void*)((uintptr_t)ptr - offset))
@@ -58,6 +59,6 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 #define ALIAS(f) __attribute__ ((alias (#f)))
 #define LINKER_SYMBOL(name, type) extern void _##name(); static const type name = (type)&_##name
 
-#define container_of(ptr, type, member) ({                  \
+#define container_of(ptr, type, member) (ptr ? ({                  \
   const __typeof( ((type *)0)->member ) *__mptr = (ptr);    \
-  (type *)( (char *)__mptr - offsetof(type,member) );})
+  (type *)( (char *)__mptr - offsetof(type,member) );}) : NULL)

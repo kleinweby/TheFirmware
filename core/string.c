@@ -67,51 +67,36 @@ size_t strlen(const char* str)
 /// @param base The base to print the number in
 /// @param minLength Min length which wil be padded
 /// @param useWhitespacePadding Pad with whitespace instead of zeros
-size_t print_number(file_t f, uint32_t number, uint8_t base, uint32_t minLength, bool useWhitespacePadding)
+static size_t print_number(file_t f, uint32_t number, uint8_t base, uint32_t minLength, bool useWhitespacePadding)
 {
 	// We only support base 2 to 16
 	if (base < 2 || base > 16)
 		return 0;
 
-	char buffer[25];
-	char* tempString = buffer;
+	char _buffer[25];
+	char* buffer = &_buffer[25];
 	uint32_t usedLength = 0;
 
-	// First we put the number in in reverse to
-	// calculate the needed space and the number
-	// itself
 	do {
 		uint8_t remainder;
 
 		remainder = number % base;
 		number = number / base;
 
-		*tempString = numberDefinitions[remainder];
+		*(--buffer) = numberDefinitions[remainder];
 
 		usedLength++;
-		tempString++;
-	} while(number > 0);
-
-	// Now we know the needed length and
-	// have the number in a reverse format aviaible
+	} while(number > 0 && usedLength < 25);
 
 	// Now padd the thing.
 	for (; usedLength < minLength; usedLength++) {
 		if (useWhitespacePadding)
-			*tempString = ' ';
+			*(--buffer) = ' ';
 		else
-			*tempString = '0';
-		tempString++;
+			*(--buffer) = '0';
 	}
 
-	tempString--;
-
-	// Now swap the thing around
-	for (uint8_t i = 0; i < usedLength; i++, tempString--) {
-		write(f, tempString, 1);
-	}
-
-	return usedLength;
+	return write(f, buffer, usedLength);
 }
 
 size_t fprintf(file_t f, const char* format, ...)

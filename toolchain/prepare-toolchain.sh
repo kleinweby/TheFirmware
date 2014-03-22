@@ -209,6 +209,9 @@ function compile_llvm_clang {
 	log "Compile LLVM/CLANG"
 	mkdir "$TEMP_DIR/llvm-build"
 	pushd "$TEMP_DIR/llvm-build"
+	# cmake -G Ninja ../llvm -DLLVM_DEFAULT_TARGET_TRIPLE="$TARGET_TRIPLET_CLANG" -DCMAKE_INSTALL_PREFIX="$TOOLCHAIN_DIR" -DCMAKE_BUILD_TYPE="Release" -DLLVM_TARGETS_TO_BUILD="ARM" -DLLVM_ENABLE_CXX11=True -DCMAKE_CXX_FLAGS='-std=c++11' || exit 1
+	# ninja || exit 1
+	# ninja install || exit 1
 	../llvm/configure --target="$TARGET_TRIPLET_CLANG" --prefix="$TOOLCHAIN_DIR" --with-build-sysroot="$TOOLCHAIN_DIR" --disable-docs --disable-static --enable-optimized --disable-assertions --disable-debug-runtime --disable-expensive-checks --enable-bindings=none --enable-targets=arm || exit 1
 	make -j$MAKE_JOBS || exit 1
 	make install || exit 1
