@@ -1,0 +1,5 @@
+var :include_paths, ["-I#{path('.')}"]
+
+file '*.c'
+
+build 'firmware.elf', 'ld', objects, '$linker_file'

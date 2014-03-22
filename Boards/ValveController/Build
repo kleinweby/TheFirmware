@@ -1,5 +1,0 @@
-
-board 'ValveController' do
-  targets 'LPC11C24'
-  file '*.{c,cc}'
-end

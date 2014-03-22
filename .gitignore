@@ -1,7 +1,10 @@
 .build/
 *.elf
 *.toolchain
+toolchain/downloads
+toolchain/ninja-build
 doc/
 FirmwareInfo.cc.rake-defs
 FirmwareInfo.cc
 build.ninja
+tools/simulator/simulator

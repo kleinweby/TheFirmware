@@ -1,0 +1,9 @@
+
+target 'cortex-m0p-sim', :base => 'cortex-m0' do
+  var :linker_file, path('./link.ld')
+
+  var :define, '-DTESTS_SUPPORTED=1'
+  var :include_paths, ["-I#{path('.')}"]
+
+  file '*.c'
+end

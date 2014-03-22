@@ -1,0 +1,3 @@
+board 'test' do
+  targets ['cortex-m0p-sim', 'samd20j18', 'lpc11xx']
+end

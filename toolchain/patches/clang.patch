@@ -1,0 +1,154 @@
+Index: lib/Driver/Driver.cpp
+===================================================================
+--- lib/Driver/Driver.cpp	(revision 203251)
++++ lib/Driver/Driver.cpp	(working copy)
+@@ -1950,6 +1950,9 @@
+     case llvm::Triple::Win32:
+       TC = new toolchains::Windows(*this, Target, Args);
+       break;
++    case llvm::Triple::TheFirmware:
++      TC = new toolchains::TheFirmware(*this, Target, Args);
++      break;
+     case llvm::Triple::MinGW32:
+       // FIXME: We need a MinGW toolchain. Fallthrough for now.
+     default:
+Index: lib/Driver/ToolChains.cpp
+===================================================================
+--- lib/Driver/ToolChains.cpp	(revision 203251)
++++ lib/Driver/ToolChains.cpp	(working copy)
+@@ -3398,3 +3398,18 @@
+                                 ArgStringList &CmdArgs) const {
+   // We don't output any lib args. This is handled by xcc.
+ }
++
++
++TheFirmware::TheFirmware(const Driver &D, const llvm::Triple& Triple, const ArgList &Args)
++: Generic_ELF(D, Triple, Args) {
++//    getFilePaths().push_back(getDriver().Dir + "/../lib");
++//    getFilePaths().push_back("/usr/lib");
++}
++
++Tool *TheFirmware::buildAssembler() const {
++    return new tools::ClangAs(*this);
++}
++
++Tool *TheFirmware::buildLinker() const {
++    return new tools::thefirmware::Link(*this);
++}
+Index: lib/Driver/ToolChains.h
+===================================================================
+--- lib/Driver/ToolChains.h	(revision 203251)
++++ lib/Driver/ToolChains.h	(working copy)
+@@ -766,6 +766,16 @@
+                                    llvm::opt::ArgStringList &CmdArgs) const;
+ };
+
++
++class LLVM_LIBRARY_VISIBILITY TheFirmware : public Generic_ELF {
++public:
++    TheFirmware(const Driver &D, const llvm::Triple& Triple, const ArgList &Args);
++
++protected:
++    virtual Tool *buildLinker() const;
++    virtual Tool *buildAssembler() const;
++};
++
+ } // end namespace toolchains
+ } // end namespace driver
+ } // end namespace clang
+Index: lib/Driver/Tools.cpp
+===================================================================
+--- lib/Driver/Tools.cpp	(revision 203251)
++++ lib/Driver/Tools.cpp	(working copy)
+@@ -7452,3 +7452,62 @@
+     Args.MakeArgString(getToolChain().GetProgramPath("xcc"));
+   C.addCommand(new Command(JA, *this, Exec, CmdArgs));
+ }
++
++
++// Just copied from minix for now
++void thefirmware::Link::ConstructJob(Compilation &C, const JobAction &JA,
++                               const InputInfo &Output,
++                               const InputInfoList &Inputs,
++                               const ArgList &Args,
++                               const char *LinkingOutput) const {
++    const Driver &D = getToolChain().getDriver();
++    ArgStringList CmdArgs;
++
++    if (Output.isFilename()) {
++        CmdArgs.push_back("-o");
++        CmdArgs.push_back(Output.getFilename());
++    } else {
++        assert(Output.isNothing() && "Invalid output.");
++    }
++
++    // No start objects avaiable for now
++//    if (!Args.hasArg(options::OPT_nostdlib) &&
++//        !Args.hasArg(options::OPT_nostartfiles)) {
++//        CmdArgs.push_back(Args.MakeArgString(getToolChain().GetFilePath("crt1.o")));
++//        CmdArgs.push_back(Args.MakeArgString(getToolChain().GetFilePath("crti.o")));
++//        CmdArgs.push_back(Args.MakeArgString(getToolChain().GetFilePath("crtbegin.o")));
++//        CmdArgs.push_back(Args.MakeArgString(getToolChain().GetFilePath("crtn.o")));
++//    }
++
++    Args.AddAllArgs(CmdArgs, options::OPT_L);
++    Args.AddAllArgs(CmdArgs, options::OPT_T_Group);
++    Args.AddAllArgs(CmdArgs, options::OPT_e);
++
++    AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs);
++
++    addProfileRT(getToolChain(), Args, CmdArgs, getToolChain().getTriple());
++
++    // No math lib avaiable
++//    if (!Args.hasArg(options::OPT_nostdlib) &&
++//        !Args.hasArg(options::OPT_nodefaultlibs)) {
++//        if (D.CCCIsCXX) {
++//            getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
++//            CmdArgs.push_back("-lm");
++//        }
++//    }
++
++// No std lib is avaiable for now
++//    if (!Args.hasArg(options::OPT_nostdlib) &&
++//        !Args.hasArg(options::OPT_nostartfiles)) {
++//        if (Args.hasArg(options::OPT_pthread))
++//            CmdArgs.push_back("-lpthread");
++//        CmdArgs.push_back("-lc");
++//        CmdArgs.push_back("-lCompilerRT-Generic");
++//        CmdArgs.push_back("-L/usr/pkg/compiler-rt/lib");
++//        CmdArgs.push_back(
++//                          Args.MakeArgString(getToolChain().GetFilePath("crtend.o")));
++//    }
++
++    const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("i386-thefirmware-elf-ld"));
++    C.addCommand(new Command(JA, *this, Exec, CmdArgs));
++}
+Index: lib/Driver/Tools.h
+===================================================================
+--- lib/Driver/Tools.h	(revision 203251)
++++ lib/Driver/Tools.h	(working copy)
+@@ -653,7 +653,24 @@
+   };
+ } // end namespace XCore.
+
++/// thefirmware --
++namespace thefirmware {
++  class LLVM_LIBRARY_VISIBILITY Link : public Tool  {
++  public:
++    Link(const ToolChain &TC) : Tool("thefirmware::Link", "linker", TC) {}
+
++    virtual bool hasIntegratedCPP() const { return false; }
++    virtual bool isLinkJob() const { return true; }
++
++    virtual void ConstructJob(Compilation &C, const JobAction &JA,
++                              const InputInfo &Output,
++                              const InputInfoList &Inputs,
++                              const ArgList &TCArgs,
++                              const char *LinkingOutput) const;
++  };
++} // end namespace thefirmware
++
++
+ } // end namespace toolchains
+ } // end namespace driver
+ } // end namespace clang

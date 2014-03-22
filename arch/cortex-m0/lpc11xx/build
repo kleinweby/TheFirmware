@@ -1,0 +1,9 @@
+
+target 'lpc11xx', :base => 'cortex-m0' do
+  var :linker_file, path('./link.ld')
+
+  var :include_paths, [ "-I#{path('./CMSIS/inc')}", "-I#{path('.')}" ]
+
+  file '*.c'
+  file 'CMSIS/src/*.c'
+end
