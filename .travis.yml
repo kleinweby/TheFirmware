@@ -19,6 +19,6 @@ before_script:
 - sudo apt-get update
 - sudo apt-get install libev-dev libc6-dev-i386
 - gem install travis-artifacts
-- ./Toolchain/prepare-toolchain.sh
+- ./toolchain/prepare-toolchain.sh
 - ./tools/travis/travis-ninja.sh
 script: ./tools/travis/travis-ci.sh
