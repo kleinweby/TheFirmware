@@ -35,13 +35,33 @@ static void idle_cb (struct ev_loop *loop, ev_idle *w, int revents)
 	mcu_runloop(mcu);
 }
 
-bool mcu_init(mcu_t mcu, struct ev_loop* loop)
+bool mcu_init(mcu_t mcu, const char* kernel_path, struct ev_loop* loop)
 {
+	mcu->kernel = mcu_kernel_create(kernel_path, (struct mcu_kernel_callbacks){
+		.context = mcu,
+		.fetch8 = (void*)mcu_util_fetch8,
+		.fetch16 = (void*)mcu_fetch16,
+		.fetch32 = (void*)mcu_fetch32,
+		.write8 = (void*)mcu_util_write8,
+		.write16 = (void*)mcu_write16,
+		.write32 = (void*)mcu_write32,
+	});
+
 	mcu->loop = loop;
 
 	ev_idle_init(&mcu->idle, idle_cb);
 
 	return true;
+}
+
+uint32_t mcu_read_reg(mcu_t mcu, reg_t reg)
+{
+	return mcu_kernel_read_reg(mcu->kernel, reg);
+}
+
+void mcu_write_reg(mcu_t mcu, reg_t reg, uint32_t val)
+{
+	mcu_kernel_write_reg(mcu->kernel, reg, val);
 }
 
 #define DECLARE_MEM_OP(name, type) \
@@ -126,7 +146,7 @@ bool mcu_util_write8(mcu_t mcu, uint32_t addr, uint8_t valueIn)
 	return mcu_write16(mcu, addr & ~1, value);
 }
 
-bool mcu_add_mem_dev(mcu_t mcu, uint32_t offset, mem_dev_t dev) 
+bool mcu_add_mem_dev(mcu_t mcu, uint32_t offset, mem_dev_t dev)
 {
 	// Quick and dirty, unordered
 
@@ -152,7 +172,7 @@ bool mcu_unlock(mcu_t mcu)
 bool mcu_lock(mcu_t mcu)
 {
 	mcu->unlocked = false;
-	
+
 	return true;
 }
 
@@ -217,4 +237,3 @@ void mcu_add_callbacks(mcu_t mcu, mcu_callbacks_t callbacks)
 	callbacks->next = mcu->callbacks;
 	mcu->callbacks = callbacks;
 }
-

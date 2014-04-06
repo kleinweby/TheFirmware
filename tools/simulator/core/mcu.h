@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <ev.h>
 
+#include <mcu_kernel.h>
+
 typedef struct mcu* mcu_t;
 typedef struct mcu_callbacks* mcu_callbacks_t;
 typedef struct mcu_instr16* mcu_instr16_t;
@@ -41,8 +43,7 @@ typedef enum {
 } mcu_state_t;
 
 struct mcu {
-	mcu_instr16_t instrs16;
-	mcu_instr32_t instrs32;
+	mcu_kernel_t kernel;
 
 	mem_dev_t mem_devs;
 
@@ -57,7 +58,7 @@ struct mcu {
 	ev_idle idle;
 };
 
-bool mcu_init(mcu_t mcu, struct ev_loop* loop);
+bool mcu_init(mcu_t mcu, const char* kernel_path, struct ev_loop* loop);
 bool mcu_is_halted(mcu_t mcu);
 halt_reason_t mcu_halt_reason(mcu_t mcu);
 
@@ -124,7 +125,7 @@ struct mcu_instr32 {
 #else
 #define trace_instr16(fmt, ...)
 #define trace_instr32(fmt, ...)
-#define trace_print(fmt, ...) 
+#define trace_print(fmt, ...)
 #endif
 
 void mcu_add_callbacks(mcu_t mcu, mcu_callbacks_t callbacks);

@@ -52,9 +52,7 @@ mcu_t mcu_cortex_m0p_create(struct ev_loop *loop, size_t ramsize)
 		return NULL;
 	}
 
-	mcu_init((mcu_t)mcu, loop);
-	mcu->mcu.instrs16 = mcu_instr16_cortex_m0p;
-	mcu->mcu.instrs32 = mcu_instr32_cortex_m0p;
+	mcu_init((mcu_t)mcu, "./test.bc", loop);
 
 	{
 		flash_dev_t flash = flash_dev_create(32 * 1024);
@@ -170,115 +168,59 @@ bool mcu_do_irq(mcu_t mcu, irq_t fault)
 	return false;
 }
 
-uint32_t mcu_read_reg(mcu_t _mcu, reg_t reg)
-{
-	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
+// uint32_t mcu_read_reg(mcu_t _mcu, reg_t reg)
+// {
+// 	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
+//
+// 	if (reg == REG_SP) {
+// 		if (mcu->regs[reg] & 0x2)
+// 			reg = REG_PSP;
+// 		else
+// 			reg = REG_MSP;
+// 	}
+// 	else if (reg == REG_APSR)
+// 		return mcu->regs[REG_XPSR] & 0xF0000000;
+// 	else if (reg == REG_IPSR)
+// 		return mcu->regs[REG_XPSR] & 0x1F;
+// 	else if (reg == REG_EPSR)
+// 		return mcu->regs[REG_XPSR] & 0x1000000;
+//
+// 	return mcu->regs[reg];
+// }
 
-	if (reg == REG_SP) {
-		if (mcu->regs[reg] & 0x2)
-			reg = REG_PSP;
-		else
-			reg = REG_MSP;
-	}
-	else if (reg == REG_APSR)
-		return mcu->regs[REG_XPSR] & 0xF0000000;
-	else if (reg == REG_IPSR)
-		return mcu->regs[REG_XPSR] & 0x1F;
-	else if (reg == REG_EPSR)
-		return mcu->regs[REG_XPSR] & 0x1000000;
-
-	return mcu->regs[reg];
-}
-
-void mcu_write_reg(mcu_t _mcu, reg_t reg, uint32_t val)
-{
-	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
-
-	if (reg == REG_PC) {
-		val &= ~1;
-	}
-
-	if (reg == REG_SP) {
-		if (mcu->regs[reg] & 0x2)
-			reg = REG_PSP;
-		else
-			reg = REG_MSP;
-	}
-
-	if (reg == REG_APSR)
-		mcu->regs[REG_XPSR] = (mcu->regs[REG_XPSR] & ~0xF0000000) | (val & 0xF0000000);
-	else if (reg == REG_IPSR)
-		mcu->regs[REG_XPSR] = (mcu->regs[REG_XPSR] & ~0x1F) | (val & 0x1F);
-	else if (reg == REG_EPSR)
-		mcu->regs[REG_XPSR] = (mcu->regs[REG_XPSR] & ~0x1000000) | (val & 0x1000000);
-	else
-		mcu->regs[reg] = val;
-}
+// void mcu_write_reg(mcu_t _mcu, reg_t reg, uint32_t val)
+// {
+// 	mcu_cortex_m0p_t mcu = (mcu_cortex_m0p_t)_mcu;
+//
+// 	if (reg == REG_PC) {
+// 		val &= ~1;
+// 	}
+//
+// 	if (reg == REG_SP) {
+// 		if (mcu->regs[reg] & 0x2)
+// 			reg = REG_PSP;
+// 		else
+// 			reg = REG_MSP;
+// 	}
+//
+// 	if (reg == REG_APSR)
+// 		mcu->regs[REG_XPSR] = (mcu->regs[REG_XPSR] & ~0xF0000000) | (val & 0xF0000000);
+// 	else if (reg == REG_IPSR)
+// 		mcu->regs[REG_XPSR] = (mcu->regs[REG_XPSR] & ~0x1F) | (val & 0x1F);
+// 	else if (reg == REG_EPSR)
+// 		mcu->regs[REG_XPSR] = (mcu->regs[REG_XPSR] & ~0x1000000) | (val & 0x1000000);
+// 	else
+// 		mcu->regs[reg] = val;
+// }
 
 bool mcu_instr_step(mcu_t mcu)
 {
-	uint32_t pc = mcu_read_reg(mcu, REG_PC);
-	uint32_t old_pc = pc;
-	uint32_t instr;
-	bool thritytwo = false;
+	printf("[%08x] ", mcu_read_reg(mcu, REG_PC));
+	mcu_kernel_disassemble(mcu->kernel, printf);
+	printf("\n");
+	mcu_kernel_execute(mcu->kernel);
 
-	if (!mcu_fetch16(mcu, pc - 2, (uint16_t*)&instr)) {
-		printf("ERROR: could not fetch instruction. [pc=0x%x]", pc);
-		mcu_halt(mcu, HALT_HARD_FAULT);
-		return false;
-	}
-
-	// 32-bit thumb instruction
-	if ((instr & 0xF800) == 0xF800 ||
-		(instr & 0xF800) == 0xE800 ||
-		(instr & 0xF800) == 0xF000) {
-		thritytwo = true;
-
-		instr <<= 16;
-		pc += 2;
-
-		if (!mcu_fetch16(mcu, pc - 2, (uint16_t*)&instr)) {
-			printf("ERROR: could not fetch instruction. [pc=0x%x]", pc);
-			mcu_halt(mcu, HALT_HARD_FAULT);
-			return false;
-		}
-	}
-
-	mcu_write_reg(mcu, REG_PC, pc+2);
-
-	if (thritytwo) {
-		for (mcu_instr32_t def = mcu->instrs32; def->impl != NULL; ++def) {
-			if ((instr & def->mask) == def->instr){
-				if (!def->impl(mcu, instr)) {
-					mcu_write_reg(mcu, REG_PC, old_pc);
-					return false;
-				}
-				else
-					return true;
-			}
-		}
-
-		printf("Unkown 32-bit thumb instruction: 0x%08x", instr);
-	}
-	else {
-		for (mcu_instr16_t def = mcu->instrs16; def->impl != NULL; ++def) {
-			if ((instr & def->mask) == def->instr) {
-				if (!def->impl(mcu, instr)) {
-					mcu_write_reg(mcu, REG_PC, old_pc);
-					return false;
-				}
-				else
-					return true;
-			}
-		}
-
-		printf("Unkown 16-bit thumb instruction: 0x%04x", instr);
-	}
-
-	mcu_write_reg(mcu, REG_PC, old_pc);
-	mcu_halt(mcu, HALT_UNKOWN_INSTRUCTION);
-
-	return false;
+	return true;
 }
 
 static void mcu_update_nflag(void* _mcu, uint32_t c)
@@ -605,8 +547,8 @@ struct mcu_instr16 mcu_instr16_cortex_m0p[] = {
 
 	//ASR(2) two register
 	{
-		.mask = 0xF800,
-		.instr = 0x1000,
+		.mask = 0xFF80,
+		.instr = 0x4100,
 		.impl = ^bool(mcu_t mcu, uint16_t instr) {
 			reg_t reg      = (instr >> 0) & 0x7;
 			reg_t shift_reg = (instr >> 3) & 0x7;

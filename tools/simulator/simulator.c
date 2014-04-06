@@ -40,6 +40,7 @@
 #include <mcu.h>
 #include <gdb.h>
 #include <elf.h>
+#include <mcu_kernel.h>
 
 bool mcu_flash_file(mcu_t mcu, const char* filename)
 {
@@ -47,6 +48,8 @@ bool mcu_flash_file(mcu_t mcu, const char* filename)
 }
 
 int main(int argc, char** argv) {
+	mcu_kernel_init();
+
 	struct ev_loop *loop = EV_DEFAULT;
 
 	bool wait_for_gdb = false;
@@ -89,7 +92,7 @@ int main(int argc, char** argv) {
 		printf("Could not create gdb\n");
 		return -1;
 	}
-	
+
 	if (firmware_file) {
 		if (!mcu_flash_file(mcu, firmware_file)) {
 			printf("Flash faild");
@@ -109,4 +112,3 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
-
