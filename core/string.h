@@ -26,11 +26,12 @@
 
 #include <stdarg.h>
 #include <vfs.h>
+#include <runtime.h>
 
 size_t fprintf(file_t file, const char* format, ...);
 size_t vfprintf(file_t file, const char* format, va_list args);
 
-int isdigit(int c);
-size_t strlen(const char* str);
+int isdigit(int c) CONST;
+size_t strlen(const char* str) PURE;
 
 int readline(file_t file, char* buffer, size_t len);

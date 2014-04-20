@@ -51,6 +51,9 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 /// Denotes a unimplemented code path
 #define unimplemented() assert(false, "Unimplemented")
 
+#define CONST __attribute__((const))
+#define PURE __attribute__((pure))
+
 #define NONNULL(...) __attribute__((nonnull (__VA_ARGS__)))
 
 #define OFFSET_PTR(ptr, offset) ((void*)((uintptr_t)ptr - offset))

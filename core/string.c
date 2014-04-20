@@ -186,7 +186,7 @@ size_t vfprintf(file_t f, const char* format, va_list args)
 					{
 						uint32_t val = va_arg(args, uint32_t);
 						if (*format == 'x') {
-							res = write(f, "0x", 1);
+							res = write(f, "0x", 2);
 							if (res < 0)
 								return len;
 							len += res;
@@ -235,7 +235,7 @@ size_t vfprintf(file_t f, const char* format, va_list args)
 					// String
 					case 's':
 					{
-						char* str = va_arg(args, char*) ?: "(null)";
+						const char* str = va_arg(args, char*) ?: "(null)";
 						size_t l = strlen(str);
 
 						res = write(f, str, l);
