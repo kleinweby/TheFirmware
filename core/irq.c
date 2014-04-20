@@ -33,9 +33,9 @@ struct irq_entry {
 
 typedef struct irq_entry irq_entry_t;
 
-struct {
+static struct {
 	irq_entry_t entries[NUMBER_OF_IRQS];
-} irq;
+} irq = {};
 
 void irq_init()
 {
@@ -45,7 +45,7 @@ void irq_init()
 
 bool irq_register(uint8_t irq_number, irq_handler_t handler)
 {
-	if (irq.entries[irq_number].handler || irq_number >= NUMBER_OF_IRQS)
+	if (irq_number >= NUMBER_OF_IRQS || irq.entries[irq_number].handler)
 		return false;
 
 	irq.entries[irq_number].handler = handler;
@@ -55,7 +55,7 @@ bool irq_register(uint8_t irq_number, irq_handler_t handler)
 
 bool irq_unregister(uint8_t irq_number, irq_handler_t handler)
 {
-	if (irq.entries[irq_number].handler != handler || irq_number >= NUMBER_OF_IRQS)
+	if (irq_number >= NUMBER_OF_IRQS || irq.entries[irq_number].handler != handler)
 		return false;
 
 	irq.entries[irq_number].handler = NULL;
