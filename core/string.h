@@ -35,3 +35,10 @@ int isdigit(int c) CONST;
 size_t strlen(const char* str) PURE;
 
 int readline(file_t file, char* buffer, size_t len);
+
+int memcmp(const void* s1, const void* s2, size_t n) PURE;
+int strcmp(const char* s1, const char* s2) PURE;
+int strncmp(const char* s1, const char* s2, size_t n) PURE;
+void* memcpy(void* restrict dst, const void* restrict src, size_t n);
+void* memmove(void* dst, const void* src, size_t len);
+void* memset(void* b, char c, size_t len);
