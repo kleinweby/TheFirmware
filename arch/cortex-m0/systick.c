@@ -98,7 +98,7 @@ static void systick_init(systick_t timer)
   timer->initialized = true;
 }
 
-static struct timer_ops systick_ops = {
+static const struct timer_ops systick_ops = {
   .set = systick_set,
   .get = systick_get,
   .remaining = systick_remaining,
@@ -114,7 +114,7 @@ static struct systick systick = {
 static void systick_handle_irq(void)
 {
   if (systick.timer.handler)
-  systick.timer.handler(&systick.timer, systick_get(&systick.timer));
+  	systick.timer.handler(&systick.timer, systick_get(&systick.timer));
 }
 
 timer_t systick_get_timer()
