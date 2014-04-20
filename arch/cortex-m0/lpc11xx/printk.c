@@ -99,7 +99,7 @@ static int write_op(file_t f, const void* buf, size_t nbytes)
       ;
     LPC_UART->THR = *(char*)buf;
   }
-  return 0;
+  return nbytes;
 }
 
 static const struct file_operations ops = {
