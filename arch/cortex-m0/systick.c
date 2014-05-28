@@ -77,7 +77,13 @@ static void systick_disable(timer_t _timer)
 
 static void systick_set(timer_t _timer, millitime_t time)
 {
-  herz_t clock = clock_get_main();
+  herz_t clock;
+
+	// We have the reference clock
+	if (systick_regs->CALIB & (1 << 31))
+		clock = clock_systick_reference();
+	else
+		clock = clock_get_main();
 
   millitime_t maxPossibleValue = 1000 * kMaxLoadValue/clock;
 

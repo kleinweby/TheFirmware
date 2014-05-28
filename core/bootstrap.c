@@ -170,7 +170,7 @@ int valve_cmd(int argc, const char** argv)
 		printf("Opening (%d mV, %d ms, polarity = %d)...", volt, delay_timeout, valve.polarity);
 
 		gpio_set(pin, true);
-		delay(delay_timeout/2);
+		delay(delay_timeout);
 		gpio_set(pin, false);
 
 		printf("done\r\n");
@@ -184,7 +184,7 @@ int valve_cmd(int argc, const char** argv)
 		printf("Closing (%d mV, %d ms, polarity = %d)...", volt, delay_timeout, valve.polarity);
 
 		gpio_set(pin, true);
-		delay(delay_timeout/2);
+		delay(delay_timeout);
 		gpio_set(pin, false);
 
 		printf("done\r\n");

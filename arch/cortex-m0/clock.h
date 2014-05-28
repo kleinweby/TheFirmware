@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2013, Christian Speich
+// Copyright (c) 2013-2014, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -22,15 +22,8 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <clock.h>
-#include "system_LPC11xx.h"
+#pragma once
 
-herz_t clock_get_main()
-{
-  return SystemCoreClock;
-}
+#include_next <clock.h>
 
-herz_t clock_systick_reference()
-{
-  return clock_get_main()/2;
-}
+herz_t clock_systick_reference();
