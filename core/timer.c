@@ -82,7 +82,7 @@ static void timer_managed_insert(timer_t timer, struct timer_managed_timeout* ti
   assert(timeout, "Timeout can not be NULL");
 
   if (list_is_empty(&timer->managed_timeouts)) {
-    log(LOG_LEVEL_INFO, "Insert %p with remaining %u", timeout, timeout->remaining);
+    // log(LOG_LEVEL_INFO, "Insert %p with remaining %u", timeout, timeout->remaining);
     list_append(&timer->managed_timeouts, &timeout->entry);
     timer_managed_recalculate(timer);
     return;
@@ -94,14 +94,12 @@ static void timer_managed_insert(timer_t timer, struct timer_managed_timeout* ti
   list_foreach_contained(t, &timer->managed_timeouts, struct timer_managed_timeout, entry) {
     if (timeout->remaining <= t->remaining) {
       if (&t->entry == list_first(&timer->managed_timeouts)) {
-        log(LOG_LEVEL_INFO, "Insert first %p with remaining %u", timeout, timeout->remaining);
         list_insert_before(&t->entry, &timeout->entry);
         list_rrotate(&timer->managed_timeouts);
 
         timer_managed_recalculate(timer);
       }
       else {
-        log(LOG_LEVEL_INFO, "Insert %p with remaining %u", timeout, timeout->remaining);
         list_insert_before(&t->entry, &timeout->entry);
       }
       t->remaining -= timeout->remaining;
@@ -110,7 +108,6 @@ static void timer_managed_insert(timer_t timer, struct timer_managed_timeout* ti
     timeout->remaining -= t->remaining;
   }
 
-  log(LOG_LEVEL_INFO, "Insert %p with remaining %u", timeout, timeout->remaining);
   list_append(&timer->managed_timeouts, &timeout->entry);
 }
 
@@ -191,7 +188,6 @@ static void timer_managedhandler(timer_t timer, millitime_t elapsed_time)
 
       if (t->reset_time > 0) {
         t->remaining = t->reset_time;
-        log(LOG_LEVEL_INFO, "Reschedule with %u", t->remaining);
         timer_managed_insert(timer, t);
         free_it = false;
       }

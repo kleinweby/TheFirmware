@@ -42,3 +42,5 @@ int strncmp(const char* s1, const char* s2, size_t n) PURE;
 void* memcpy(void* restrict dst, const void* restrict src, size_t n);
 void* memmove(void* dst, const void* src, size_t len);
 void* memset(void* b, char c, size_t len);
+const char* strchr(const char *s, int c);
+uint32_t atoi(const char* c);

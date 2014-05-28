@@ -348,7 +348,7 @@ int strcmp(const char* s1, const char* s2)
 
 int strncmp(const char* s1, const char* s2, size_t n)
 {
-	for (; n > 0 && *s1 && *s2 && *s1 == *s2; --n, --s1, --s2)
+	for (; n > 0 && *s1 && *s2 && *s1 == *s2; --n, ++s1, ++s2)
 		;
 
 	if (n == 0)
@@ -400,4 +400,61 @@ void* memset(void* _b, char c, size_t n)
 		*b = c;
 
 	return b;
+}
+
+const char* strchr(const char *s, int c)
+{
+	for (; *s != '\0'; ++s)
+		if (*s == c)
+			return s;
+
+	return NULL;
+}
+
+char *strsep(char **stringp, const char *delim)
+{
+	assert(stringp, "stringp can't be NULL");
+	assert(delim, "delim can't be NULL");
+
+	char* found = *stringp;
+	char* remaining = found;
+
+	if (!stringp)
+		return NULL;
+
+	for (; *remaining != '\0'; ++remaining) {
+		if (strchr(delim, *remaining)) {
+			*remaining = '\0';
+			++remaining;
+			break;
+		}
+	}
+
+	if (*remaining == '\0')
+		*stringp = NULL;
+	else
+		*stringp = remaining;
+
+	return found;
+}
+
+char* strsep_ext(char** stringp, const char* delim) {
+	char* value;
+
+	do {
+		value = strsep(stringp, delim);
+	} while (value && strlen(value) == 0);
+
+	return value;
+}
+
+uint32_t atoi(const char* c)
+{
+	uint32_t i = 0;
+
+	for (; *c != '\0' && isdigit(*c); c++) {
+		i = 10 * i + ((*c)-'0');
+	}
+
+	return i;
 }

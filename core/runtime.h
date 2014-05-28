@@ -62,6 +62,8 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 #define ALIAS(f) __attribute__ ((alias (#f)))
 #define LINKER_SYMBOL(name, type) extern void _##name(); static const type name = (type)&_##name
 
+#define ENUM(_type, _name) _type _name; enum
+
 #define container_of(ptr, type, member) (ptr ? ({                  \
   const __typeof( ((type *)0)->member ) *__mptr = (ptr);    \
   (type *)( (char *)__mptr - offsetof(type,member) );}) : NULL)

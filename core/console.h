@@ -24,18 +24,15 @@
 
 #pragma once
 
-/// when 1 log calls will also print the file and line number that log call was
-/// made.
-///
-/// @note Enabling this can enlargen the binary quit a bit, as strings for all
-/// file names must be stored
-///
-#define LOG_SOURCE_LOCATION 0
+#include <vfs.h>
 
-/// Defines the default stack size of the main stack
-#define STACK_SIZE_MAIN 1024
+typedef struct console* console_t;
 
-/// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 1024
+// Spawns a new console on the given console
+//
+// This starts a new background thread for servicing this console
+//
+// @return the newly created console, can left unused
+console_t console_spawn(file_t file);
 
-#define STACK_SIZE_CONSOLE STACK_SIZE_MAIN
+size_t printf(const char* format, ...);

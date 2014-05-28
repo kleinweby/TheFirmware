@@ -28,6 +28,7 @@
 #include <arch.h>
 #include <runtime.h>
 #include <list.h>
+#include <timer.h>
 
 /// Initializes the scheduler and transforms the current context into the main
 /// thread.
@@ -61,6 +62,8 @@ struct scheduler_thread_data {
   list_entry_t queue_entry;
 };
 typedef struct scheduler_thread_data scheduler_thread_data_t;
+
+void delay(millitime_t time);
 
 #include <thread.h>
 
