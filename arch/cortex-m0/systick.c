@@ -59,9 +59,9 @@ static herz_t systick_clock()
 {
 	// Use the clock specified in the control register
 	if (systick_regs->CTRL & kCtrlClockSource)
-		return clock_systick_reference();
-	else
 		return clock_get_main();
+	else
+		return clock_systick_reference();
 }
 
 static millitime_t systick_get(timer_t _timer)

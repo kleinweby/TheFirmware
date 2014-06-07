@@ -117,6 +117,12 @@ void gpio_set(int pin, bool on)
 	LPC_GPIO[port]->MASKED_ACCESS[(1<<pin)] = on << pin;
 }
 
+void gpio_strobe(int pin, bool on, millitime_t time)
+{
+	gpio_set(pin, on);
+	delay(time);
+	gpio_set(pin, !on);
+}
 
 int adc(int argc, const char** argv)
 {
@@ -169,10 +175,7 @@ int valve_cmd(int argc, const char** argv)
 
 		printf("Opening (%d mV, %d ms, polarity = %d)...", volt, delay_timeout, valve.polarity);
 
-		gpio_set(pin, true);
-		delay(delay_timeout);
-		gpio_set(pin, false);
-
+		gpio_strobe(pin, true, delay_timeout);
 		printf("done\r\n");
 	}
 	else if (strcmp(argv[1], "close") == 0) {
@@ -183,10 +186,7 @@ int valve_cmd(int argc, const char** argv)
 
 		printf("Closing (%d mV, %d ms, polarity = %d)...", volt, delay_timeout, valve.polarity);
 
-		gpio_set(pin, true);
-		delay(delay_timeout);
-		gpio_set(pin, false);
-
+		gpio_strobe(pin, true, delay_timeout);
 		printf("done\r\n");
 	}
 	else if (strcmp(argv[1], "show") == 0) {
