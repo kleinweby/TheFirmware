@@ -1,0 +1,1 @@
+/bin/ls: func ls_cmd

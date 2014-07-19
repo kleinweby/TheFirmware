@@ -43,9 +43,11 @@ class BuildConfiguration < Ninja
 
     @ext_rules = {}
     self._objects = []
+    self._dyns = Hash.new
   end
 
   attr_accessor :_objects
+  attr_accessor :_dyns
 
   # Conveinent methods
   def file(glob, extra_options = {}, &block)
@@ -92,6 +94,14 @@ class BuildConfiguration < Ninja
     conf = self
     LateProxy.new do
       conf._objects
+    end
+  end
+
+  def expanded(name)
+    conf = self
+    
+    LateProxy.new do 
+      conf.var name
     end
   end
 

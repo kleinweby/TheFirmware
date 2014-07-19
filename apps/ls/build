@@ -1,0 +1,2 @@
+file '*.c'
+var :gen_fs, path('ls.fs')

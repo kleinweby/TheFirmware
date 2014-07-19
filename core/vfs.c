@@ -27,6 +27,11 @@
 
 static const int ERR_NOT_SUPPORTED = -1;
 
+vnode_kind_t vnode_get_kind(vnode_t vnode)
+{
+  return vnode->kind;
+}
+
 int read(file_t file, void* buf, size_t nbytes)
 {
   if (file->ops->read) {
@@ -150,6 +155,13 @@ void vfs_dump(file_t output)
   };
   fprintf(output, "/ \t\t; (vnode = %p)\r\n", vfs_root);
   vnode_readdir(vfs_root, vfs_dump_callback, &context);
+}
+
+extern vnode_t staticfs_root;
+
+void staticfs_init()
+{
+  vfs_set_root(staticfs_root);
 }
 
 vnode_t staticfs_lookup(vnode_t _vnode, const char* name)

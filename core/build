@@ -2,4 +2,8 @@ var :include_paths, ["-I#{path('.')}"]
 
 file '*.c'
 
+build '.build/static-fs-gen.c', 'gen-fs', expanded(:gen_fs)
+build '.build/static-fs-gen.o', 'cc', '.build/static-fs-gen.c'
+objects << '.build/static-fs-gen.o'
+
 build 'firmware.elf', 'ld', objects, '$linker_file'

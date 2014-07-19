@@ -70,6 +70,8 @@ struct vnode {
 
 typedef const struct vnode* vnode_t;
 
+vnode_kind_t vnode_get_kind(vnode_t vnode);
+
 struct vnode_reg_ops {
   file_t (*open)(vnode_t vnode);
 };
@@ -79,7 +81,7 @@ file_t vnode_open(vnode_t vnode);
 typedef void (*vnode_readdir_callback_t)(vnode_t parent, const char* name, vnode_t child, void* context);
 
 struct vnode_dir_ops {
-  // As optimization, it is required of the lookup function to thread any
+  // As optimization, it is required of the lookup function to treat any
   // '/' in name as '\0'
   vnode_t (*lookup)(vnode_t vnode, const char* name);
   void (*readdir)(vnode_t vnode, vnode_readdir_callback_t callback, void* context);
@@ -100,6 +102,8 @@ vnode_t vfs_lookup(const char* path);
 void vfs_dump(file_t output);
 
 // StaticFS
+
+void staticfs_init();
 
 struct staticfs_vnode_entry {
   const char* name;

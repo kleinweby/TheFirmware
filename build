@@ -11,7 +11,11 @@ else
   var :ldflags, [ '-Wl,--gc-sections']
 end
 
+
+
 parse 'arch/build'
 parse 'core/build'
 parse 'platform/build'
 parse 'tests/build'
+parse 'boards/build'
+parse 'apps/build'

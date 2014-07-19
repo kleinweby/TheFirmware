@@ -1,6 +1,10 @@
 .build/
 *.elf
 *.toolchain
+*.o
+.ninja_log
+.ninja_deps
+*.d
 toolchain/downloads
 toolchain/ninja-build
 doc/

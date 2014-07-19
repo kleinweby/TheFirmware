@@ -67,3 +67,7 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 #define container_of(ptr, type, member) (ptr ? ({                  \
   const __typeof( ((type *)0)->member ) *__mptr = (ptr);    \
   (type *)( (char *)__mptr - offsetof(type,member) );}) : NULL)
+
+#define STR(s) #s
+#define GEN_SECTION_NAME(ns, name) ".text.gen."#ns"."#name
+#define GEN_SECTION_ATTR(ns, name) __attribute__ ((section (GEN_SECTION_NAME(ns, name))))
