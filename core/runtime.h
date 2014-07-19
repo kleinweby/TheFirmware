@@ -51,6 +51,9 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 /// Denotes a unimplemented code path
 #define unimplemented() assert(false, "Unimplemented")
 
+#define CONST __attribute__((const))
+#define PURE __attribute__((pure))
+
 #define NONNULL(...) __attribute__((nonnull (__VA_ARGS__)))
 
 #define OFFSET_PTR(ptr, offset) ((void*)((uintptr_t)ptr - offset))
@@ -59,6 +62,12 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 #define ALIAS(f) __attribute__ ((alias (#f)))
 #define LINKER_SYMBOL(name, type) extern void _##name(); static const type name = (type)&_##name
 
+#define ENUM(_type, _name) _type _name; enum
+
 #define container_of(ptr, type, member) (ptr ? ({                  \
   const __typeof( ((type *)0)->member ) *__mptr = (ptr);    \
   (type *)( (char *)__mptr - offsetof(type,member) );}) : NULL)
+
+#define STR(s) #s
+#define GEN_SECTION_NAME(ns, name) ".text.gen."#ns"."#name
+#define GEN_SECTION_ATTR(ns, name) __attribute__ ((section (GEN_SECTION_NAME(ns, name))))

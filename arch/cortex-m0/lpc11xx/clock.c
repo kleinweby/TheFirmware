@@ -29,3 +29,8 @@ herz_t clock_get_main()
 {
   return SystemCoreClock;
 }
+
+herz_t clock_systick_reference()
+{
+  return clock_get_main()/2;
+}

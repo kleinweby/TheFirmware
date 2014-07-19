@@ -37,11 +37,80 @@
 #include <scheduler.h>
 #include <string.h>
 #include <systick.h>
+#include <console.h>
 
-void test(timer_t timer, void* context)
-{
-	log(LOG_LEVEL_INFO, "Got %s :)", context);
+#include "LPC11xx.h"
+#include "system_LPC11xx.h"
+
+void* test_staticnode = NULL;
+
+int hello(int argc, const char** argv) {
+	log(LOG_LEVEL_INFO, "Hello");
+	return 0;
 }
+
+size_t printf(const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	size_t len = vfprintf(debug_serial, format, args);
+	va_end(args);
+
+	return len;
+}
+
+void valve_help()
+{
+	printf("HELLP!!!\r\n");
+}
+
+// int valve_cmd(int argc, const char** argv)
+// {
+// 	if (argc < 2) {
+// 		valve_help();
+// 		return -1;
+// 	}
+
+// 	if (strcmp(argv[1], "help") == 0) {
+// 		valve_help();
+// 		return 0;
+// 	}
+// 	else if (strcmp(argv[1], "open") == 0) {
+// 	}
+// 	else if (strcmp(argv[1], "close") == 0) {
+// 	}
+// 	else if (strcmp(argv[1], "show") == 0) {
+// 		printf("open-power: %d\r\n", valve.open_power);
+// 		printf("close-power: %d\r\n", valve.close_power);
+// 		printf("polarity: %d\r\n", valve.polarity);
+// 	}
+// 	else if (strcmp(argv[1], "set") == 0) {
+// 		if (argc != 4) {
+// 			valve_help();
+// 			return -1;
+// 		}
+
+// 		if (strcmp(argv[2], "open-power") == 0) {
+// 			valve.open_power = atoi(argv[3]);
+// 			printf("open-power: %d\r\n", valve.open_power);
+// 		}
+// 		else if (strcmp(argv[2], "close-power") == 0) {
+// 			valve.close_power = atoi(argv[3]);
+// 			printf("close-power: %d\r\n", valve.close_power);
+// 		}
+// 		else if (strcmp(argv[2], "polarity") == 0) {
+// 			valve.polarity = atoi(argv[3]);
+// 			printf("polarity: %d\r\n", valve.polarity);
+// 		}
+// 		else
+// 			printf("Unkown\r\n");
+// 	}
+// 	else {
+// 		valve_help();
+// 	}
+
+// 	return 0;
+// }
 
 void error()
 {
@@ -72,27 +141,11 @@ void bootstrap()
 
 	test_do(TEST_IN_MAIN_TASK);
 
-	timer_t timer = systick_get_timer();
+	staticfs_init();
+	vfs_dump(debug_serial);
 
-	timer_managed_schedule(timer, 1000, true, test, "1 second");
-	timer_managed_schedule(timer, 2000, true, test, "2 second");
-	timer_managed_schedule(timer, 5000, true, test, "5 second");
-
-	// while (1) {
-	// 	char buf[60];
-	// 	char* str = "> ";
-	// 	write(debug_serial, str, strlen(str));
-	//
-	// 	if (readline(debug_serial, buf, 60) < 0) {
-	// 		str = "error reading\r\n";
-	// 		write(debug_serial, str, strlen(str));
-	// 	}
-	// 	else {
-	// 		str = "got it!\r\n";
-	// 		write(debug_serial, str, strlen(str));
-	// 	}
-	// }
+	console_spawn(debug_serial);
 
 	while(1)
-		; //__asm("WFI");
+		yield(); //__asm("WFI");
 }

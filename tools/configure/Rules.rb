@@ -30,3 +30,8 @@ rule 'gen' do
 	var :command, "./tools/configure/gen.rb $out"
 	var :description, 'GEN $out'
 end
+
+rule 'gen-fs' do
+	var :command, "./tools/gen-fs.py -o $out $in"
+	var :description, 'GEN $out'
+end

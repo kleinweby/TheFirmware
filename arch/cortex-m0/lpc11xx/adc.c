@@ -22,20 +22,52 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
+#include <adc.h>
+#include <malloc.h>
 
-/// when 1 log calls will also print the file and line number that log call was
-/// made.
-///
-/// @note Enabling this can enlargen the binary quit a bit, as strings for all
-/// file names must be stored
-///
-#define LOG_SOURCE_LOCATION 0
+#include "LPC11xx.h"
 
-/// Defines the default stack size of the main stack
-#define STACK_SIZE_MAIN 1024
+struct adc {
+	pin_t pin;
+};
 
-/// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 1024
+adc_t adc_create(pin_t pin)
+{
+	adc_t adc = malloc_raw(sizeof(struct adc));
 
-#define STACK_SIZE_CONSOLE STACK_SIZE_MAIN
+	if (!adc) {
+		return NULL;
+	}
+
+	// Disable Power down bit to the ADC block.
+	LPC_SYSCON->PDRUNCFG &= ~(0x1<<4);
+	// Enable ADC
+	LPC_SYSCON->SYSAHBCLKCTRL |= (1<<13);
+	// Set clock
+	LPC_ADC->CR = ((SystemCoreClock/LPC_SYSCON->SYSAHBCLKDIV)/4500000-1)<<8;
+	LPC_IOCON->PIO1_11   = 0x01;
+
+	return adc;
+}
+
+uint32_t adc_read(adc_t adc)
+{
+	static const uint8_t chan = 7;
+
+	// Start conv
+	LPC_ADC->CR &= 0xFFFFFF00;
+	LPC_ADC->CR |= (1 << 24) | (1 << chan);
+
+	uint32_t val;
+
+	do {
+		val = LPC_ADC->GDR;
+	} while (!(val & (1 << 31))); // Done bit
+
+	// Stop
+	LPC_ADC->CR &= 0xF8FFFFFF;
+
+	int human_val = (((val >> 6) & 0x3FF) * 16) * 3300;
+
+	return human_val / 1000;
+}

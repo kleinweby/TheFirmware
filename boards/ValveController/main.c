@@ -22,20 +22,11 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
+#include "valve.h"
 
-/// when 1 log calls will also print the file and line number that log call was
-/// made.
-///
-/// @note Enabling this can enlargen the binary quit a bit, as strings for all
-/// file names must be stored
-///
-#define LOG_SOURCE_LOCATION 0
+valve_t valve;
 
-/// Defines the default stack size of the main stack
-#define STACK_SIZE_MAIN 1024
-
-/// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 1024
-
-#define STACK_SIZE_CONSOLE STACK_SIZE_MAIN
+int main()
+{
+	valve = valve_create(PIN(2,7), PIN(2,8), VALVE_GARDENA_9V_TYPE, NULL);
+}

@@ -22,20 +22,11 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
+int ls_cmd(int argc, const char** argv)
+{
+	for (int i = 0; i < argc; i++) {
 
-/// when 1 log calls will also print the file and line number that log call was
-/// made.
-///
-/// @note Enabling this can enlargen the binary quit a bit, as strings for all
-/// file names must be stored
-///
-#define LOG_SOURCE_LOCATION 0
-
-/// Defines the default stack size of the main stack
-#define STACK_SIZE_MAIN 1024
-
-/// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 1024
-
-#define STACK_SIZE_CONSOLE STACK_SIZE_MAIN
+	}
+	
+	return 0;
+}

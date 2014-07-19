@@ -1,0 +1,6 @@
+board 'ValveController' do
+  targets ['cortex-m0p-sim', 'lpc11xx']
+
+  file '*.c'
+  var :gen_fs, path('valve.fs')
+end

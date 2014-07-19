@@ -24,18 +24,13 @@
 
 #pragma once
 
-/// when 1 log calls will also print the file and line number that log call was
-/// made.
-///
-/// @note Enabling this can enlargen the binary quit a bit, as strings for all
-/// file names must be stored
-///
-#define LOG_SOURCE_LOCATION 0
+#include <timer.h>
 
-/// Defines the default stack size of the main stack
-#define STACK_SIZE_MAIN 1024
+typedef ENUM(uint8_t, gpio_direction_t) {
+	GPIO_DIRECTION_IN,
+	GPIO_DIRECTION_OUT
+};
 
-/// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 1024
-
-#define STACK_SIZE_CONSOLE STACK_SIZE_MAIN
+void gpio_set_direction(pin_t pin, gpio_direction_t direction);
+void gpio_set(pin_t pin, bool on);
+void gpio_strobe(pin_t pin, bool on, millitime_t time);

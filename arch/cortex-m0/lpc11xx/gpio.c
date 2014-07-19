@@ -22,20 +22,36 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
+#include <gpio.h>
+#include <scheduler.h>
+#include "LPC11xx.h"
 
-/// when 1 log calls will also print the file and line number that log call was
-/// made.
-///
-/// @note Enabling this can enlargen the binary quit a bit, as strings for all
-/// file names must be stored
-///
-#define LOG_SOURCE_LOCATION 0
+static LPC_GPIO_TypeDef (* const LPC_GPIO[4]) = { LPC_GPIO0, LPC_GPIO1, LPC_GPIO2, LPC_GPIO3 };
 
-/// Defines the default stack size of the main stack
-#define STACK_SIZE_MAIN 1024
+void gpio_set_direction(pin_t pin, gpio_direction_t direction)
+{
+	int port = pin >> 16;
+	pin &= 0xFFFF;
 
-/// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 1024
+	if (direction == GPIO_DIRECTION_OUT) {
+		LPC_GPIO[port]->DIR |= 1<<pin;
+	}
+	else {
+		LPC_GPIO[port]->DIR &= ~(1<<pin);
+	}
+}
 
-#define STACK_SIZE_CONSOLE STACK_SIZE_MAIN
+void gpio_set(pin_t pin, bool on)
+{
+	int port = pin >> 16;
+	pin &= 0xFFFF;
+
+	LPC_GPIO[port]->MASKED_ACCESS[(1<<pin)] = on << pin;
+}
+
+void gpio_strobe(pin_t pin, bool on, millitime_t time)
+{
+	gpio_set(pin, on);
+	delay(time);
+	gpio_set(pin, !on);
+}

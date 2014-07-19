@@ -246,18 +246,6 @@ static void arch_handle_pendsv(void)
     :
   );
 
-  // We'll never geht here
+  // We'll never get here
   unreachable();
 }
-
-// static void arch_handle_irq(void) __attribute__((naked));
-// static void arch_handle_irq(void)
-// {
-//     __asm volatile (
-//         "mrs r0, IPSR\n"
-//         "b %[do_irq]"
-//         :
-//         : [do_irq] "i" (do_irq)
-//     );
-//     unreachable();
-// }

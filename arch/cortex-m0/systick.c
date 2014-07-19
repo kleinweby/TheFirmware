@@ -55,14 +55,23 @@ struct systick {
 
 typedef struct systick* systick_t;
 
+static herz_t systick_clock()
+{
+	// Use the clock specified in the control register
+	if (systick_regs->CTRL & kCtrlClockSource)
+		return clock_get_main();
+	else
+		return clock_systick_reference();
+}
+
 static millitime_t systick_get(timer_t _timer)
 {
-  return systick_regs->LOAD * 1000 / clock_get_main();
+  return systick_regs->LOAD * 1000 / systick_clock();
 }
 
 static millitime_t systick_remaining(timer_t _timer)
 {
-  return systick_regs->VAL * 1000 / clock_get_main();
+  return systick_regs->VAL * 1000 / systick_clock();
 }
 
 static void systick_enable(timer_t _timer)
@@ -77,14 +86,14 @@ static void systick_disable(timer_t _timer)
 
 static void systick_set(timer_t _timer, millitime_t time)
 {
-  herz_t clock = clock_get_main();
+  herz_t clock = systick_clock();
 
   millitime_t maxPossibleValue = 1000 * kMaxLoadValue/clock;
 
   if (time > maxPossibleValue)
     time = maxPossibleValue;
 
-  systick_regs->LOAD = (clock)/1000 * time;
+  systick_regs->LOAD = clock/1000 * time;
   systick_regs->VAL = 0;
 	// log(LOG_LEVEL_INFO, "Set systick to %u", time);
   systick_enable(_timer);
@@ -98,7 +107,7 @@ static void systick_init(systick_t timer)
   timer->initialized = true;
 }
 
-static struct timer_ops systick_ops = {
+static const struct timer_ops systick_ops = {
   .set = systick_set,
   .get = systick_get,
   .remaining = systick_remaining,
@@ -114,7 +123,7 @@ static struct systick systick = {
 static void systick_handle_irq(void)
 {
   if (systick.timer.handler)
-  systick.timer.handler(&systick.timer, systick_get(&systick.timer));
+  	systick.timer.handler(&systick.timer, systick_get(&systick.timer));
 }
 
 timer_t systick_get_timer()

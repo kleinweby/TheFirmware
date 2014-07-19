@@ -22,20 +22,18 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
+#include <stdbool.h>
 
-/// when 1 log calls will also print the file and line number that log call was
-/// made.
-///
-/// @note Enabling this can enlargen the binary quit a bit, as strings for all
-/// file names must be stored
-///
-#define LOG_SOURCE_LOCATION 0
+#include <adc.h>
+#include <gpio.h>
 
-/// Defines the default stack size of the main stack
-#define STACK_SIZE_MAIN 1024
+typedef struct valve* valve_t;
 
-/// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 1024
+typedef ENUM(uint8_t, valve_type_t) {
+	VALVE_GARDENA_9V_TYPE = 1
+};
 
-#define STACK_SIZE_CONSOLE STACK_SIZE_MAIN
+valve_t valve_create(pin_t pin_a, pin_t pin_b, valve_type_t valve_type, adc_t adc);
+
+bool valve_close(valve_t valve);
+bool valve_open(valve_t valve);

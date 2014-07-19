@@ -30,6 +30,11 @@ herz_t clock_get_main()
   return gclock_get_generator(GCLOCK_GENERATOR_0) >> PM->CPUSEL.reg;
 }
 
+herz_t clock_systick_reference()
+{
+  return clock_get_main();
+}
+
 herz_t clock_get_source(clock_source_t source)
 {
   switch (source) {

@@ -29,7 +29,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-static char numberDefinitions[] = "0123456789ABCDEF";
+static const char numberDefinitions[] = "0123456789ABCDEF";
 static const char *trueString = "true";
 static const char *falseString = "false";
 
@@ -186,7 +186,7 @@ size_t vfprintf(file_t f, const char* format, va_list args)
 					{
 						uint32_t val = va_arg(args, uint32_t);
 						if (*format == 'x') {
-							res = write(f, "0x", 1);
+							res = write(f, "0x", 2);
 							if (res < 0)
 								return len;
 							len += res;
@@ -235,7 +235,7 @@ size_t vfprintf(file_t f, const char* format, va_list args)
 					// String
 					case 's':
 					{
-						char* str = va_arg(args, char*) ?: "(null)";
+						const char* str = va_arg(args, char*) ?: "(null)";
 						size_t l = strlen(str);
 
 						res = write(f, str, l);
@@ -318,6 +318,143 @@ int readline(file_t file, char* buffer, size_t len)
 	}
 
 	buffer[i+1] = '\0';
+
+	return i;
+}
+
+int memcmp(const void* _s1, const void* _s2, size_t n)
+{
+	const char* s1 = _s1;
+	const char* s2 = _s2;
+
+	for (; n > 0 && *s1 == *s2; --n, --s1, --s2)
+		;
+
+	if (n == 0)
+		return 0;
+	else if (*s1 < *s2)
+		return -1;
+	else if (*s1 > *s2)
+		return 1;
+
+	// All cases handled
+	unreachable();
+}
+
+int strcmp(const char* s1, const char* s2)
+{
+	return strncmp(s1, s2, SIZE_MAX);
+}
+
+int strncmp(const char* s1, const char* s2, size_t n)
+{
+	for (; n > 0 && *s1 && *s2 && *s1 == *s2; --n, ++s1, ++s2)
+		;
+
+	if (n == 0)
+		return 0;
+	else if (*s1 < *s2)
+		return -1;
+	else if (*s1 > *s2)
+		return 1;
+	else // *s1 may be equal to *s2 here, wenn both are \0 but n is still > 0
+		return 0;
+}
+
+void* memcpy(void* restrict _dst, const void* restrict _src, size_t n)
+{
+	char* restrict dst = _dst;
+	const char* restrict src = _src;
+
+	for (; n > 0; --n, ++dst, ++src)
+		*dst = *src;
+
+	return _dst;
+}
+
+void* memmove(void* _dst, const void* _src, size_t n)
+{
+	char* dst = _dst;
+	const char* src = _src;
+
+	if (dst < src) { // Forward
+		for (; n > 0; --n, ++src, ++dst)
+			*dst = *src;
+	}
+	else if (dst > src) { // Backward
+		src += n;
+		dst += n;
+
+		for (; n > 0; --n, --src, --dst)
+			*dst = *src;
+	}
+
+	return dst;
+}
+
+void* memset(void* _b, char c, size_t n)
+{
+	char* b = _b;
+
+	for (; n > 0; --n, ++b)
+		*b = c;
+
+	return b;
+}
+
+const char* strchr(const char *s, int c)
+{
+	for (; *s != '\0'; ++s)
+		if (*s == c)
+			return s;
+
+	return NULL;
+}
+
+char *strsep(char **stringp, const char *delim)
+{
+	assert(stringp, "stringp can't be NULL");
+	assert(delim, "delim can't be NULL");
+
+	char* found = *stringp;
+	char* remaining = found;
+
+	if (!stringp)
+		return NULL;
+
+	for (; *remaining != '\0'; ++remaining) {
+		if (strchr(delim, *remaining)) {
+			*remaining = '\0';
+			++remaining;
+			break;
+		}
+	}
+
+	if (*remaining == '\0')
+		*stringp = NULL;
+	else
+		*stringp = remaining;
+
+	return found;
+}
+
+char* strsep_ext(char** stringp, const char* delim) {
+	char* value;
+
+	do {
+		value = strsep(stringp, delim);
+	} while (value && strlen(value) == 0);
+
+	return value;
+}
+
+uint32_t atoi(const char* c)
+{
+	uint32_t i = 0;
+
+	for (; *c != '\0' && isdigit(*c); c++) {
+		i = 10 * i + ((*c)-'0');
+	}
 
 	return i;
 }

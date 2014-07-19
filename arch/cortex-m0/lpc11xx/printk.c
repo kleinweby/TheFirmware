@@ -50,6 +50,8 @@ enum {
 
 void printk_init(uint32_t baud)
 {
+  SystemInit();
+
   // Configure RX PIN
   LPC_IOCON->PIO1_6 &= ~0x07;
   LPC_IOCON->PIO1_6 |= 0x01;
@@ -99,11 +101,26 @@ static int write_op(file_t f, const void* buf, size_t nbytes)
       ;
     LPC_UART->THR = *(char*)buf;
   }
-  return 0;
+  return nbytes;
+}
+
+static int read_op(file_t f, void* buf, size_t nbytes)
+{
+  size_t n;
+
+  for (n = 0; n < nbytes; n++, buf++) {
+    while (!(LPC_UART->LSR & LSR_RDR))
+      ;
+
+    *(char *)buf = LPC_UART->RBR;
+  }
+
+  return n;
 }
 
 static const struct file_operations ops = {
   .write = write_op,
+  .read = read_op,
 };
 
 static struct file _debug_serial = {

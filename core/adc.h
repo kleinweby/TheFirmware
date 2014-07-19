@@ -24,18 +24,11 @@
 
 #pragma once
 
-/// when 1 log calls will also print the file and line number that log call was
-/// made.
-///
-/// @note Enabling this can enlargen the binary quit a bit, as strings for all
-/// file names must be stored
-///
-#define LOG_SOURCE_LOCATION 0
+#include <stdint.h>
+#include <gpio.h>
 
-/// Defines the default stack size of the main stack
-#define STACK_SIZE_MAIN 1024
+typedef struct adc* adc_t;
 
-/// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 1024
+adc_t adc_create(pin_t pin);
 
-#define STACK_SIZE_CONSOLE STACK_SIZE_MAIN
+uint32_t adc_read(adc_t adc);
