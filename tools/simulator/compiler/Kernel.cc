@@ -52,7 +52,7 @@ bool Kernel::build()
     cerr << "Verify failed" << endl;
     exit(1);
   }
-  return true;
+  // return true;
 
   PassManager manager;
   FunctionPassManager fmanager(_m);
@@ -73,7 +73,7 @@ bool Kernel::build()
     }
   }
 
-  // manager.add(createInternalizePass(exportedFunctions));
+  manager.add(createInternalizePass(exportedFunctions));
 
   builder.OptLevel = 3;
   builder.BBVectorize = true;

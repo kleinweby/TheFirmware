@@ -137,7 +137,7 @@ bool mcu_reset(mcu_t _mcu)
 		}
 
 		if ((val & 1) == 0) {
-			printf("Reset vector contains arm address\n");
+			printf("Reset vector contains arm address: %x\n", val);
 			return false;
 		}
 
