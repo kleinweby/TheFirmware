@@ -35,3 +35,6 @@ bool irq_register(uint8_t irq_number, irq_handler_t handler);
 bool irq_unregister(uint8_t irq_number, irq_handler_t handler);
 
 void do_irq(uint8_t irq_number);
+
+void irq_enable(uint8_t irq_number);
+void irq_disable(uint8_t irq_number);
