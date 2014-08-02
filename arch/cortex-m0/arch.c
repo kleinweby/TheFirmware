@@ -270,10 +270,16 @@ typedef struct
 
 void irq_enable(uint8_t irq_number)
 {
+  assert(irq_number >= 7, "Can only enable irqs");
+  irq_number -= 7;
+
   NVIC->ISER[0] = (1 << ((uint32_t)(irq_number) & 0x1F));
 }
 
 void irq_disable(uint8_t irq_number)
 {
+  assert(irq_number >= 7, "Can only disable irqs");
+  irq_number -= 7;
+
   NVIC->ICER[0] = (1 << ((uint32_t)(irq_number) & 0x1F));
 }
