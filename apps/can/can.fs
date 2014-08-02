@@ -1,0 +1,1 @@
+/bin/can: func can_cmd
