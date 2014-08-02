@@ -177,30 +177,44 @@ static void isr(void) {
 	can_rom_driver->isr();
 }
 
+struct can_speed_table_entry {
+	herz_t clock;
+	can_speed_t can;
+	uint32_t div;
+	uint32_t btr;
+};
+
+static const struct can_speed_table_entry can_speed_table[] = {
+	{.clock = 12000000, .can = 125000, .div = 0, .btr = 0x1c05},
+};
+
 bool can_init(can_speed_t speed)
 {
 	printf("Clock %d", clock_get_main());
 
+	const struct can_speed_table_entry* entry = NULL;
+
+	herz_t clock_speed = clock_get_main();
+
+	for (uint8_t i = 0, size = sizeof(can_speed_table)/sizeof(struct can_speed_table_entry); i < size; i++) {
+		if (can_speed_table[i].clock == clock_speed &&
+			can_speed_table[i].can == speed) {
+			entry = &can_speed_table[i];
+			break;
+		}
+	}
+
+	assert(entry, "Could not find a can speed entry for clock and speed requested");
+
 	uint32_t ClkInitTable[2] = {
-	  0, // CANCLKDIV
-	  0x1c05  // CAN_BTR
-	  // 5,
-	  // 0x1c00
-
-		// 40,
-		// 0x1c27
-
-	  // 0x00000000UL, // CANCLKDIV
-	  // 0x00001C57UL  // CAN_BTR
+	  entry->div,
+	  entry->btr
 	};
 
-		if (!irq_register(IRQ13, isr)) {
+	if (!irq_register(IRQ13, isr)) {
 		assert(false, "Could not register can irq");
 		return false;
 	}
-
-
-		printf("Div %d\r\n", ClkInitTable[0]);
 
 	struct _rom_t** rom = (struct _rom_t**)0x1fff1ff8;
 
@@ -211,8 +225,6 @@ bool can_init(can_speed_t speed)
 
 	// LPC_CAN->CNTL |= (1<<7);
 	// LPC_CAN->TEST |= (1<<4);
-
-	printf("LPC_SYSCON->SYSAHBCLKCTRL %x\r\n", LPC_SYSCON->SYSAHBCLKCTRL);
 
 	irq_enable(IRQ6);
 
