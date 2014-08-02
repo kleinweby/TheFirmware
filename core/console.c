@@ -37,6 +37,7 @@ struct console {
 };
 
 static void console_main(console_t console);
+static console_t global_console;
 
 console_t console_spawn(file_t file)
 {
@@ -60,6 +61,7 @@ console_t console_spawn(file_t file)
   // Start the console
   thread_wakeup(console->thread);
 
+  global_console = console;
   return console;
 }
 
@@ -147,4 +149,13 @@ void console_main(struct console* console) {
       }
 		}
 	}
+}
+
+size_t printf(const char* format, ...)
+{
+  va_list args;
+  va_start(args, format);
+  size_t len = vfprintf(global_console->file, format, args);
+  va_end(args);
+  return len;
 }
