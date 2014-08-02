@@ -24,9 +24,129 @@
 
 #include "valve.h"
 
+#include <string.h>
+#include <console.h>
+
 valve_t valve;
 
 int main()
 {
 	valve = valve_create(PIN(2,7), PIN(2,8), VALVE_GARDENA_9V_TYPE, NULL);
 }
+
+void valve_help()
+{
+	printf("HELLP!!!\r\n");
+}
+
+int valve_cmd(int argc, const char** argv)
+{
+	if (argc < 2) {
+ 		valve_help();
+ 		return -1;
+	}
+
+	if (strcmp(argv[1], "help") == 0) {
+		valve_help();
+		return 0;
+	}
+	else if (strcmp(argv[1], "open") == 0) {
+		printf("Open valve...");
+		if (valve_open(valve)) {
+			printf("ok.\r\n");
+		}
+		else {
+			printf("faild.\r\n");
+		}
+	}
+	else if (strcmp(argv[1], "close") == 0) {
+		printf("Close valve...");
+		if (valve_close(valve)) {
+			printf("ok.\r\n");
+		}
+		else {
+			printf("faild.\r\n");
+		}
+	}
+	// else if (strcmp(argv[1], "show") == 0) {
+	// 	printf("open-power: %d\r\n", valve.open_power);
+	// 	printf("close-power: %d\r\n", valve.close_power);
+	// 	printf("polarity: %d\r\n", valve.polarity);
+	// }
+	// else if (strcmp(argv[1], "set") == 0) {
+	// 	if (argc != 4) {
+	// 		valve_help();
+	// 		return -1;
+	// 	}
+
+	// 	if (strcmp(argv[2], "open-power") == 0) {
+	// 		valve.open_power = atoi(argv[3]);
+	// 		printf("open-power: %d\r\n", valve.open_power);
+	// 	}
+	// 	else if (strcmp(argv[2], "close-power") == 0) {
+	// 		valve.close_power = atoi(argv[3]);
+	// 		printf("close-power: %d\r\n", valve.close_power);
+	// 	}
+	// 	else if (strcmp(argv[2], "polarity") == 0) {
+	// 		valve.polarity = atoi(argv[3]);
+	// 		printf("polarity: %d\r\n", valve.polarity);
+	// 	}
+	// 	else
+	// 		printf("Unkown\r\n");
+	// }
+	else {
+		valve_help();
+	}
+
+ 	return 0;
+}
+
+
+
+// int valve_cmd(int argc, const char** argv)
+// {
+// 	if (argc < 2) {
+// 		valve_help();
+// 		return -1;
+// 	}
+
+// 	if (strcmp(argv[1], "help") == 0) {
+// 		valve_help();
+// 		return 0;
+// 	}
+// 	else if (strcmp(argv[1], "open") == 0) {
+// 	}
+// 	else if (strcmp(argv[1], "close") == 0) {
+// 	}
+// 	else if (strcmp(argv[1], "show") == 0) {
+// 		printf("open-power: %d\r\n", valve.open_power);
+// 		printf("close-power: %d\r\n", valve.close_power);
+// 		printf("polarity: %d\r\n", valve.polarity);
+// 	}
+// 	else if (strcmp(argv[1], "set") == 0) {
+// 		if (argc != 4) {
+// 			valve_help();
+// 			return -1;
+// 		}
+
+// 		if (strcmp(argv[2], "open-power") == 0) {
+// 			valve.open_power = atoi(argv[3]);
+// 			printf("open-power: %d\r\n", valve.open_power);
+// 		}
+// 		else if (strcmp(argv[2], "close-power") == 0) {
+// 			valve.close_power = atoi(argv[3]);
+// 			printf("close-power: %d\r\n", valve.close_power);
+// 		}
+// 		else if (strcmp(argv[2], "polarity") == 0) {
+// 			valve.polarity = atoi(argv[3]);
+// 			printf("polarity: %d\r\n", valve.polarity);
+// 		}
+// 		else
+// 			printf("Unkown\r\n");
+// 	}
+// 	else {
+// 		valve_help();
+// 	}
+
+// 	return 0;
+// }
