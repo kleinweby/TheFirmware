@@ -103,6 +103,8 @@ static bool console_parse_command(char* buf, int* _argc, char** _argv) {
 }
 
 void console_main(struct console* console) {
+  vnode_t bin_dir = vfs_lookup("bin");
+
   while (1) {
 	  char buf[60];
 		char* str = "> ";
@@ -131,7 +133,7 @@ void console_main(struct console* console) {
         continue;
       }
 
-      vnode_t vnode = vfs_lookup(argv[0]);
+      vnode_t vnode = vnode_lookup(bin_dir, argv[0]);
 
       if (!vnode) {
         fprintf(console->file, "command not found\r\n");

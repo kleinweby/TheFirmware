@@ -5,7 +5,7 @@ import sys
 import click
 import os.path
 
-path = Literal('/').suppress() + delimitedList(Word(alphas), "/", combine=True)('path')
+path = Literal('/').suppress() + delimitedList(Word(alphas, alphanums + "-_"), "/", combine=True)('path')
 
 func_obj = Literal('func')('type') + Word(alphas, alphanums + "_")('func_name')
 obj = func_obj
@@ -44,6 +44,7 @@ class FSDir(FSObject):
 
 			f.write("    %s(%s),\n" % (entry.entry_func(), ', '.join(args)))
 
+		f.write("    STATICFS_DIR_ENTRY_LAST,\n");
 		f.write(");\n\n")
 
 	def add_entry(self, name, obj):

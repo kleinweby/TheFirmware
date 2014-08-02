@@ -39,81 +39,19 @@
 #include <systick.h>
 #include <console.h>
 
-#include "LPC11xx.h"
-#include "system_LPC11xx.h"
-
-void* test_staticnode = NULL;
-
-int hello(int argc, const char** argv) {
-	log(LOG_LEVEL_INFO, "Hello");
-	return 0;
-}
-
-size_t printf(const char* format, ...)
+__attribute__( ( always_inline ) ) static inline uint32_t __get_PSP(void)
 {
-	va_list args;
-	va_start(args, format);
-	size_t len = vfprintf(debug_serial, format, args);
-	va_end(args);
+  register uint32_t result;
 
-	return len;
+  __asm volatile ("MRS %0, psp\n"  : "=r" (result) );
+  return(result);
 }
-
-void valve_help()
-{
-	printf("HELLP!!!\r\n");
-}
-
-// int valve_cmd(int argc, const char** argv)
-// {
-// 	if (argc < 2) {
-// 		valve_help();
-// 		return -1;
-// 	}
-
-// 	if (strcmp(argv[1], "help") == 0) {
-// 		valve_help();
-// 		return 0;
-// 	}
-// 	else if (strcmp(argv[1], "open") == 0) {
-// 	}
-// 	else if (strcmp(argv[1], "close") == 0) {
-// 	}
-// 	else if (strcmp(argv[1], "show") == 0) {
-// 		printf("open-power: %d\r\n", valve.open_power);
-// 		printf("close-power: %d\r\n", valve.close_power);
-// 		printf("polarity: %d\r\n", valve.polarity);
-// 	}
-// 	else if (strcmp(argv[1], "set") == 0) {
-// 		if (argc != 4) {
-// 			valve_help();
-// 			return -1;
-// 		}
-
-// 		if (strcmp(argv[2], "open-power") == 0) {
-// 			valve.open_power = atoi(argv[3]);
-// 			printf("open-power: %d\r\n", valve.open_power);
-// 		}
-// 		else if (strcmp(argv[2], "close-power") == 0) {
-// 			valve.close_power = atoi(argv[3]);
-// 			printf("close-power: %d\r\n", valve.close_power);
-// 		}
-// 		else if (strcmp(argv[2], "polarity") == 0) {
-// 			valve.polarity = atoi(argv[3]);
-// 			printf("polarity: %d\r\n", valve.polarity);
-// 		}
-// 		else
-// 			printf("Unkown\r\n");
-// 	}
-// 	else {
-// 		valve_help();
-// 	}
-
-// 	return 0;
-// }
 
 void error()
 {
+	volatile uint32_t* stack = (uint32_t*)__get_PSP();
+	uint32_t eip = stack[5];
+	#pragma unused(eip)
 	assert(false, "some error");
 }
 
@@ -122,10 +60,9 @@ void bootstrap()
 	arch_early_init();
 	test_do(TEST_AFTER_ARCH_EARLY_INIT);
 
-	irq_register(IRQ_HARDFAULT, error);
-
 	printk_init(38400);
 	irq_init();
+	irq_register(IRQ_HARDFAULT, error);
 
 	log(LOG_LEVEL_INFO, "Starting up TheFirmware...");
 
