@@ -226,7 +226,7 @@ bool can_init(can_speed_t speed)
 	// LPC_CAN->CNTL |= (1<<7);
 	// LPC_CAN->TEST |= (1<<4);
 
-	irq_enable(IRQ6);
+	irq_enable(IRQ13);
 
 	return true;
 }
