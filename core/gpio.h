@@ -31,6 +31,14 @@ typedef ENUM(uint8_t, gpio_direction_t) {
 	GPIO_DIRECTION_OUT
 };
 
+typedef ENUM(uint8_t, gpio_pull_t) {
+	GPIO_PULL_NONE,
+	GPIO_PULL_UP,
+	GPIO_PULL_DOWN,
+};
+
 void gpio_set_direction(pin_t pin, gpio_direction_t direction);
+void gpio_set_pull(pin_t pin, gpio_pull_t pull);
 void gpio_set(pin_t pin, bool on);
+bool gpio_get(pin_t pin);
 void gpio_strobe(pin_t pin, bool on, millitime_t time);

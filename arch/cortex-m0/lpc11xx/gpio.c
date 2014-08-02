@@ -28,10 +28,25 @@
 
 static LPC_GPIO_TypeDef (* const LPC_GPIO[4]) = { LPC_GPIO0, LPC_GPIO1, LPC_GPIO2, LPC_GPIO3 };
 
+static inline uint8_t pin_get_port(uint32_t pin)
+{
+	return pin >> 24;
+}
+
+static inline uint8_t pin_get_pin(uint32_t pin)
+{
+	return (pin >> 16) & 0xFF;
+}
+
+static inline uint8_t pin_get_number(uint32_t pin)
+{
+	return pin & 0xFFFF;
+}
+
 void gpio_set_direction(pin_t pin, gpio_direction_t direction)
 {
-	int port = pin >> 16;
-	pin &= 0xFFFF;
+	int port = pin_get_port(pin);
+	pin = pin_get_pin(pin);
 
 	if (direction == GPIO_DIRECTION_OUT) {
 		LPC_GPIO[port]->DIR |= 1<<pin;
@@ -41,12 +56,41 @@ void gpio_set_direction(pin_t pin, gpio_direction_t direction)
 	}
 }
 
+void gpio_set_pull(pin_t pin, gpio_pull_t pull)
+{
+	volatile uint32_t* conf = NULL;
+
+	if (pin == PIN(2, 7)) {
+		conf = &LPC_IOCON->PIO2_7;
+	}
+
+	switch(pull) {
+	case GPIO_PULL_NONE:
+		*conf = (*conf & 0xFFFFFFE7);
+		break;
+	case GPIO_PULL_DOWN:
+		*conf = (*conf & 0xFFFFFFE7) | 0x8;
+		break;
+	case GPIO_PULL_UP:
+		*conf = (*conf & 0xFFFFFFE7) | 0x10;
+		break;	
+	}
+}
+
 void gpio_set(pin_t pin, bool on)
 {
-	int port = pin >> 16;
-	pin &= 0xFFFF;
+	int port = pin_get_port(pin);
+	pin = pin_get_pin(pin);
 
 	LPC_GPIO[port]->MASKED_ACCESS[(1<<pin)] = on << pin;
+}
+
+bool gpio_get(pin_t pin)
+{
+	int port = pin_get_port(pin);
+	pin = pin_get_pin(pin);
+
+	return LPC_GPIO[port]->MASKED_ACCESS[(1<<pin)] >> pin;
 }
 
 void gpio_strobe(pin_t pin, bool on, millitime_t time)
