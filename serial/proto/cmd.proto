@@ -1,0 +1,24 @@
+//
+// Id identifies a uniq communication.
+// Mostly this communication consists of one command and it's
+// reply. But multiple commands and replys (in whatever order)
+// are possible. However if/when this is possible is application
+// defined. Consult the documentation for the commands in question.
+//
+// ID 0 is always reserved for the log channel. This is active
+// from the very beginning and does not need to be open.
+//
+
+package TheFirmware;
+
+message Request {
+	required int32 channel = 1;
+
+	extensions 32 to max;
+}
+
+message Response {
+	required int32 channel = 1;
+
+	extensions 32 to max;
+}

@@ -1,0 +1,20 @@
+import 'cmd.proto'; 
+package TheFirmware;
+
+message IdentifyRequest {
+	extend Request {
+		optional IdentifyRequest IdentifyRequest = 32;
+	}
+}
+
+message IdentifyResponse {
+	extend Response {
+		optional IdentifyResponse IdentifyResponse = 32;
+	}
+
+	required string version = 1;
+	optional string serialNo = 4;
+
+	repeated int32 supportedCommands = 2 [packed=true];
+	repeated string features = 3;
+}

@@ -22,20 +22,51 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
+#include <channel.h>
 
-/// when 1 log calls will also print the file and line number that log call was
-/// made.
-///
-/// @note Enabling this can enlargen the binary quit a bit, as strings for all
-/// file names must be stored
-///
-#define LOG_SOURCE_LOCATION 1
+#include <pb_utils.h>
+#include <cmd.pb.h>
 
-/// Defines the default stack size of the main stack
-#define STACK_SIZE_MAIN 1024
+static uint8_t kMagicNumber[2] = {0xCA, 0xFE};
 
-/// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 1024
+bool serial_channel_send(serial_channel_t channel, const pb_extension_type_t* extension_type, void* reply)
+{
+	TheFirmware_Response r = TheFirmware_Response_init_default;
+	pb_extension_t ext;
 
-#define STACK_SIZE_CONSOLE STACK_SIZE_MAIN
+	ext.type = extension_type;
+	ext.dest = reply;
+	ext.next = NULL;
+	r.extensions = &ext;
+
+	r.channel = channel->id;
+
+	uint32_t crc32;
+	size_t size;
+
+	{
+		pb_ostream_t stream = pb_crc32_ostream_init;
+
+		if (!pb_encode(&stream, TheFirmware_Response_fields, &r))
+			return false;
+
+		crc32 = pb_crc32_ostream_get(&stream);
+		size = stream.bytes_written;
+	}
+
+	pb_ostream_t stream = pb_ostream_from_file(channel->connection->fd);
+
+	// Send Magic Number
+	if (!pb_write(&stream, kMagicNumber, 2))
+		return false;
+
+	// First send crc
+	if (!pb_encode_fixed32(&stream, &crc32)) 
+		return false;
+
+	// Then send length
+	if (!pb_encode_varint(&stream, (uint64_t)size))
+        return false;
+
+	return pb_encode(&stream, TheFirmware_Response_fields, &r);
+}

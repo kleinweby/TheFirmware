@@ -28,11 +28,12 @@
 #include <config.h>
 
 typedef enum {
-	LOG_LEVEL_DEBUG = 0,
-	LOG_LEVEL_VERBOSE = 1,
-	LOG_LEVEL_INFO = 2,
-	LOG_LEVEL_WARN = 3,
-	LOG_LEVEL_ERROR = 4,
+	LOG_LEVEL_FATAL = 0,
+	LOG_LEVEL_ERROR = 1,
+	LOG_LEVEL_WARN = 2,
+	LOG_LEVEL_INFO = 3,
+	LOG_LEVEL_DEBUG = 4,
+	LOG_LEVEL_VERBOSE = 5
 } log_level_t;
 
 static const log_level_t min_log_level = LOG_LEVEL_DEBUG;
@@ -40,7 +41,7 @@ static const log_level_t min_log_level = LOG_LEVEL_DEBUG;
 void _logv(const char* file, int line, log_level_t log_level, const char* message, va_list args);
 
 static inline void _log(const char* file, int line, log_level_t log_level, const char* message, ...) {
-	if (log_level >= min_log_level) {
+	if (log_level <= min_log_level) {
 		va_list args;
 		va_start(args, message);
 		_logv(file, line, log_level, message, args);

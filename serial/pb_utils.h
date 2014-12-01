@@ -24,18 +24,33 @@
 
 #pragma once
 
-/// when 1 log calls will also print the file and line number that log call was
-/// made.
-///
-/// @note Enabling this can enlargen the binary quit a bit, as strings for all
-/// file names must be stored
-///
-#define LOG_SOURCE_LOCATION 1
+#include <pb.h>
+#include <pb_encode.h>
 
-/// Defines the default stack size of the main stack
-#define STACK_SIZE_MAIN 1024
+bool _pb_crc32_ostream_callback(pb_ostream_t *stream, const uint8_t *buf, size_t count);
 
-/// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 1024
+#define pb_crc32_ostream_init {&_pb_crc32_ostream_callback, (void*)0xffffffff, SIZE_MAX, 0}
 
-#define STACK_SIZE_CONSOLE STACK_SIZE_MAIN
+static inline uint32_t pb_crc32_ostream_get(pb_ostream_t *stream) {
+	return (uint32_t)stream->state ^ 0xffffffff;
+}
+
+bool pb_ostream_file_callback(pb_ostream_t *stream, const uint8_t *buf, size_t count);
+#define pb_ostream_from_file(file) {&pb_ostream_file_callback, (void*)(file), SIZE_MAX, 0}
+
+void pb_utils_encode_static_string(pb_callback_t* callback, const char* str);
+
+struct _pb_utils_vastring_args {
+	const char* message;
+	va_list args;
+};
+
+bool _pb_utils_encode_vastring_callback(pb_ostream_t *stream, const pb_field_t *field, void * const *arg);
+
+// Need to do that in an macro do avoid allocating the args struct on heap
+#define pb_utils_encode_vastring(callback, format, vaargs) \
+	(callback)->funcs.encode = _pb_utils_encode_vastring_callback; \
+	(callback)->arg = (void*)&(struct _pb_utils_vastring_args){ \
+		.message = format, \
+		.args = vaargs \
+	}; 

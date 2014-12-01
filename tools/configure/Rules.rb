@@ -35,3 +35,10 @@ rule 'gen-fs' do
 	var :command, "./tools/gen-fs.py -o $out $in"
 	var :description, 'GEN $out'
 end
+
+rule 'protoc' do
+	var :command, "./toolchain/nanopb/generator-bin/protoc $include_paths --nanopb_out=$in"
+	var :description, 'GEN $in'
+end
+
+register_default_rule '.proto', 'protoc'

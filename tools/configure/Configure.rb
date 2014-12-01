@@ -54,11 +54,24 @@ class BuildConfiguration < Ninja
     Pathname.glob(glob) do |file|
       # Re-relativ path
       file = path(file)
-      obj = path(file.join(self.root.options.builddir, file.to_s + '.o'))
       rulename = extra_options[:rulename] || rule_for_file(file)
 
-      build obj, rulename, file
-      self._objects << obj
+      if rulename == 'protoc'
+        base = path(file.join(self.root.options.builddir, file.dirname, file.basename(file.extname)))
+        obj = [base.to_s + '.pb.h', base.to_s + '.pb.c']
+
+        var :include_paths, ["-I#{base.dirname}"]
+        build obj, rulename, [base.dirname, file]
+
+        d = obj[1].to_s + '.o'
+        build d, 'cc', obj[1]
+        self._objects << d
+      else
+        obj = path(file.join(self.root.options.builddir, file.to_s + '.o'))
+
+        build obj, rulename, file
+        self._objects << obj
+      end
     end
   end
 

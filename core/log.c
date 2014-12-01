@@ -26,7 +26,10 @@
 
 #include <printk.h>
 #include <string.h>
+#include <channel.h>
+#include <pb_utils.h>
 
+#if 0
 #if 0
 #define COLOR_RESET "\033[0m"
 #define COLOR_CYAN "\033[0;32m"
@@ -75,3 +78,39 @@ void _logv(const char* file, int line, log_level_t log_level, const char* messag
 	vfprintf(debug_serial, message, args);
 	printk("\r\n");
 }
+
+#else
+
+#include <log.pb.h>
+
+void _logv(const char* file, int line, log_level_t log_level, const char* message, va_list args)
+{
+	TheFirmware_LogMessage logMessage = TheFirmware_LogMessage_init_default;
+
+	pb_utils_encode_vastring(&logMessage.message, message, args);
+
+	if (file) {
+		pb_utils_encode_static_string(&logMessage.file, file);
+	}
+
+	if (line > 0) {
+		logMessage.has_lineNo = true;
+		logMessage.lineNo = line;
+	}
+
+	// The loglevel matches the severity
+	logMessage.severity = (TheFirmware_LogMessage_Severity)log_level;
+
+	struct serial_connection conn = {
+		.fd = debug_serial,
+	};
+
+	struct serial_channel chan = {
+		.connection = &conn,
+		.id = 0,
+	};
+
+	serial_channel_send(&chan, &TheFirmware_LogMessage_logMessage, &logMessage);
+}
+
+#endif

@@ -43,6 +43,9 @@ int read(file_t file, void* buf, size_t nbytes)
 
 int write(file_t file, const void* buf, size_t nbytes)
 {
+  if (!file)
+    return nbytes;
+
   if (file->ops->write) {
     return file->ops->write(file, buf, nbytes);
   }

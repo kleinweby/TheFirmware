@@ -361,6 +361,11 @@ int strncmp(const char* s1, const char* s2, size_t n)
 		return 0;
 }
 
+void* __aeabi_memcpy(void* restrict _dst, const void* restrict _src, size_t n)
+{
+	return memcpy(_dst, _src, n);
+}
+
 void* memcpy(void* restrict _dst, const void* restrict _src, size_t n)
 {
 	char* restrict dst = _dst;

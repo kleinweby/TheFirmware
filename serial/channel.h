@@ -24,18 +24,15 @@
 
 #pragma once
 
-/// when 1 log calls will also print the file and line number that log call was
-/// made.
-///
-/// @note Enabling this can enlargen the binary quit a bit, as strings for all
-/// file names must be stored
-///
-#define LOG_SOURCE_LOCATION 1
+#include <pb.h>
+#include <connection.h>
 
-/// Defines the default stack size of the main stack
-#define STACK_SIZE_MAIN 1024
+typedef struct serial_channel* serial_channel_t;
 
-/// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 1024
+struct serial_channel {
+	serial_connection_t connection;
+	uint32_t id;
+};
 
-#define STACK_SIZE_CONSOLE STACK_SIZE_MAIN
+// Sends a response over the channel
+bool serial_channel_send(serial_channel_t channel, const pb_extension_type_t* extension_type, void* reply);

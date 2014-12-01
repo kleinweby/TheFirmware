@@ -1,0 +1,4 @@
+var :include_paths, ["-I#{path('.')}", "-I#{path('./proto')}"]
+
+file 'proto/*.proto'
+file '*.c'

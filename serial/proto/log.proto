@@ -1,0 +1,22 @@
+import "cmd.proto";
+package TheFirmware;
+
+message LogMessage {
+	extend Response {
+		optional LogMessage logMessage = 33;
+	}
+
+	enum Severity {
+		Fatal = 0;
+		Error = 1;
+		Warning = 2;
+		Info = 3;
+		Debug = 4;
+		Verbose = 5;
+	}
+
+	required Severity severity = 1 [default=Info];
+	required string message = 2;
+	optional string file = 3;
+	optional int32 lineNo = 4;
+}
