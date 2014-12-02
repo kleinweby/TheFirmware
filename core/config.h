@@ -33,9 +33,14 @@
 #define LOG_SOURCE_LOCATION 1
 
 /// Defines the default stack size of the main stack
-#define STACK_SIZE_MAIN 1024
+#define STACK_SIZE_MAIN 2048
 
 /// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 1024
+#define STACK_SIZE_ISR 2048
 
 #define STACK_SIZE_CONSOLE STACK_SIZE_MAIN
+
+// Enable the possibility to measure the stack utilisation
+#define STACK_UTILISATION 1
+
+#define STACK_CHECK_PROTECTOR 1

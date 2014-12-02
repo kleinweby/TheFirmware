@@ -25,10 +25,13 @@
 #include <thread.h>
 #include <malloc.h>
 #include <log.h>
+#include <string.h>
 
 list_t _thread_list;
 list_t* thread_list = &_thread_list;
 tid_t next_tid;
+
+static const uint32_t kStackProtector = 0xBADBEEF;
 
 void thread_init()
 {
@@ -46,10 +49,18 @@ thread_t thread_create(const char* name, size_t stack_size, stack_t stack)
 	thread->state = THREAD_STATE_STOPPED;
 	thread->name = name;
 	thread->tid = next_tid++;
+	thread->stack_protector = NULL;
 
 	if (stack_size > 0) {
-		uint8_t* stack = malloc_raw(stack_size);
-		thread->stack = (stack_t)&stack[stack_size-4];
+		uint8_t* stack = malloc_raw(stack_size + sizeof(kStackProtector));
+		thread->stack = (stack_t)&stack[stack_size + sizeof(kStackProtector) - 4];
+		thread->stack_protector = (stack_t)stack;
+		*(uint32_t*)thread->stack_protector = kStackProtector;
+
+#if STACK_UTILISATION
+		thread->stack_size = stack_size;
+		thread_stack_utilisation_reset(thread);
+#endif
 	}
 
 	list_entry_init(&thread->thread_list_entry);
@@ -86,6 +97,42 @@ void thread_set_function_v(thread_t thread, entry_func func, uint8_t argc, va_li
   	thread->stack -= 8;
   }
 }
+
+void thread_assert_stack_protection(thread_t thread)
+{
+	if (thread->stack_protector) {
+		assert(thread->stack_protector < thread->stack, "Stack below stack protector");
+		uint32_t* stack_protector = (uint32_t*)thread->stack_protector;
+		assert(*stack_protector == kStackProtector, "Stack protector is trashed");
+	}
+}
+
+#if STACK_UTILISATION
+
+void thread_stack_utilisation_reset(thread_t thread)
+{
+	// We cant reset it for the current running thread at the moment
+	if (thread == scheduler_current_thread())
+		return;
+
+	uint32_t* stack = thread->stack_protector;
+	stack++;
+	for (; stack < thread->stack; stack++)
+		*stack = kStackProtector;
+}
+
+size_t thread_stack_utilisation(thread_t thread)
+{
+	uint32_t* stack = thread->stack_protector;
+	size_t size = thread->stack_size;
+
+	for (; stack < thread->stack && *stack == kStackProtector; stack++, size -= 4)
+		;
+
+	return size;
+}
+
+#endif
 
 static void thread_set_state(thread_t thread, thread_state_t state)
 {

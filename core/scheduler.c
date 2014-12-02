@@ -44,6 +44,10 @@ stack_t schedule(stack_t stack)
 {
   thread_set_stack(scheduler.current_thread, stack);
 
+#ifdef STACK_CHECK_PROTECTOR
+  thread_assert_stack_protection(scheduler.current_thread);
+#endif
+
   scheduler_lock();
   assert(!list_is_empty(&scheduler.running_queue), "No task to run");
   list_lrotate(&scheduler.running_queue);
