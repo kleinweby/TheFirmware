@@ -50,7 +50,7 @@ __attribute__( ( always_inline ) ) static inline uint32_t __get_PSP(void)
 void error()
 {
 	volatile uint32_t* stack = (uint32_t*)__get_PSP();
-	uint32_t eip = stack[5];
+	uint32_t eip = stack[-1];
 	#pragma unused(eip)
 	assert(false, "some error");
 }

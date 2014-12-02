@@ -56,7 +56,7 @@ thread_t thread_create(const char* name, size_t stack_size, stack_t stack)
 	list_append(thread_list, &thread->thread_list_entry);
 
 	scheduler_thread_data_init(thread);
-	log(LOG_LEVEL_DEBUG, "created thread tid=%d, name=%s", thread->tid, name);
+	log(LOG_LEVEL_DEBUG, "created thread tid=%d, name=%s, stack %p", thread->tid, name, thread->stack);
 
 	return thread;
 }
