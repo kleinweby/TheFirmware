@@ -41,7 +41,7 @@ extern unsigned int __data_section_table_end;
 extern unsigned int __bss_section_table;
 extern unsigned int __bss_section_table_end;
 
-static void arch_handle_irq(void);
+static void arch_handle_irq(void) __attribute__ ((naked, noreturn));
 static void arch_handle_pendsv(void) __attribute__ ((naked, noreturn));
 
 static void do_irq_reset(void);
@@ -167,7 +167,7 @@ void arch_yield()
   *((uint32_t volatile *)0xE000ED04) = 0x10000000; // trigger PendSV
 }
 
-static void arch_handle_irq(void)
+static stack_t arch_dispatch_irq(stack_t stack)
 {
   register uint32_t irq;
 
@@ -180,6 +180,76 @@ static void arch_handle_irq(void)
     irq -= 2;
 
   do_irq(irq);
+
+  return stack;
+}
+
+static void arch_handle_irq(void)
+{
+  __asm volatile (
+    "PUSH   {lr}                      \n" // Save lr
+
+    //
+    // Save state
+    //
+
+    // Get saved stack pointer
+    "MRS    r3,  PSP                  \n"
+
+    // Make room to save the registers
+    "SUBS   r3,  #32                  \n"
+    "MOV    r0,  r3                   \n" // r0 is argument
+
+    // Push r4-r7 to the stack
+    "STMIA  r3!, {r4-r7}              \n"
+
+    // Push r8-r11
+    "MOV    r4,  r8                   \n"
+    "MOV    r5,  r9                   \n"
+    "MOV    r6,  r10                  \n"
+    "MOV    r7,  r11                  \n"
+    "STMIA  r3!, {r4-r7}              \n"
+
+    // Call schedule
+    "bl     %[dispatch]               \n"
+
+    //
+    // Restore state
+    //
+
+    // Return stack is in r0
+
+    // Pop r8-r11
+    "ADDS    r0,  #16                  \n" // Adjust stack
+    "LDMIA   r0!, {r4-r7}              \n"
+    "MOV     r8,  r4                   \n"
+    "MOV     r9,  r5                   \n"
+    "MOV     r10, r6                   \n"
+    "MOV     r11, r7                   \n"
+
+    // Pop r4-r7
+    "SUBS    r0,  #32                  \n" // Adjust stack
+    "LDMIA   r0!, {r4-r7}              \n"
+
+    // Restore stack
+    "ADDS    r0,  #16                  \n"
+
+    // Restore stack pointer
+    "MSR     PSP, r0                   \n"
+
+    //
+    // Exit
+    //
+    "CPSIE   i                         \n" // Always enable interrupts
+    "POP     {pc}                      \n" // Restore lr and return
+
+    :
+    : [dispatch]"i"(arch_dispatch_irq)
+    :
+  );
+
+  // We'll never get here
+  unreachable();
 }
 
 static void arch_handle_pendsv(void)
