@@ -84,6 +84,7 @@ void bootstrap()
 	console_spawn(debug_serial);
 
 	while (1) {
+		thread_block();
 		yield(); //__asm("WFI");
 	}
 }

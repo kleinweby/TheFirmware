@@ -79,3 +79,6 @@ void scheduler_thread_data_init(thread_t thread);
 //
 
 void scheduler_thread_changed_state(thread_t thread, thread_state_t old_state, thread_state_t new_state);
+
+void scheduler_set_idle_thread(thread_t thread);
+

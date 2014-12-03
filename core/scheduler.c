@@ -28,6 +28,7 @@
 
 static struct {
   thread_t current_thread;
+  thread_t idle_thread;
   list_t running_queue;
 } scheduler;
 
@@ -49,9 +50,13 @@ stack_t schedule(stack_t stack)
 #endif
 
   scheduler_lock();
-  assert(!list_is_empty(&scheduler.running_queue), "No task to run");
-  list_lrotate(&scheduler.running_queue);
-  scheduler.current_thread = container_of(list_first(&scheduler.running_queue), struct thread, scheduler_data.queue_entry);
+  if (list_is_empty(&scheduler.running_queue)) {
+    scheduler.current_thread = scheduler.idle_thread;
+  }
+  else {
+    list_lrotate(&scheduler.running_queue);
+    scheduler.current_thread = container_of(list_first(&scheduler.running_queue), struct thread, scheduler_data.queue_entry);
+  }
   scheduler_unlock();
 
   return thread_get_stack(scheduler.current_thread);
@@ -65,6 +70,10 @@ thread_t scheduler_current_thread()
 static void delay_handler(timer_t timer, void* context)
 {
   thread_wakeup(context);
+
+  // If we're idling, yield now
+  if (scheduler.current_thread == scheduler.idle_thread)
+    yield();
 }
 
 void delay(millitime_t time)
@@ -96,4 +105,9 @@ void scheduler_thread_changed_state(thread_t thread, thread_state_t old_state, t
   }
 
   scheduler_unlock();
+}
+
+void scheduler_set_idle_thread(thread_t thread)
+{
+  scheduler.idle_thread = thread;
 }

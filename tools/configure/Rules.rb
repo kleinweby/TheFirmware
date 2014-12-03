@@ -15,6 +15,13 @@ end
 
 register_default_rule '.cc', 'cxx'
 
+rule 'as' do
+	var :command, '$as $asflags -o $out $in'
+	var :description, "AS   $in"
+end
+
+register_default_rule '.S', 'as'
+
 rule 'ld' do
 	var :command, '$ld -T$linker_file -o $out $in $ldflags'
 	var :description, "LD   $out"
