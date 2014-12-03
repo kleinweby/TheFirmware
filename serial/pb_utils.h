@@ -26,6 +26,7 @@
 
 #include <pb.h>
 #include <pb_encode.h>
+#include <pb_decode.h>
 
 bool _pb_crc32_ostream_callback(pb_ostream_t *stream, const uint8_t *buf, size_t count);
 
@@ -37,6 +38,9 @@ static inline uint32_t pb_crc32_ostream_get(pb_ostream_t *stream) {
 
 bool pb_ostream_file_callback(pb_ostream_t *stream, const uint8_t *buf, size_t count);
 #define pb_ostream_from_file(file) {&pb_ostream_file_callback, (void*)(file), SIZE_MAX, 0}
+
+bool pb_istream_file_callback(pb_istream_t *stream, uint8_t *buf, size_t count);
+#define pb_istream_from_file(file) {&pb_istream_file_callback, (void*)(file), SIZE_MAX, 0}
 
 void pb_utils_encode_static_string(pb_callback_t* callback, const char* str);
 

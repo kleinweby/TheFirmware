@@ -30,6 +30,8 @@
 #include <config.h>
 #include <string.h>
 #include <vfs.h>
+#include <log.h>
+#include <thread.h>
 
 struct console {
   file_t file;
@@ -105,9 +107,17 @@ static bool console_parse_command(char* buf, int* _argc, char** _argv) {
 }
 
 void console_main(struct console* console) {
-  vnode_t bin_dir = vfs_lookup("bin");
+  // vnode_t bin_dir = vfs_lookup("bin");
 
-  while (1) {
+  int i = 0;
+  while(1) {
+    log(LOG_LEVEL_INFO, "Hey %d", i);
+    log(LOG_LEVEL_INFO, "Stack %d", thread_stack_utilisation(scheduler_current_thread()));
+    i++;
+    delay(10000);
+  }
+
+  /*
 	  char buf[60];
 		char* str = "> ";
 		write(console->file, str, strlen(str));
@@ -148,7 +158,7 @@ void console_main(struct console* console) {
         fprintf(console->file, "command exited with %d\r\n", ret);
       }
 		}
-	}
+	}*/
 }
 
 size_t printf(const char* format, ...)

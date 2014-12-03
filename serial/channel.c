@@ -27,8 +27,6 @@
 #include <pb_utils.h>
 #include <cmd.pb.h>
 
-static const uint8_t kMagicNumber[2] = {0xCA, 0xFE};
-
 bool serial_channel_send(serial_channel_t channel, const pb_extension_type_t* extension_type, void* reply)
 {
 	TheFirmware_Response r = TheFirmware_Response_init_default;

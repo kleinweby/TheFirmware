@@ -49,6 +49,16 @@ bool pb_ostream_file_callback(pb_ostream_t *stream, const uint8_t *buf, size_t c
 	return write((file_t)stream->state, buf, count) == count;
 }
 
+bool pb_istream_file_callback(pb_istream_t *stream, uint8_t *buf, size_t count)
+{
+	size_t c = read((file_t)stream->state, buf, count);
+
+	if (c == count)
+		return true;
+
+	return false;
+}
+
 static bool pb_static_string_field_encode(pb_ostream_t *stream, const pb_field_t *field, void * const *arg)
 {
 	const char *str = (const char*)*arg;

@@ -38,6 +38,7 @@
 #include <string.h>
 #include <systick.h>
 #include <console.h>
+#include <connection.h>
 
 __attribute__( ( always_inline ) ) static inline uint32_t __get_PSP(void)
 {
@@ -60,9 +61,9 @@ void bootstrap()
 	arch_early_init();
 	test_do(TEST_AFTER_ARCH_EARLY_INIT);
 
-	printk_init(57600);
 	irq_init();
 	irq_register(IRQ_HARDFAULT, error);
+	printk_init(57600);
 
 	log(LOG_LEVEL_INFO, "Starting up TheFirmware...");
 
@@ -81,7 +82,11 @@ void bootstrap()
 	staticfs_init();
 	// vfs_dump(debug_serial);
 
-	console_spawn(debug_serial);
+	serial_connection_t conn = serial_connection_create(debug_serial);
+
+	serial_connection_handler_spawn(conn);
+
+	// console_spawn(debug_serial);
 
 	while (1) {
 		thread_block();

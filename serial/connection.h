@@ -26,11 +26,19 @@
 
 #include <pb.h>
 #include <vfs.h>
+#include <thread.h>
 
 typedef struct serial_connection* serial_connection_t;
 
+const uint8_t kMagicNumber[2];
+
 struct serial_connection {
 	file_t fd;
+	thread_t handler_thread;
 };
 
+serial_connection_t serial_connection_create(file_t fd);
+void serial_connection_destory(serial_connection_t con);
+
+void serial_connection_handler_spawn(serial_connection_t con);
 

@@ -29,6 +29,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include <pinmux.h>
+#include <irq.h>
+#include <semaphore.h>
 
 #define EDBG_CDC_MODULE              SERCOM3
 #define EDBG_CDC_SERCOM_MUX_SETTING  USART_RX_3_TX_2_XCK_3
@@ -192,8 +194,70 @@ uint32_t system_gclk_chan_get_hz(
 	return gclock_get_generator(gen_id);
 }
 
+static struct semaphore read_sema;
+static char read_buf[64];
+static int read_i = 0;
+static int write_i = 0;
+
+void sync()
+{
+	while (hw->STATUS.reg & SERCOM_USART_STATUS_SYNCBUSY) {
+		/* Wait until the synchronization is complete */
+	}
+}
+
+int getchar(char* c)
+{
+	while (!(hw->INTFLAG.reg & SERCOM_USART_INTFLAG_RXC))
+		;
+
+	sync();
+
+	/* Read out the status code and mask away all but the 3 LSBs*/
+	int error_code = (uint8_t)(hw->STATUS.reg & SERCOM_USART_STATUS_MASK);
+
+	/* Check if an error has occurred during the receiving */
+	if (error_code) {
+		/* Check which error occurred */
+		if (error_code & SERCOM_USART_STATUS_FERR) {
+			/* Clear flag by writing a 1 to it and
+			 * return with an error code */
+			hw->STATUS.reg = SERCOM_USART_STATUS_FERR;
+
+			return -1;
+		} else if (error_code & SERCOM_USART_STATUS_BUFOVF) {
+			/* Clear flag by writing a 1 to it and
+			 * return with an error code */
+			hw->STATUS.reg = SERCOM_USART_STATUS_BUFOVF;
+
+			return -1;
+		} else if (error_code & SERCOM_USART_STATUS_PERR) {
+			/* Clear flag by writing a 1 to it and
+			 * return with an error code */
+			hw->STATUS.reg = SERCOM_USART_STATUS_PERR;
+
+			return -1;
+		}
+	}
+
+	*c = hw->DATA.reg;
+
+	return 0;
+}
+
+static void uart_isr(void)
+{
+	write_i = (write_i + 1)%64;
+	getchar(&read_buf[write_i]);
+	semaphore_signal(&read_sema);
+}
+
 void printk_init(uint32_t baud)
 {
+	irq_register(IRQ10, uart_isr);
+	irq_enable(IRQ10);
+	semaphore_init(&read_sema, 0);
+
 	uint32_t pm_index     = 3 + PM_APBCMASK_SERCOM0_Pos;
 	uint32_t gclk_index   = 3 + SERCOM0_GCLK_ID_CORE;
 
@@ -269,52 +333,7 @@ void printk_init(uint32_t baud)
 	hw->CTRLB.bit.RXEN = 1;
 	hw->CTRLB.bit.TXEN = 1;
 	hw->CTRLA.bit.ENABLE = 1;
-}
-
-void sync()
-{
-	while (hw->STATUS.reg & SERCOM_USART_STATUS_SYNCBUSY) {
-		/* Wait until the synchronization is complete */
-	}
-}
-
-int getchar(char* c)
-{
-	while (!(hw->INTFLAG.reg & SERCOM_USART_INTFLAG_RXC))
-		;
-
-	sync();
-
-	/* Read out the status code and mask away all but the 3 LSBs*/
-	int error_code = (uint8_t)(hw->STATUS.reg & SERCOM_USART_STATUS_MASK);
-
-	/* Check if an error has occurred during the receiving */
-	if (error_code) {
-		/* Check which error occurred */
-		if (error_code & SERCOM_USART_STATUS_FERR) {
-			/* Clear flag by writing a 1 to it and
-			 * return with an error code */
-			hw->STATUS.reg = SERCOM_USART_STATUS_FERR;
-
-			return -1;
-		} else if (error_code & SERCOM_USART_STATUS_BUFOVF) {
-			/* Clear flag by writing a 1 to it and
-			 * return with an error code */
-			hw->STATUS.reg = SERCOM_USART_STATUS_BUFOVF;
-
-			return -1;
-		} else if (error_code & SERCOM_USART_STATUS_PERR) {
-			/* Clear flag by writing a 1 to it and
-			 * return with an error code */
-			hw->STATUS.reg = SERCOM_USART_STATUS_PERR;
-
-			return -1;
-		}
-	}
-
-	*c = hw->DATA.reg;
-
-	return 0;
+	hw->INTENSET.bit.RXC = 1;
 }
 
 void putchar(char c)
@@ -333,9 +352,9 @@ static int read_op(file_t f, void* buf, size_t nbytes)
 	size_t n;
 
 	for (n = 0; n < nbytes; n++, buf++) {
-		if (getchar(buf) < 0) {
-			break;
-		}
+		semaphore_wait(&read_sema);
+		*(char*)buf = read_buf[read_i];
+		read_i = (read_i + 1)%64;
 	}
 
 	return n;

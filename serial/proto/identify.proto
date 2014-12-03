@@ -3,13 +3,13 @@ package TheFirmware;
 
 message IdentifyRequest {
 	extend Request {
-		optional IdentifyRequest IdentifyRequest = 32;
+		optional IdentifyRequest identifyRequest = 32;
 	}
 }
 
 message IdentifyResponse {
 	extend Response {
-		optional IdentifyResponse IdentifyResponse = 32;
+		optional IdentifyResponse identifyResponse = 32;
 	}
 
 	required string version = 1;
