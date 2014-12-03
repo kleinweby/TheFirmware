@@ -80,6 +80,7 @@ void thread_set_function(thread_t thread, entry_func func, uint8_t argc, ...)
 	va_end(args);
 }
 
+// TODO: this is arch depended
 void thread_set_function_v(thread_t thread, entry_func func, uint8_t argc, va_list args)
 {
 	// Prepare stack

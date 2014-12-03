@@ -137,6 +137,8 @@ void arch_early_init()
   malloc_init((void*)HeapStart, (void*)MainStackTop - STACK_SIZE_MAIN);
 }
 
+void arch_idle_thread(void);
+
 void arch_late_init()
 {
   // Now we switch the used stack from msp to psp
@@ -160,6 +162,11 @@ void arch_late_init()
     : "r"(&isr_stack[STACK_SIZE_ISR - 1])
     :
   );
+
+  thread_t idle_thread = thread_create("idle", 68, NULL);
+
+  thread_set_function(idle_thread, arch_idle_thread, 0);
+  scheduler_set_idle_thread(idle_thread);
 }
 
 void arch_yield()
