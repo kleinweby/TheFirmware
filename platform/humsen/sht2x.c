@@ -51,7 +51,7 @@ sht2x_t sht2x_create(i2c_dev_t bus)
 	return dev;
 }
 
-int16_t sht2x_measure_temperature(sht2x_t dev)
+int32_t sht2x_measure_temperature(sht2x_t dev)
 {
 	uint8_t buf[3];
 
@@ -64,7 +64,7 @@ int16_t sht2x_measure_temperature(sht2x_t dev)
 	return ((21965 * raw) >> 13) - 46850;
 }
 
-int16_t sht2x_measure_humidity(sht2x_t dev)
+int32_t sht2x_measure_humidity(sht2x_t dev)
 {
 	uint8_t buf[3];
 
@@ -93,5 +93,5 @@ uint64_t sht2x_read_serial_number(sht2x_t dev)
 
 	return (uint64_t)buf2[3] << 56 | (uint64_t)buf2[4] << 48 | (uint64_t)buf1[0] << 40 
 			| (uint64_t)buf1[2] << 32 | (uint64_t)buf1[4] << 24 | (uint64_t)buf1[6] << 16
-			| (uint64_t)buf2[0] << 8 | (uint64_t)buf1[1];
+			| (uint64_t)buf2[0] << 8 | (uint64_t)buf2[1];
 }

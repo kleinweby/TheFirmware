@@ -33,7 +33,7 @@ static void sht2x_cmd_help()
 	printf("  id   - read serial number\n");
 }
 
-static sht2x_t sht21;
+static sht2x_t sht21 = NULL;
 
 int sht2x_cmd(int argc, const char** argv)
 {
