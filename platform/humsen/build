@@ -1,0 +1,6 @@
+board 'humsen' do
+  targets ['lpc11xx']
+  var :include_paths, ["-I#{path('.')}"]
+
+  file '*.c'
+end
