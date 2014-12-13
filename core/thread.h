@@ -29,6 +29,7 @@
 
 #include <stdint.h>
 #include <stdarg.h>
+#include <config.h>
 
 typedef enum {
 	THREAD_STATE_UNKOWN  = 0,
@@ -49,6 +50,10 @@ struct thread {
 	tid_t tid;
 	thread_state_t state;
 	stack_t stack;
+	stack_t stack_protector;
+#if STACK_UTILISATION
+	size_t stack_size;
+#endif
 	const char* name;
 
 	scheduler_thread_data_t scheduler_data;
@@ -66,8 +71,18 @@ thread_t thread_create(const char* name, size_t stack_size, stack_t stack);
 void thread_set_function(thread_t thread, entry_func func, uint8_t argc, ...);
 void thread_set_function_v(thread_t thread, entry_func func, uint8_t argc, va_list args);
 
+void thread_assert_stack_protection(thread_t thread);
+
+#if STACK_UTILISATION
+
+void thread_stack_utilisation_reset(thread_t thread);
+size_t thread_stack_utilisation(thread_t thread);
+
+#endif
+
 static inline void thread_set_stack(thread_t thread, stack_t stack)
 {
+	assert(thread->stack_protector < stack, "Stack overflow while setting the stack");
 	thread->stack = stack;
 }
 
