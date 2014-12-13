@@ -29,6 +29,8 @@
 static const uint8_t kSHT2xAddress = 0x80;
 static const uint8_t kSHT2x_TRIG_T_MEASURE_HOLD = 0xE3;
 static const uint8_t kSHT2x_TRIG_RH_MEASURE_HOLD = 0xE5;
+static const uint8_t kSHT2xReadSerialNumber1 = 0x0F;
+static const uint8_t kSHT2xReadSerialNumber2 = 0xC9;
 
 struct sht2x {
 	i2c_dev_t i2c;
@@ -73,4 +75,23 @@ int16_t sht2x_measure_humidity(sht2x_t dev)
 	int16_t raw = (buf[0] << 8) | buf[1];
 
 	return ((15625 * raw) >> 13) - 6000;
+}
+
+uint64_t sht2x_read_serial_number(sht2x_t dev)
+{
+	uint8_t buf1[8];
+
+	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xReadSerialNumber1, 1, buf1, 8)) {
+		return -1;
+	}
+
+	uint8_t buf2[6];
+
+	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xReadSerialNumber2, 1, buf2, 6)) {
+		return -1;
+	}
+
+	return (uint64_t)buf2[3] << 56 | (uint64_t)buf2[4] << 48 | (uint64_t)buf1[0] << 40 
+			| (uint64_t)buf1[2] << 32 | (uint64_t)buf1[4] << 24 | (uint64_t)buf1[6] << 16
+			| (uint64_t)buf2[0] << 8 | (uint64_t)buf1[1];
 }
