@@ -27,8 +27,8 @@
 #include <malloc.h>
 
 static const uint8_t kSHT2xAddress = 0x80;
-static const uint8_t kSHT2x_TRIG_T_MEASURE_HOLD = 0xE3;
-static const uint8_t kSHT2x_TRIG_RH_MEASURE_HOLD = 0xE5;
+static const uint8_t kSHT2xTrigTMeasureHold = 0xE3;
+static const uint8_t kSHT2xTrigRHMeasureHold = 0xE5;
 static const uint8_t kSHT2xReadSerialNumber1 = 0x0F;
 static const uint8_t kSHT2xReadSerialNumber2 = 0xC9;
 
@@ -55,7 +55,7 @@ int32_t sht2x_measure_temperature(sht2x_t dev)
 {
 	uint8_t buf[3];
 
-	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2x_TRIG_T_MEASURE_HOLD, 1, buf, 3)) {
+	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xTrigTMeasureHold, 1, buf, 3)) {
 		return -1;
 	}
 
@@ -68,7 +68,7 @@ int32_t sht2x_measure_humidity(sht2x_t dev)
 {
 	uint8_t buf[3];
 
-	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2x_TRIG_RH_MEASURE_HOLD, 1, buf, 3)) {
+	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xTrigRHMeasureHold, 1, buf, 3)) {
 		return -1;
 	}
 
