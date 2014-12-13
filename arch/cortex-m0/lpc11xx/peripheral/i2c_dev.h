@@ -26,4 +26,4 @@
 
 #include_next<peripheral/i2c_dev.h>
 
-
+i2c_dev_t i2c_dev_create();

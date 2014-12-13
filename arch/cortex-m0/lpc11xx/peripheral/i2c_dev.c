@@ -165,7 +165,7 @@ static void i2c_dev_isr(void)
 	}
 }
 
-i2c_dev_t i2c_create_dev()
+i2c_dev_t i2c_dev_create()
 {
 	i2c_dev_t dev = malloc_raw(sizeof(struct i2c_dev));
 
