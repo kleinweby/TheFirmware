@@ -3,4 +3,5 @@ board 'humsen' do
   var :include_paths, ["-I#{path('.')}"]
 
   file '*.c'
+  var :gen_fs, path('sht2x_cmd.fs')
 end

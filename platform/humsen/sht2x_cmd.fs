@@ -1,0 +1,1 @@
+/bin/sht2x: func sht2x_cmd
