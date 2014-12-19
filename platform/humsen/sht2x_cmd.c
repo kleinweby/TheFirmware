@@ -56,7 +56,7 @@ int sht2x_cmd(int argc, const char** argv)
 	}
 	else if (strcmp(argv[0], "id") == 0) {
 		uint64_t id = sht2x_read_serial_number(sht21);
-		printf("Serial number: %0x%08x", (uint32_t)((id >> 32) & 0xFFFFFFFF), (uint32_t)(id & 0xFFFFFFFF));
+		printf("Serial number: %0x%08x\n", (uint32_t)((id >> 32) & 0xFFFFFFFF), (uint32_t)(id & 0xFFFFFFFF));
 	}
 	else {
 		sht2x_cmd_help();

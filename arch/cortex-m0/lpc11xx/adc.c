@@ -67,6 +67,10 @@ uint32_t adc_read(adc_t adc)
 	// Stop
 	LPC_ADC->CR &= 0xF8FFFFFF;
 
+	// R2=10k R1=150k -> scale is 1/16th
+	// Vref = 3.3V
+	// returns in milivolts
+	// TODO: this totally does not belong here
 	int human_val = (((val >> 6) & 0x3FF) * 16) * 3300;
 
 	return human_val / 1000;
