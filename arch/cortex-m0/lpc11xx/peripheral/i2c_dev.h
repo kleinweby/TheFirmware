@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2013, Christian Speich
+// Copyright (c) 2014, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -24,23 +24,6 @@
 
 #pragma once
 
-/// when 1 log calls will also print the file and line number that log call was
-/// made.
-///
-/// @note Enabling this can enlargen the binary quit a bit, as strings for all
-/// file names must be stored
-///
-#define LOG_SOURCE_LOCATION 0
+#include_next<peripheral/i2c_dev.h>
 
-/// Defines the default stack size of the main stack
-#define STACK_SIZE_MAIN 2048
 
-/// Defines the default stack size of the isr stack
-#define STACK_SIZE_ISR 2048
-
-#define STACK_SIZE_CONSOLE STACK_SIZE_MAIN
-
-// Enable the possibility to measure the stack utilisation
-#define STACK_UTILISATION 1
-
-#define STACK_CHECK_PROTECTOR 1

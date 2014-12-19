@@ -50,7 +50,7 @@ __attribute__( ( always_inline ) ) static inline uint32_t __get_PSP(void)
 void error()
 {
 	volatile uint32_t* stack = (uint32_t*)__get_PSP();
-	uint32_t eip = stack[5];
+	uint32_t eip = stack[-1];
 	#pragma unused(eip)
 	assert(false, "some error");
 }
@@ -60,7 +60,7 @@ void bootstrap()
 	arch_early_init();
 	test_do(TEST_AFTER_ARCH_EARLY_INIT);
 
-	printk_init(38400);
+	printk_init(57600);
 	irq_init();
 	irq_register(IRQ_HARDFAULT, error);
 
@@ -79,10 +79,12 @@ void bootstrap()
 	test_do(TEST_IN_MAIN_TASK);
 
 	staticfs_init();
-	vfs_dump(debug_serial);
+	// vfs_dump(debug_serial);
 
 	console_spawn(debug_serial);
 
-	while(1)
+	while (1) {
+		thread_block();
 		yield(); //__asm("WFI");
+	}
 }

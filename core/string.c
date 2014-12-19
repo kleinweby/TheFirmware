@@ -392,6 +392,11 @@ void* memmove(void* _dst, const void* _src, size_t n)
 	return dst;
 }
 
+void* __aeabi_memset(void* _b, size_t n, char c)
+{
+	return memset(_b, c, n);
+}
+
 void* memset(void* _b, char c, size_t n)
 {
 	char* b = _b;

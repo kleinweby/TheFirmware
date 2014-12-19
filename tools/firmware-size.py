@@ -20,6 +20,10 @@ class Size(object):
     elif filename.startswith('arch'):
       self.kind = 'arch'
       self.name = os.path.dirname(os.path.relpath(filename, 'arch'))
+    elif filename.endswith('.pb.c') or filename.startswith('vendor/nanopb') or filename.startswith('serial/pb'):
+      self.kind = 'protobuf'
+      self.category = 'protobuf'
+      self.name = filename
     elif self.category.endswith('_test'):
       self.kind = 'tests'
       self.category = self.category[:-len('_test')]
