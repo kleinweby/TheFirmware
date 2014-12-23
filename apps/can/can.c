@@ -24,6 +24,7 @@
 
 #include <console.h>
 #include <string.h>
+#include <scheduler.h>
 
 #include <can.h>
 
@@ -35,12 +36,18 @@ int can_cmd(int argc, const char** argv) {
 
 	if (strcmp(argv[1], "init") == 0) {
 		printf("Initialize can...");
-		if (can_init(500000)) {
+		if (can_init(125000)) {
 			printf("done.\r\n");
 		}
 		else {
 			printf("faild.\r\n");
 		}
+
+		return 0;
+	}
+	else if (strcmp(argv[1], "reset") == 0) {
+		printf("Resetting can...\r\n");
+		can_reset(125000);
 
 		return 0;
 	}
@@ -57,6 +64,12 @@ int can_cmd(int argc, const char** argv) {
 		printf("done.\r\n");
 
 		return 0;
+	}
+	else if (strcmp(argv[1], "load") == 0) {
+		while (1) {
+			can_send();
+			// delay(25);
+		}
 	}
 
 	return -1;

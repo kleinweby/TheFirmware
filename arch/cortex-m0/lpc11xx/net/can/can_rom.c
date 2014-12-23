@@ -184,11 +184,37 @@ struct can_speed_table_entry {
 	uint32_t btr;
 };
 
+// Calculated via http://www.bittiming.can-wiki.info/#C_CAN
+// BTR usually is correct, but DIV is always wrong so those
+// have been solved by try and error
 static const struct can_speed_table_entry can_speed_table[] = {
-	{.clock = 12000000, .can = 125000, .div = 0, .btr = 0x1c05},
+	{.clock = 12000000, .can = 50000, .div = 2/*15*/, .btr = 0x1c0e},
+	// Calculated using 6mhz and adjusted div by -1
+	{.clock = 12000000, .can = 125000, .div = 2, .btr = 0x1c02},
+
+	// Adjust div by -7
+	{.clock = 16000000, .can = 125000, .div = 8-7, .btr = 0x1c07},
 };
 
 bool can_init(can_speed_t speed)
+{
+	if (!irq_register(IRQ13, isr)) {
+		assert(false, "Could not register can irq");
+		return false;
+	}
+
+	can_reset(speed);
+
+	// printf("Test mode\r\n");
+	// LPC_CAN->CNTL |= (1<<7);
+	// LPC_CAN->TEST |= (1<<4);
+
+	irq_enable(IRQ13);
+
+	return true;
+}
+
+void can_reset(can_speed_t speed)
 {
 	printf("Clock %d", clock_get_main());
 
@@ -207,14 +233,9 @@ bool can_init(can_speed_t speed)
 	assert(entry, "Could not find a can speed entry for clock and speed requested");
 
 	uint32_t ClkInitTable[2] = {
-	  entry->div,
+	  entry->div - 1, // There is no divider of zero
 	  entry->btr
 	};
-
-	if (!irq_register(IRQ13, isr)) {
-		assert(false, "Could not register can irq");
-		return false;
-	}
 
 	struct _rom_t** rom = (struct _rom_t**)0x1fff1ff8;
 
@@ -222,13 +243,6 @@ bool can_init(can_speed_t speed)
 
 	can_rom_driver->init(ClkInitTable, 1);
 	can_rom_driver->config_calb(&can_rom_callbacks);
-
-	// LPC_CAN->CNTL |= (1<<7);
-	// LPC_CAN->TEST |= (1<<4);
-
-	irq_enable(IRQ13);
-
-	return true;
 }
 
 void can_bind(uint8_t addr)
@@ -236,22 +250,30 @@ void can_bind(uint8_t addr)
 	can.addr = addr;
 
 	can.bind.msgobj = 1;
-	can.bind.mode_id = 0x400;
-	can.bind.mask = 0x700;
+	can.bind.mode_id = 0x0 | 0x20000000UL;
+	can.bind.mask = 0x0;
 	can_rom_driver->config_rxmsgobj(&can.bind);	
 }
+
+static uint32_t i = 0;
 
 void can_send()
 {
 	can_rom_msg_t send;
 	send.msgobj  = 0;
-	send.mode_id = 0x400+0x20;
+	send.mode_id = 0x321412 | 0x20000000UL;//;0x400+0x20;
 	send.mask    = 0x0;
-	send.dlc     = 4;
+	send.dlc     = 8;
 	send.data[0] = 'T';	//0x54
 	send.data[1] = 'E';	//0x45
 	send.data[2] = 'S';	//0x53
 	send.data[3] = 'T';
+	uint8_t* n = (uint8_t*)&i;
+	send.data[4] = n[3];
+	send.data[5] = n[2];
+	send.data[6] = n[1];
+	send.data[7] = n[0];
+	i++;
 
 	can_rom_driver->can_transmit(&send);
 }

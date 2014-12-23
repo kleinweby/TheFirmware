@@ -30,6 +30,7 @@
 typedef uint32_t can_speed_t;
 
 bool can_init(can_speed_t speed);
+void can_reset(can_speed_t speed);
 
 void can_bind(uint8_t addr);
 
