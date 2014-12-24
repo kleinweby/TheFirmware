@@ -29,6 +29,8 @@
 #include <console.h>
 #include <clock.h>
 #include <scheduler.h>
+#include <semaphore.h>
+#include <string.h>
 
 #include "LPC11xx.h"
 #include "system_LPC11xx.h"
@@ -91,11 +93,19 @@ struct _can_rom_driver_t{
 
 typedef struct _can_rom_driver_t* can_rom_driver_t;
 
+struct _lpc11_can_receive_conf {
+	can_receive_callback_t callback;
+	void* context;
+};
 
 struct _can {
-	uint8_t addr;
-	can_rom_msg_t bind;
-	can_rom_msg_t send;
+	// LPC11 supports 32 message objects, msg object with id 0
+	// is reserved for sending.
+	struct _lpc11_can_receive_conf receive_conf[31];
+
+	struct semaphore send_lock;
+	struct semaphore send_done;
+	bool send_async;
 };
 
 static struct _can can;
@@ -110,20 +120,31 @@ static can_rom_driver_t can_rom_driver;
 
 static void can_rom_callback_rx(uint8_t msg_obj_num)
 {
-	printf("rx callback\r\n");
-
 	can_rom_msg_t msg;
 
 	msg.msgobj = msg_obj_num;
 	can_rom_driver->can_receive(&msg);
 
-	  char str[] = {msg.data[0], msg.data[1], msg.data[2], msg.data[3], msg.data[4], msg.data[5], msg.data[6],  msg.data[7], '\0'};
-	  printf("Got %s\r\n", str);
+	struct _lpc11_can_receive_conf* conf = &can.receive_conf[msg_obj_num - 1];
+
+	if (conf->callback) {
+		can_frame_t frame;
+
+		frame.id = msg.mode_id;
+		frame.data_length = msg.dlc;
+		memcpy(frame.data, msg.data, frame.data_length);
+		conf->callback(frame, conf->context);
+	}
 }
 
 static void can_rom_callback_tx(uint8_t msg_obj_num)
 {
-	printf("tx callback\r\n");
+	assert(msg_obj_num == 0, "Wrong tx callback?!");
+
+	semaphore_signal(&can.send_done);
+	if (can.send_async) {
+		semaphore_signal(&can.send_lock);
+	}
 }
 
 #define CAN_ERROR_NONE 0x00000000UL
@@ -196,26 +217,13 @@ static const struct can_speed_table_entry can_speed_table[] = {
 	{.clock = 16000000, .can = 125000, .div = 8-7, .btr = 0x1c07},
 };
 
-bool can_init(can_speed_t speed)
+status_t can_init(can_speed_t speed)
 {
 	if (!irq_register(IRQ13, isr)) {
 		assert(false, "Could not register can irq");
 		return false;
 	}
 
-	can_reset(speed);
-
-	// printf("Test mode\r\n");
-	// LPC_CAN->CNTL |= (1<<7);
-	// LPC_CAN->TEST |= (1<<4);
-
-	irq_enable(IRQ13);
-
-	return true;
-}
-
-void can_reset(can_speed_t speed)
-{
 	printf("Clock %d", clock_get_main());
 
 	const struct can_speed_table_entry* entry = NULL;
@@ -243,37 +251,90 @@ void can_reset(can_speed_t speed)
 
 	can_rom_driver->init(ClkInitTable, 1);
 	can_rom_driver->config_calb(&can_rom_callbacks);
+
+	// printf("Test mode\r\n");
+	// LPC_CAN->CNTL |= (1<<7);
+	// LPC_CAN->TEST |= (1<<4);
+
+	semaphore_init(&can.send_lock, 1);
+	semaphore_init(&can.send_done, 0);
+
+	irq_enable(IRQ13);
+
+	return STATUS_OK;
 }
 
-void can_bind(uint8_t addr)
+void can_reset(can_speed_t speed)
 {
-	can.addr = addr;
-
-	can.bind.msgobj = 1;
-	can.bind.mode_id = 0x0 | 0x20000000UL;
-	can.bind.mask = 0x0;
-	can_rom_driver->config_rxmsgobj(&can.bind);	
+	unimplemented();
 }
 
-static uint32_t i = 0;
-
-void can_send()
+status_t can_send(const can_frame_t frame, can_flags_t flags)
 {
+	semaphore_wait(&can.send_lock);
+
 	can_rom_msg_t send;
 	send.msgobj  = 0;
-	send.mode_id = 0x321412 | 0x20000000UL;//;0x400+0x20;
+	send.mode_id = frame.id;
 	send.mask    = 0x0;
-	send.dlc     = 8;
-	send.data[0] = 'T';	//0x54
-	send.data[1] = 'E';	//0x45
-	send.data[2] = 'S';	//0x53
-	send.data[3] = 'T';
-	uint8_t* n = (uint8_t*)&i;
-	send.data[4] = n[3];
-	send.data[5] = n[2];
-	send.data[6] = n[1];
-	send.data[7] = n[0];
-	i++;
+	send.dlc     = frame.data_length;
+	memcpy(&send.data, &frame.data, 8);
 
-	can_rom_driver->can_transmit(&send);
+	if (flags & CAN_FLAG_NOWAIT) {
+		can.send_async = true;
+		can_rom_driver->can_transmit(&send);
+
+		return STATUS_OK;
+	}
+	else {
+		can.send_async = false;
+		can_rom_driver->can_transmit(&send);
+		semaphore_wait(&can.send_done);
+		semaphore_signal(&can.send_lock);
+
+		return STATUS_OK;
+	}
+}
+
+status_t can_set_receive_callback(can_id_t id, can_id_t id_mask, can_receive_callback_t callback, void* context)
+{
+	int32_t idx = -1;
+
+	for (int i = 0; i < 31; ++i) {
+		if (can.receive_conf[i].callback == NULL) {
+			idx = i;
+			break;
+		}
+	}
+
+	if (idx < 0) {
+		return STATUS_ERR(0);
+	}
+
+	can.receive_conf[idx].callback = callback;
+	can.receive_conf[idx].context = context;
+
+	can_rom_msg_t recv;
+	recv.msgobj = idx + 1;
+	recv.mode_id = id;
+	recv.mask = id_mask;
+
+	can_rom_driver->config_rxmsgobj(&recv);	
+
+	return STATUS_OK;
+}
+
+status_t can_unset_receive_callback(can_id_t id, can_id_t id_mask, can_receive_callback_t callback, void* context)
+{
+	// TODO: this is not entierly correct
+	// and does not reset the hardware filter (seems like an impossible thing?)
+	for (int i = 0; i < 31; ++i) {
+		if (can.receive_conf[i].callback == callback && can.receive_conf[i].context == context) {
+			can.receive_conf[i].callback = NULL;
+			can.receive_conf[i].context = NULL;
+			return STATUS_OK;
+		}
+	}
+
+	return STATUS_ERR(0);
 }

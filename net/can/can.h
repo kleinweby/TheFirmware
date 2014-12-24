@@ -26,12 +26,30 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <timer.h>
+#include <runtime.h>
 
 typedef uint32_t can_speed_t;
+typedef uint32_t can_id_t;
 
-bool can_init(can_speed_t speed);
-void can_reset(can_speed_t speed);
+typedef struct can_frame {
+	can_id_t id;
+	uint8_t data_length;
+	uint8_t data[8];
+} can_frame_t;
 
-void can_bind(uint8_t addr);
+typedef ENUM(uint8_t, can_flags_t) {
+	CAN_FLAG_NOWAIT = (1 << 0), // Only valid for can_send
+};
 
-void can_send();
+status_t can_init(can_speed_t speed);
+void can_reset();
+
+void can_set_restart_ms(millitime_t time);
+
+status_t can_send(const can_frame_t frame, can_flags_t flags);
+// status_t can_receive(can_id_t id, can_id_t id_mask, can_frame_t* frame, can_flags_t flags);
+
+typedef void (*can_receive_callback_t)(const can_frame_t, void* context);
+status_t can_set_receive_callback(can_id_t id, can_id_t id_mask, can_receive_callback_t callback, void* context);
+status_t can_unset_receive_callback(can_id_t id, can_id_t id_mask, can_receive_callback_t callback, void* context);
