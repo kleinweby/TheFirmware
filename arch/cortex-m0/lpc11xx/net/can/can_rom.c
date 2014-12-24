@@ -118,6 +118,8 @@ struct _rom_t {
 
 static can_rom_driver_t can_rom_driver;
 
+#define LPC11_CAN_EXT_FLAG 0x20000000UL
+
 static void can_rom_callback_rx(uint8_t msg_obj_num)
 {
 	can_rom_msg_t msg;
@@ -132,6 +134,11 @@ static void can_rom_callback_rx(uint8_t msg_obj_num)
 
 		frame.id = msg.mode_id;
 		frame.data_length = msg.dlc;
+
+		if (msg.mode_id & LPC11_CAN_EXT_FLAG) {
+			frame.id &= ~LPC11_CAN_EXT_FLAG;
+			frame.flags = CAN_FRAME_FLAG_EXT;
+		}
 		memcpy(frame.data, msg.data, frame.data_length);
 		conf->callback(frame, conf->context);
 	}
@@ -221,7 +228,7 @@ status_t can_init(can_speed_t speed)
 {
 	if (!irq_register(IRQ13, isr)) {
 		assert(false, "Could not register can irq");
-		return false;
+		return STATUS_ERR(0);
 	}
 
 	printf("Clock %d", clock_get_main());
@@ -276,6 +283,10 @@ status_t can_send(const can_frame_t frame, can_flags_t flags)
 	can_rom_msg_t send;
 	send.msgobj  = 0;
 	send.mode_id = frame.id;
+
+	if (frame.flags & CAN_FRAME_FLAG_EXT)
+		send.mode_id |= LPC11_CAN_EXT_FLAG;
+
 	send.mask    = 0x0;
 	send.dlc     = frame.data_length;
 	memcpy(&send.data, &frame.data, 8);
@@ -296,7 +307,7 @@ status_t can_send(const can_frame_t frame, can_flags_t flags)
 	}
 }
 
-status_t can_set_receive_callback(can_id_t id, can_id_t id_mask, can_receive_callback_t callback, void* context)
+status_t can_set_receive_callback(can_id_t id, can_id_t id_mask, can_frame_flag_t flags, can_receive_callback_t callback, void* context)
 {
 	int32_t idx = -1;
 
@@ -319,12 +330,15 @@ status_t can_set_receive_callback(can_id_t id, can_id_t id_mask, can_receive_cal
 	recv.mode_id = id;
 	recv.mask = id_mask;
 
+	if (flags & CAN_FRAME_FLAG_EXT)
+		recv.mode_id |= LPC11_CAN_EXT_FLAG;
+
 	can_rom_driver->config_rxmsgobj(&recv);	
 
 	return STATUS_OK;
 }
 
-status_t can_unset_receive_callback(can_id_t id, can_id_t id_mask, can_receive_callback_t callback, void* context)
+status_t can_unset_receive_callback(can_id_t id, can_id_t id_mask, can_frame_flag_t flags, can_receive_callback_t callback, void* context)
 {
 	// TODO: this is not entierly correct
 	// and does not reset the hardware filter (seems like an impossible thing?)

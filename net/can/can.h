@@ -32,8 +32,14 @@
 typedef uint32_t can_speed_t;
 typedef uint32_t can_id_t;
 
+typedef ENUM(uint8_t, can_frame_flag_t) {
+	// Extended 29bit identifiers
+	CAN_FRAME_FLAG_EXT = (1 << 0),
+};
+
 typedef struct can_frame {
 	can_id_t id;
+	can_frame_flag_t flags;
 	uint8_t data_length;
 	uint8_t data[8];
 } can_frame_t;
@@ -51,5 +57,5 @@ status_t can_send(const can_frame_t frame, can_flags_t flags);
 // status_t can_receive(can_id_t id, can_id_t id_mask, can_frame_t* frame, can_flags_t flags);
 
 typedef void (*can_receive_callback_t)(const can_frame_t, void* context);
-status_t can_set_receive_callback(can_id_t id, can_id_t id_mask, can_receive_callback_t callback, void* context);
-status_t can_unset_receive_callback(can_id_t id, can_id_t id_mask, can_receive_callback_t callback, void* context);
+status_t can_set_receive_callback(can_id_t id, can_id_t id_mask, can_frame_flag_t flags, can_receive_callback_t callback, void* context);
+status_t can_unset_receive_callback(can_id_t id, can_id_t id_mask, can_frame_flag_t flags, can_receive_callback_t callback, void* context);

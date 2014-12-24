@@ -60,7 +60,7 @@ int can_cmd(int argc, const char** argv) {
 	// }
 	else if (strcmp(argv[1], "bind") == 0) {
 		printf("bind can...");
-		can_set_receive_callback(0x0, 0x0, &cb, NULL);
+		can_set_receive_callback(0x0, 0x0, CAN_FRAME_FLAG_EXT, &cb, NULL);
 		printf("done.\r\n");
 
 		return 0;
@@ -70,6 +70,7 @@ int can_cmd(int argc, const char** argv) {
 		// can_send();
 		can_frame_t frame;
 		frame.id = 0x200;
+		frame.flags = CAN_FRAME_FLAG_EXT;
 		if (argc == 3) {
 			frame.data_length = strlen(argv[2]);
 			if (frame.data_length > 8)
