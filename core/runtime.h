@@ -71,3 +71,9 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 #define STR(s) #s
 #define GEN_SECTION_NAME(ns, name) ".text.gen."#ns"."#name
 #define GEN_SECTION_ATTR(ns, name) __attribute__ ((section (GEN_SECTION_NAME(ns, name))))
+
+typedef uint32_t status_t;
+
+#define STATUS_OK 0
+#define STATUS_ERR(x) (((x) << 1) | 1)
+
