@@ -70,6 +70,7 @@ void semaphore_signal(semaphore_t semaphore)
   struct semaphore_waitee* waitee = container_of(list_first(&semaphore->queue), struct semaphore_waitee, queue_entry);
 
   if (waitee) {
+    list_delete(&semaphore->queue, list_first(&semaphore->queue));
     thread_wakeup(waitee->thread);
   }
 }
