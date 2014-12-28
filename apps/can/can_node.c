@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2013, Christian Speich
+// Copyright (c) 2014, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -22,43 +22,35 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
+#include <console.h>
+#include <can_node.h>
+#include <string.h>
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <timer.h>
-#include <runtime.h>
+int can_node_cmd(int argc, const char** argv)
+{
+	if (argc < 2) {
+		printf("To few arguments\r\n");
+		return -1;
+	}
 
-typedef uint32_t can_speed_t;
-typedef uint32_t can_id_t;
+	if (strcmp(argv[1], "init") == 0) {
+		printf("Initialize can node...");
+		if (can_node_init(0x278, 125000) == STATUS_OK) {
+			printf("done.\r\n");
+		}
+		else {
+			printf("faild.\r\n");
+		}
 
-typedef ENUM(uint8_t, can_frame_flag_t) {
-	// Extended 29bit identifiers
-	CAN_FRAME_FLAG_EXT = (1 << 0),
-};
+		return 0;
+	}
+	else if (strcmp(argv[1], "send") == 0) {
+		status_t err = can_node_send(20, 0x2D9, 5, (const uint8_t*)"Hallo");
 
-// TODO: maybe we should make the acutal structure
-// platform dependent to avoid exessive reformatting of the data
-// while it traverses the api bounds
-typedef struct can_frame {
-	can_id_t id;
-	can_frame_flag_t flags;
-	uint8_t data_length;
-	uint8_t data[8];
-} can_frame_t;
+		if (err != STATUS_OK) {
+			printf("failed.\r\n");
+		}
+	}
 
-typedef ENUM(uint8_t, can_flags_t) {
-	CAN_FLAG_NOWAIT = (1 << 0), // Only valid for can_send
-};
-
-status_t can_init(can_speed_t speed);
-void can_reset();
-
-void can_set_restart_ms(millitime_t time);
-
-status_t can_send(const can_frame_t frame, can_flags_t flags);
-// status_t can_receive(can_id_t id, can_id_t id_mask, can_frame_t* frame, can_flags_t flags);
-
-typedef void (*can_receive_callback_t)(const can_frame_t, void* context);
-status_t can_set_receive_callback(can_id_t id, can_id_t id_mask, can_frame_flag_t flags, can_receive_callback_t callback, void* context);
-status_t can_unset_receive_callback(can_id_t id, can_id_t id_mask, can_frame_flag_t flags, can_receive_callback_t callback, void* context);
+	return -1;
+}
