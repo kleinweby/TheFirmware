@@ -34,6 +34,8 @@ static const uint8_t kSHT2xReadSerialNumber2 = 0xC9;
 
 struct sht2x {
 	i2c_dev_t i2c;
+
+	uint32_t padding;
 };
 
 // No need for locking the device. We only do one transfer which in itself

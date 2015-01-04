@@ -25,19 +25,20 @@
 #include <sht2x.h>
 #include <string.h>
 #include <console.h>
+#include <scheduler.h>
 
 static void sht2x_cmd_help()
 {
-	printf("sht2x\n");
-	printf("  read - read temperature and humidity\n");
-	printf("  id   - read serial number\n");
+	printf("sht2x:\r\n");
+	printf("  read - read temperature and humidity\r\n");
+	printf("  id   - read serial number\r\n");
 }
 
 static sht2x_t sht21 = NULL;
 
 int sht2x_cmd(int argc, const char** argv)
 {
-	if (argc != 1) {
+	if (argc != 2) {
 		sht2x_cmd_help();
 		return -1;
 	}
@@ -47,16 +48,26 @@ int sht2x_cmd(int argc, const char** argv)
 		sht21 = sht2x_create(i2c);
 	}
 
-	if (strcmp(argv[0], "read") == 0) {
+	if (strcmp(argv[1], "read") == 0) {
 		printf("Temp: ");
 		int16_t t = sht2x_measure_temperature(sht21);
-		printf("%d.%03d ºC\nRH: ", t/1000, t % 1000);
+		printf("%d.%03d ºC\r\nRH: ", t/1000, t % 1000);
 		int16_t rh = sht2x_measure_humidity(sht21);
-		printf("%d.%03d %%RH\n", rh, rh/1000, rh % 1000);
+		printf("%d.%03d %%RH\r\n", rh/1000, rh % 1000);
 	}
-	else if (strcmp(argv[0], "id") == 0) {
+	else if (strcmp(argv[1], "read_loop") == 0) {
+		while (1) {
+			printf("Temp: ");
+			int16_t t = sht2x_measure_temperature(sht21);
+			printf("%d.%03d ºC RH: ", t/1000, t % 1000);
+			int16_t rh = sht2x_measure_humidity(sht21);
+			printf("%d.%03d %%RH\r\n", rh/1000, rh % 1000);
+			delay(5000);
+		}
+	}
+	else if (strcmp(argv[1], "id") == 0) {
 		uint64_t id = sht2x_read_serial_number(sht21);
-		printf("Serial number: %0x%08x\n", (uint32_t)((id >> 32) & 0xFFFFFFFF), (uint32_t)(id & 0xFFFFFFFF));
+		printf("Serial number: %0x%08x\r\n", (uint32_t)((id >> 32) & 0xFFFFFFFF), (uint32_t)(id & 0xFFFFFFFF));
 	}
 	else {
 		sht2x_cmd_help();
