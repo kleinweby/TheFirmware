@@ -29,8 +29,11 @@
 static const uint8_t kSHT2xAddress = 0x80;
 static const uint8_t kSHT2xTrigTMeasureHold = 0xE3;
 static const uint8_t kSHT2xTrigRHMeasureHold = 0xE5;
-static const uint8_t kSHT2xReadSerialNumber1 = 0x0F;
-static const uint8_t kSHT2xReadSerialNumber2 = 0xC9;
+static const uint8_t kSHT2xReadSerialNumber1[] = {0xFA, 0x0F};
+static const uint8_t kSHT2xReadSerialNumber2[] = {0xFC, 0xC9};
+static const uint8_t kSHT2xReadConfig = 0xE6;
+static const uint8_t kSHT2xWriteConfig = 0xE7;
+static const uint8_t kSHT2xSoftReset = 0xFE;
 
 struct sht2x {
 	i2c_dev_t i2c;
@@ -83,17 +86,41 @@ uint64_t sht2x_read_serial_number(sht2x_t dev)
 {
 	uint8_t buf1[8];
 
-	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xReadSerialNumber1, 1, buf1, 8)) {
+	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, kSHT2xReadSerialNumber1, 2, buf1, 8)) {
 		return -1;
 	}
 
 	uint8_t buf2[6];
 
-	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xReadSerialNumber2, 1, buf2, 6)) {
+	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, kSHT2xReadSerialNumber2, 2, buf2, 6)) {
 		return -1;
 	}
 
 	return (uint64_t)buf2[3] << 56 | (uint64_t)buf2[4] << 48 | (uint64_t)buf1[0] << 40 
 			| (uint64_t)buf1[2] << 32 | (uint64_t)buf1[4] << 24 | (uint64_t)buf1[6] << 16
 			| (uint64_t)buf2[0] << 8 | (uint64_t)buf2[1];
+}
+
+uint8_t sht2x_read_config(sht2x_t dev)
+{
+	uint8_t conf;
+
+	i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xReadConfig, 1, &conf, 1);
+
+	return conf;
+}
+
+void sht2x_write_config(sht2x_t dev, uint8_t conf)
+{
+	uint8_t buf[2] = {
+		kSHT2xWriteConfig,
+		conf,
+	};
+
+	i2c_dev_transfer(dev->i2c, kSHT2xAddress, buf, 2, NULL, 0);
+}
+
+void sht2x_soft_reset(sht2x_t dev)
+{
+	i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xSoftReset, 1, NULL, 0);
 }

@@ -50,24 +50,24 @@ int sht2x_cmd(int argc, const char** argv)
 
 	if (strcmp(argv[1], "read") == 0) {
 		printf("Temp: ");
-		int16_t t = sht2x_measure_temperature(sht21);
+		uint32_t t = sht2x_measure_temperature(sht21);
 		printf("%d.%03d ºC\r\nRH: ", t/1000, t % 1000);
-		int16_t rh = sht2x_measure_humidity(sht21);
+		uint32_t rh = sht2x_measure_humidity(sht21);
 		printf("%d.%03d %%RH\r\n", rh/1000, rh % 1000);
 	}
 	else if (strcmp(argv[1], "read_loop") == 0) {
 		while (1) {
 			printf("Temp: ");
-			int16_t t = sht2x_measure_temperature(sht21);
+			uint32_t t = sht2x_measure_temperature(sht21);
 			printf("%d.%03d ºC RH: ", t/1000, t % 1000);
-			int16_t rh = sht2x_measure_humidity(sht21);
+			uint32_t rh = sht2x_measure_humidity(sht21);
 			printf("%d.%03d %%RH\r\n", rh/1000, rh % 1000);
-			delay(5000);
+			delay(10000);
 		}
 	}
 	else if (strcmp(argv[1], "id") == 0) {
 		uint64_t id = sht2x_read_serial_number(sht21);
-		printf("Serial number: %0x%08x\r\n", (uint32_t)((id >> 32) & 0xFFFFFFFF), (uint32_t)(id & 0xFFFFFFFF));
+		printf("Serial number: %0x%08X\r\n", (uint32_t)((id >> 32) & 0xFFFFFFFF), (uint32_t)(id & 0xFFFFFFFF));
 	}
 	else {
 		sht2x_cmd_help();

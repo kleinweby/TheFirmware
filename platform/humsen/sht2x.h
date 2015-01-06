@@ -36,3 +36,7 @@ int32_t sht2x_measure_temperature(sht2x_t dev);
 int32_t sht2x_measure_humidity(sht2x_t dev);
 
 uint64_t sht2x_read_serial_number(sht2x_t dev);
+
+uint8_t sht2x_read_config(sht2x_t dev);
+void sht2x_write_config(sht2x_t dev, uint8_t conf);
+void sht2x_soft_reset(sht2x_t dev);
