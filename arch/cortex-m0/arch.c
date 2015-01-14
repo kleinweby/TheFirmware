@@ -186,7 +186,9 @@ static stack_t arch_dispatch_irq(stack_t stack)
   if (irq > 5)
     irq -= 2;
 
+  scheduler_enter_isr();
   do_irq(irq);
+  scheduler_leave_isr();
 
   return stack;
 }

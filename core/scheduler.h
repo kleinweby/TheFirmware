@@ -57,6 +57,24 @@ static inline void scheduler_unlock() {
 //
 void yield() ALIAS(arch_yield);
 
+extern uint8_t _in_isr_count;
+
+// Returns true when the current path is executed in an isr.
+//
+// This is used to determine if must use busy waiting, as we can't block the current
+// thread.
+//
+static inline bool scheduler_in_isr() {
+	return _in_isr_count > 0;
+}
+
+static inline void scheduler_enter_isr() {
+	_in_isr_count++;
+}
+
+static inline void scheduler_leave_isr() {
+	_in_isr_count--;
+}
 
 struct scheduler_thread_data {
   list_entry_t queue_entry;

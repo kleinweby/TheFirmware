@@ -32,6 +32,8 @@ static struct {
   list_t running_queue;
 } scheduler;
 
+uint8_t _in_isr_count = 0;
+
 void scheduler_init()
 {
   list_init(&scheduler.running_queue);
@@ -43,6 +45,7 @@ void scheduler_init()
 
 stack_t schedule(stack_t stack)
 {
+  scheduler_enter_isr();
   thread_set_stack(scheduler.current_thread, stack);
 
 #ifdef STACK_CHECK_PROTECTOR
@@ -59,7 +62,9 @@ stack_t schedule(stack_t stack)
   }
   scheduler_unlock();
 
-  return thread_get_stack(scheduler.current_thread);
+  stack = thread_get_stack(scheduler.current_thread);
+  scheduler_leave_isr();
+  return stack;
 }
 
 thread_t scheduler_current_thread()
