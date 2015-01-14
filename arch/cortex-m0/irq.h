@@ -46,8 +46,23 @@
 #define IRQ14 21
 #define IRQ15 22
 #define IRQ16 23
+#define IRQ17 24
+#define IRQ18 25
+#define IRQ19 26
+#define IRQ20 27
+#define IRQ21 28
+#define IRQ22 29
+#define IRQ23 30
+#define IRQ24 31
+#define IRQ25 32 
+#define IRQ26 33
+#define IRQ27 34
+#define IRQ28 35
+#define IRQ29 36
+#define IRQ30 37
+#define IRQ31 38
 
-#define NUMBER_OF_IRQS 24
+#define NUMBER_OF_IRQS 39
 
 #define IRQ_HANDLER_MISSING IRQ_HARDFAULT
 
