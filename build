@@ -16,6 +16,8 @@ end
 parse 'arch/build'
 parse 'core/build'
 parse 'platform/build'
+parse 'peripheral/build'
 parse 'tests/build'
 parse 'boards/build'
+parse 'net/build'
 parse 'apps/build'
