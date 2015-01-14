@@ -26,6 +26,7 @@
 #include <string.h>
 #include <console.h>
 #include <scheduler.h>
+#include "LPC11xx.h"
 
 static void sht2x_cmd_help()
 {
@@ -75,4 +76,40 @@ int sht2x_cmd(int argc, const char** argv)
 	}
 	
 	return 0;
+}
+
+int reset_cmd(int argc, const char** argv)
+{
+	if (argc != 2) {
+		return -1;
+	}
+
+	if (strcmp(argv[1], "reason") == 0) {
+		uint32_t val = LPC_SYSCON->SYSRESSTAT;
+
+		printf("Reset reason: ");
+		if (val & (1 << 0)) {
+			printf("POR ");
+		}
+		if (val & (1 << 1)) {
+			printf("EXT ");
+		}
+		if (val & (1 << 2)) {
+			printf("WDT ");
+		}
+		if (val & (1 << 3)) {
+			printf("BOD ");
+		}
+		if (val & (1 << 4)) {
+			printf("SYS ");
+		}
+		printf("\r\n");
+		return 0;
+	}
+	else if (strcmp(argv[1], "clear") == 0) {
+		LPC_SYSCON->SYSRESSTAT = LPC_SYSCON->SYSRESSTAT;
+		return 0;
+	}
+
+	return -1;
 }
