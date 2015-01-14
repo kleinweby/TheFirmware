@@ -25,6 +25,7 @@
 #pragma once
 
 #include <i2c_dev.h>
+#include <runtime.h>
 
 typedef struct mcp9800* mcp9800_t;
 
