@@ -104,6 +104,10 @@ void scheduler_thread_changed_state(thread_t thread, thread_state_t old_state, t
     list_append(&scheduler.running_queue, &thread->scheduler_data.queue_entry);
   }
 
+  // if we're currently idily always try to reschudle
+  if (scheduler.current_thread == scheduler.idle_thread)
+    yield();
+
   scheduler_unlock();
 }
 

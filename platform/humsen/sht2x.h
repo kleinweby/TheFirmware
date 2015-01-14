@@ -24,6 +24,19 @@
 
 #pragma once
 
-#include_next<peripheral/i2c_dev.h>
+#include <peripheral/i2c_dev.h>
 
-i2c_dev_t i2c_dev_create();
+typedef struct sht2x* sht2x_t;
+
+sht2x_t sht2x_create(i2c_dev_t bus);
+
+// in mili celsius
+int32_t sht2x_measure_temperature(sht2x_t dev);
+// in %RH/1000
+int32_t sht2x_measure_humidity(sht2x_t dev);
+
+uint64_t sht2x_read_serial_number(sht2x_t dev);
+
+uint8_t sht2x_read_config(sht2x_t dev);
+void sht2x_write_config(sht2x_t dev, uint8_t conf);
+void sht2x_soft_reset(sht2x_t dev);

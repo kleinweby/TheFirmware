@@ -165,7 +165,7 @@ static void i2c_dev_isr(void)
 	}
 }
 
-i2c_dev_t i2c_create_dev()
+i2c_dev_t i2c_dev_create()
 {
 	i2c_dev_t dev = malloc_raw(sizeof(struct i2c_dev));
 
@@ -220,5 +220,5 @@ bool i2c_dev_transfer(i2c_dev_t dev, i2c_addr_t addr, const uint8_t* writeBuffer
 	// Wait for transfer to complete
 	semaphore_wait(&dev->done);
 	semaphore_signal(&dev->lock);
-	return false;
+	return true;
 }

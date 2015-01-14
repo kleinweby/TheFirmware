@@ -260,6 +260,8 @@ rm -rf "$TOOLCHAIN_DIR"
 
 detect_host
 
+mkdir -p "$DOWNLOAD_CACHE"
+
 download_precompiled_toolchain
 download_gcc_base_toolchain
 
@@ -271,7 +273,6 @@ else
 
 	export PATH="$TOOLCHAIN_DIR/bin:$PATH"
 
-	mkdir -p "$DOWNLOAD_CACHE"
 
 	download_binutils
 	download_gdb
