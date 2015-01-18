@@ -67,22 +67,38 @@ void (* const g_pfnVectors[])(void) = {
   arch_handle_irq, // SysTick
 
   arch_handle_irq, // IRQ0
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
-  arch_handle_irq,
+  arch_handle_irq, // IRQ1
+  arch_handle_irq, // IRQ2
+  arch_handle_irq, // IRQ3
+  arch_handle_irq, // IRQ4
+  arch_handle_irq, // IRQ5
+  arch_handle_irq, // IRQ6
+  arch_handle_irq, // IRQ7
+  arch_handle_irq, // IRQ8
+  arch_handle_irq, // IRQ9
+  arch_handle_irq, // IRQ10
+  arch_handle_irq, // IRQ11
+  arch_handle_irq, // IRQ12
+  arch_handle_irq, // IRQ13
+  arch_handle_irq, // IRQ14
+  arch_handle_irq, // IRQ15
+  arch_handle_irq, // IRQ16
+  arch_handle_irq, // IRQ17
+  arch_handle_irq, // IRQ18
+
+  arch_handle_irq, // IRQ19
+  arch_handle_irq, // IRQ20
+  arch_handle_irq, // IRQ21
+  arch_handle_irq, // IRQ22
+  arch_handle_irq, // IRQ23
+  arch_handle_irq, // IRQ24
+  arch_handle_irq, // IRQ25
+  arch_handle_irq, // IRQ26
+  arch_handle_irq, // IRQ27
+  arch_handle_irq, // IRQ28
+  arch_handle_irq, // IRQ29
+  arch_handle_irq, // IRQ30
+  arch_handle_irq, // IRQ31
 };
 
 static __attribute__ ((section(".after_vectors")))
