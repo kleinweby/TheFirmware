@@ -57,11 +57,12 @@ void error()
 
 void bootstrap()
 {
+	scheduler_enter_isr();
 	arch_early_init();
 	test_do(TEST_AFTER_ARCH_EARLY_INIT);
 
-	printk_init(57600);
 	irq_init();
+	printk_init(57600);
 	irq_register(IRQ_HARDFAULT, error);
 
 	log(LOG_LEVEL_INFO, "Starting up TheFirmware...");
@@ -71,6 +72,7 @@ void bootstrap()
 
 	thread_init();
 	scheduler_init();
+	scheduler_leave_isr();
 
 	size_t free_mem = get_free_size();
 

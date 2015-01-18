@@ -30,6 +30,7 @@
 #include <semaphore.h>
 #include <scheduler.h>
 #include <irq.h>
+#include <log.h>
 
 #define IER_RBR         (0x01<<0)
 #define IER_THRE        (0x01<<1)
@@ -55,6 +56,7 @@ enum {
 };
 
 struct uart {
+  char read_buf;
   struct semaphore read_sem;
   struct semaphore write_sem;
 };
@@ -66,9 +68,11 @@ static void uart_isr()
   uint32_t status = LPC_UART->IIR;
 
   if ((status & IIR_RBR) == IIR_RBR) {
+    LPC_UART->IER &= ~IER_RBR;
+    uart.read_buf = LPC_UART->RBR;
     semaphore_signal(&uart.read_sem);
   }
-  else if ((status & IIR_THRE) == IIR_THRE) {
+  if ((status & IIR_THRE) == IIR_THRE) {
     semaphore_signal(&uart.write_sem);
   }
 }
@@ -120,7 +124,6 @@ void printk_init(uint32_t baud)
 
   semaphore_init(&uart.read_sem, 0);
   semaphore_init(&uart.write_sem, 0);
-  LPC_UART->IER = IER_RBR | IER_THRE;
 
   assert(irq_register(IRQ21, uart_isr), "Could not register uart irq");
   irq_enable(IRQ21);
@@ -137,8 +140,10 @@ static int write_op(file_t f, const void* buf, size_t nbytes)
   }
   else {
     for (size_t i = 0; i < nbytes; i++, buf++) {
+      LPC_UART->IER |= IER_THRE;
       semaphore_wait(&uart.write_sem);
       LPC_UART->THR = *(char*)buf;
+      LPC_UART->IER &= ~IER_THRE;
     }
   }
   return nbytes;
@@ -158,9 +163,10 @@ static int read_op(file_t f, void* buf, size_t nbytes)
   }
   else {
     for (n = 0; n < nbytes; n++, buf++) {
+      LPC_UART->IER |= IER_RBR;
       semaphore_wait(&uart.read_sem);
 
-      *(char *)buf = LPC_UART->RBR;
+      *(char *)buf = uart.read_buf;
     }
   }
 
