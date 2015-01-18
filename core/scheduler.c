@@ -45,6 +45,8 @@ void scheduler_init()
 
 stack_t schedule(stack_t stack)
 {
+  assert(stack != NULL, "Stack can not be NULL");
+
   scheduler_enter_isr();
   thread_set_stack(scheduler.current_thread, stack);
 
