@@ -284,7 +284,7 @@ int readline(file_t file, char* buffer, size_t len)
 			break;
 		}
 		// Backspace
-		else if (c == 0x7F) {
+		else if (c == 0x7F | c == 0x8) {
 			if (i > 0) {
 				i--;
 				char* str = "\033[1D\033[K";

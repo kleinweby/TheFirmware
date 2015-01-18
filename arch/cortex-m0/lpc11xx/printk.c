@@ -27,12 +27,19 @@
 #include "LPC11xx.h"
 #include "system_LPC11xx.h"
 #include <string.h>
+#include <semaphore.h>
+#include <scheduler.h>
+#include <irq.h>
+#include <log.h>
 
 #define IER_RBR         (0x01<<0)
 #define IER_THRE        (0x01<<1)
 #define IER_RLS         (0x01<<2)
 #define IER_ABEO        (0x01<<8)
 #define IER_ABTO        (0x01<<9)
+
+#define IIR_RBR         (0x4)
+#define IIR_THRE        (0x2)
 
 #define LSR_RDR         (0x01<<0)
 #define LSR_OE          (0x01<<1)
@@ -47,6 +54,28 @@ enum {
   kIIRReceiveLineStatus = 0x6,
   kIIRReceiveDataAvailable = 0x4
 };
+
+struct uart {
+  char read_buf;
+  struct semaphore read_sem;
+  struct semaphore write_sem;
+};
+
+static struct uart uart;
+
+static void uart_isr()
+{
+  uint32_t status = LPC_UART->IIR;
+
+  if ((status & IIR_RBR) == IIR_RBR) {
+    LPC_UART->IER &= ~IER_RBR;
+    uart.read_buf = LPC_UART->RBR;
+    semaphore_signal(&uart.read_sem);
+  }
+  if ((status & IIR_THRE) == IIR_THRE) {
+    semaphore_signal(&uart.write_sem);
+  }
+}
 
 void printk_init(uint32_t baud)
 {
@@ -92,14 +121,30 @@ void printk_init(uint32_t baud)
 
 //   // Enable interrupt
 //   NVIC_EnableIRQ(UART_IRQn);
+
+  semaphore_init(&uart.read_sem, 0);
+  semaphore_init(&uart.write_sem, 0);
+
+  assert(irq_register(IRQ21, uart_isr), "Could not register uart irq");
+  irq_enable(IRQ21);
 }
 
 static int write_op(file_t f, const void* buf, size_t nbytes)
 {
-  for (size_t i = 0; i < nbytes; i++, buf++) {
-    while ( !(LPC_UART->LSR & LSR_THRE) )
-      ;
-    LPC_UART->THR = *(char*)buf;
+  if (scheduler_in_isr()) {
+    for (size_t i = 0; i < nbytes; i++, buf++) {
+      while ( !(LPC_UART->LSR & LSR_THRE) )
+        ;
+      LPC_UART->THR = *(char*)buf;
+    }
+  }
+  else {
+    for (size_t i = 0; i < nbytes; i++, buf++) {
+      LPC_UART->IER |= IER_THRE;
+      semaphore_wait(&uart.write_sem);
+      LPC_UART->THR = *(char*)buf;
+      LPC_UART->IER &= ~IER_THRE;
+    }
   }
   return nbytes;
 }
@@ -108,11 +153,21 @@ static int read_op(file_t f, void* buf, size_t nbytes)
 {
   size_t n;
 
-  for (n = 0; n < nbytes; n++, buf++) {
-    while (!(LPC_UART->LSR & LSR_RDR))
-      ;
+  if (scheduler_in_isr()) {
+    for (n = 0; n < nbytes; n++, buf++) {
+      while (!(LPC_UART->LSR & LSR_RDR))
+        ;
 
-    *(char *)buf = LPC_UART->RBR;
+      *(char *)buf = LPC_UART->RBR;
+    }
+  }
+  else {
+    for (n = 0; n < nbytes; n++, buf++) {
+      LPC_UART->IER |= IER_RBR;
+      semaphore_wait(&uart.read_sem);
+
+      *(char *)buf = uart.read_buf;
+    }
   }
 
   return n;
