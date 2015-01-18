@@ -31,15 +31,17 @@
 static void sht2x_cmd_help()
 {
 	printf("sht2x:\r\n");
-	printf("  read - read temperature and humidity\r\n");
-	printf("  id   - read serial number\r\n");
+	printf("  read       - read temperature and humidity\r\n");
+	printf("  id         - read serial number\r\n");
+	printf("  config get -\r\n");
+	printf("  reset      -\r\n");
 }
 
 static sht2x_t sht21 = NULL;
 
 int sht2x_cmd(int argc, const char** argv)
 {
-	if (argc != 2) {
+	if (argc < 2) {
 		sht2x_cmd_help();
 		return -1;
 	}
@@ -50,25 +52,88 @@ int sht2x_cmd(int argc, const char** argv)
 	}
 
 	if (strcmp(argv[1], "read") == 0) {
-		printf("Temp: ");
-		uint32_t t = sht2x_measure_temperature(sht21);
-		printf("%d.%03d ºC\r\nRH: ", t/1000, t % 1000);
-		uint32_t rh = sht2x_measure_humidity(sht21);
-		printf("%d.%03d %%RH\r\n", rh/1000, rh % 1000);
-	}
-	else if (strcmp(argv[1], "read_loop") == 0) {
-		while (1) {
-			printf("Temp: ");
+		uint32_t repeatCount = 1;
+		millitime_t waitDuration = 0;
+
+		if (argc > 2) {
+			waitDuration = atoi(argv[2]) * 1000;
+
+			if (argc > 3) {
+				repeatCount = atoi(argv[3]);
+			}
+			else {
+				repeatCount = UINT32_MAX;
+			}
+		}
+
+		while(repeatCount > 0) {
 			uint32_t t = sht2x_measure_temperature(sht21);
-			printf("%d.%03d ºC RH: ", t/1000, t % 1000);
 			uint32_t rh = sht2x_measure_humidity(sht21);
-			printf("%d.%03d %%RH\r\n", rh/1000, rh % 1000);
-			delay(10000);
+			printf("Temp: %d.%03d ºC RH: %d.%03d %%RH\r\n", t/1000, t % 1000, rh/1000, rh % 1000);
+
+			if (waitDuration) {
+				delay(waitDuration);
+			}
+			repeatCount--;
 		}
 	}
 	else if (strcmp(argv[1], "id") == 0) {
 		uint64_t id = sht2x_read_serial_number(sht21);
 		printf("Serial number: %0x%08X\r\n", (uint32_t)((id >> 32) & 0xFFFFFFFF), (uint32_t)(id & 0xFFFFFFFF));
+	}
+	else if (strcmp(argv[1], "config") == 0) {
+		if (argc < 3) {
+			sht2x_cmd_help();
+			return -1;
+		}
+
+		if (strcmp(argv[2], "get") == 0) {
+			uint8_t conf = sht2x_read_config(sht21);
+
+			printf("Conf: %x\r\n", conf);
+			uint8_t resolution = ((conf >> 7) & 0x1) | (conf & 0x1);
+
+			switch (resolution) {
+				case 0x0:
+					printf("  Resolution: 12bit RH, 14bit T\r\n");
+					break;
+				case 0x1:
+					printf("  Resolution: 8bit RH, 12bit T\r\n");
+					break;
+				case 0x2:
+					printf("  Resolution: 10bit RH, 13bit T\r\n");
+					break;
+				case 0x3:
+					printf("  Resolution: 11bit RH, 11bit T\r\n");
+					break;
+			}
+
+			if ((conf >> 6) & 0x1) {
+				printf("  End of battery: < 2.25V\r\n");
+			}
+			else {
+				printf("  End of battery: > 2.25V\r\n");
+			}
+
+			if ((conf >> 2) & 0x1) {
+				printf("  Heater: ON\r\n");
+			}
+			else {
+				printf("  Heater: OFF\r\n");
+			}
+
+			if ((conf >> 1) & 0x1) {
+				printf("  OTP: OFF\r\n");
+			}
+			else {
+				printf("  OTP: ON\r\n");
+			}
+		}
+	}
+	else if (strcmp(argv[1], "reset") == 0) {
+		sht2x_soft_reset(sht21);
+		printf("Sensor has been reset.\r\n");
+		return 0;
 	}
 	else {
 		sht2x_cmd_help();

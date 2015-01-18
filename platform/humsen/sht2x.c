@@ -25,6 +25,7 @@
 #include <sht2x.h>
 
 #include <malloc.h>
+#include <log.h>
 
 static const uint8_t kSHT2xAddress = 0x80;
 static const uint8_t kSHT2xTrigTMeasureHold = 0xE3;
@@ -34,12 +35,31 @@ static const uint8_t kSHT2xReadSerialNumber2[] = {0xFC, 0xC9};
 static const uint8_t kSHT2xReadConfig = 0xE6;
 static const uint8_t kSHT2xWriteConfig = 0xE7;
 static const uint8_t kSHT2xSoftReset = 0xFE;
+static const uint16_t kSHT2xCRCPolynomial = 0x131;
 
 struct sht2x {
 	i2c_dev_t i2c;
 
 	uint32_t padding;
 };
+
+static bool check_crc(uint8_t* data, size_t length, uint8_t checksum)
+{
+	uint8_t crc = 0;
+
+	for (size_t n = 0; n < length; n++) {
+		crc ^= data[n];
+
+		for (uint8_t i = 8; i > 0; i--) {
+			if (crc & 0x80)
+				crc = (crc << 1) ^ kSHT2xCRCPolynomial;
+			else
+				crc <<= 1;
+		}
+	}
+
+	return crc == checksum;
+}
 
 // No need for locking the device. We only do one transfer which in itself
 // is already atomic, so we don't need to ensure that ourself
@@ -64,7 +84,11 @@ int32_t sht2x_measure_temperature(sht2x_t dev)
 		return -1;
 	}
 
-	int16_t raw = (buf[0] << 8) | buf[1];
+	uint16_t raw = (buf[0] << 8) | buf[1];
+
+	raw &= ~0x3;
+
+	log(LOG_LEVEL_DEBUG, "[SHT2x] t raw=%x (%02X%02X), crc=%x (%s)", raw, buf[0], buf[1], buf[2], check_crc(buf, 2, buf[2]) ? "good" : "fail");
 
 	return ((21965 * raw) >> 13) - 46850;
 }
@@ -77,7 +101,11 @@ int32_t sht2x_measure_humidity(sht2x_t dev)
 		return -1;
 	}
 
-	int16_t raw = (buf[0] << 8) | buf[1];
+	uint16_t raw = (buf[0] << 8) | buf[1];
+
+	raw &= ~0x3;
+
+	log(LOG_LEVEL_DEBUG, "[SHT2x] rh raw=%x (%02X%02X), crc=%x (%s)", raw, buf[0], buf[1], buf[2], check_crc(buf, 2, buf[2]) ? "good" : "fail");
 
 	return ((15625 * raw) >> 13) - 6000;
 }
