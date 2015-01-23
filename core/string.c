@@ -455,11 +455,54 @@ char* strsep_ext(char** stringp, const char* delim) {
 
 uint32_t atoi(const char* c)
 {
-	uint32_t i = 0;
+	return strtol(c, NULL, 10);
+}
 
-	for (; *c != '\0' && isdigit(*c); c++) {
-		i = 10 * i + ((*c)-'0');
+uint32_t strtol(const char* c, char **endptr, uint8_t base)
+{
+	// Autodetect base
+	if (base == 0) {
+		if (*c == '0' && (*(c+1) == 'x' || *(c+1) == 'X')) {
+			base = 16;
+			c += 2;
+		}
+		else if (*c == '0' && (*(c+1) == 'b' || *(c+1) == 'B')) {
+			base = 2;
+			c += 2;
+		}
+		else {
+			base = 10;
+		}
 	}
 
-	return i;
+	uint32_t n = 0;
+	for (; *c != '\0'; c++) {
+		uint8_t i;
+
+		if ('0' <= *c && *c <= '9') {
+			i = *c - '0'; 
+		}
+		else if ('A' <= *c && *c <= 'F') {
+			i = *c - 'A' + 10;
+		}
+		else if ('a' <= *c && *c <= 'f') {
+			i = *c - 'a' + 10;
+		}
+		else {
+			break;
+		}
+
+		if (i > base) {
+			break;
+		}
+
+		n *= base;
+		n += i;
+	}
+
+	if (endptr) {
+		*endptr = (char*)c;
+	}
+
+	return n;
 }

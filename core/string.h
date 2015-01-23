@@ -44,3 +44,4 @@ void* memmove(void* dst, const void* src, size_t len);
 void* memset(void* b, char c, size_t len);
 const char* strchr(const char *s, int c);
 uint32_t atoi(const char* c);
+uint32_t strtol(const char* c, char **endptr, uint8_t base);
