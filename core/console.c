@@ -27,7 +27,7 @@
 #include <runtime.h>
 #include <malloc.h>
 #include <thread.h>
-#include <config.h>
+#include <firmware_config.h>
 #include <string.h>
 #include <vfs.h>
 

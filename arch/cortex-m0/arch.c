@@ -29,7 +29,7 @@
 #include <malloc.h>
 #include <thread.h>
 #include <scheduler.h>
-#include <config.h>
+#include <firmware_config.h>
 
 #include <stdint.h>
 
