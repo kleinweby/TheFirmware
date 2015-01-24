@@ -23,7 +23,7 @@
 //
 
 #include <console.h>
-#include <can_node.h>
+#include <can_node/can_node.h>
 #include <string.h>
 
 int can_node_cmd(int argc, const char** argv)

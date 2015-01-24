@@ -22,15 +22,69 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
+#include "can_node.h"
 
-#include <can.h>
+#include <string.h>
 
-typedef uint16_t can_node_id_t;
-typedef uint16_t can_node_topic_t;
+bool can_node_valid_id(can_node_id_t id)
+{
+	return (id & 0xFC00) == 0;	
+}
 
-static const can_node_id_t CAN_NODE_BROADCAST_ID = 0x0;
+#define assert_can_node_id(id) assert(can_node_valid_id(id), "Can node id can only be 10 bit.")
 
-status_t can_node_init(can_node_id_t node_id, can_speed_t speed);
+struct _can_node {
+	can_node_id_t node_id;
 
-status_t can_node_send(can_node_topic_t topic, can_node_id_t to, uint8_t len, const uint8_t* data);
+};
+
+static struct _can_node can_node;
+
+static can_id_t can_id_build(can_node_id_t from, can_node_id_t to, can_node_topic_t topic)
+{
+	return ((topic & 0x1FF) << 20) | ((from & 0x3FF) << 10) | (to & 0x3FF);
+}
+
+static can_node_id_t can_id_extract_to(can_id_t id)
+{
+	return id & 0x3FF;
+}
+
+static can_node_id_t can_id_extract_from(can_id_t id)
+{
+	return (id >> 10) & 0x3FF;
+}
+
+static can_node_topic_t can_id_extract_topic(can_id_t id)
+{
+	return (id >> 20) & 0x1FF;
+}
+
+status_t can_node_init(can_node_id_t node_id, can_speed_t speed)
+{
+	assert_can_node_id(node_id);
+
+	status_t err = can_init(speed);
+
+	if (err != STATUS_OK)
+		return err;
+
+	can_node.node_id = node_id;
+
+	return STATUS_OK;
+}
+
+status_t can_node_send(can_node_topic_t topic, can_node_id_t to, uint8_t len, const uint8_t* data)
+{
+	assert_can_node_id(to);
+	assert(len <= 8, "Can node send length must be less than 9");
+
+	can_frame_t frame;
+	frame.id = can_id_build(can_node.node_id, to, topic);
+	frame.flags = CAN_FRAME_FLAG_EXT;
+
+	frame.data_length = len;
+	memcpy(frame.data, data, len);
+
+	return can_send(frame, 0);
+}
