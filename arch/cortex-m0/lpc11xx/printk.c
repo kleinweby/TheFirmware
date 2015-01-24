@@ -58,7 +58,9 @@ enum {
 struct uart {
   char read_buf;
   struct semaphore read_sem;
+  struct semaphore read_lock;
   struct semaphore write_sem;
+  struct semaphore write_lock;
 };
 
 static struct uart uart;
@@ -124,6 +126,8 @@ void printk_init(uint32_t baud)
 
   semaphore_init(&uart.read_sem, 0);
   semaphore_init(&uart.write_sem, 0);
+  semaphore_init(&uart.read_lock, 1);
+  semaphore_init(&uart.write_lock, 1);
 
   assert(irq_register(IRQ21, uart_isr), "Could not register uart irq");
   irq_enable(IRQ21);
@@ -139,12 +143,14 @@ static int write_op(file_t f, const void* buf, size_t nbytes)
     }
   }
   else {
+    semaphore_wait(&uart.write_lock);
     for (size_t i = 0; i < nbytes; i++, buf++) {
       LPC_UART->IER |= IER_THRE;
       semaphore_wait(&uart.write_sem);
       LPC_UART->THR = *(char*)buf;
       LPC_UART->IER &= ~IER_THRE;
     }
+    semaphore_signal(&uart.write_lock);
   }
   return nbytes;
 }
@@ -162,12 +168,14 @@ static int read_op(file_t f, void* buf, size_t nbytes)
     }
   }
   else {
+    semaphore_wait(&uart.read_lock);
     for (n = 0; n < nbytes; n++, buf++) {
       LPC_UART->IER |= IER_RBR;
       semaphore_wait(&uart.read_sem);
 
       *(char *)buf = uart.read_buf;
     }
+    semaphore_signal(&uart.read_lock);
   }
 
   return n;
