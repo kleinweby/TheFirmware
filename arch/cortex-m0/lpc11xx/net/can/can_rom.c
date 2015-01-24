@@ -231,8 +231,6 @@ status_t can_init(can_speed_t speed)
 		return STATUS_ERR(0);
 	}
 
-	printf("Clock %d", clock_get_main());
-
 	const struct can_speed_table_entry* entry = NULL;
 
 	herz_t clock_speed = clock_get_main();
