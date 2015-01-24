@@ -37,6 +37,7 @@ struct i2c_dev {
 
 	// Current transfer
 	struct semaphore done;
+	status_t status;
 	i2c_addr_t addr;
 	const uint8_t* writeBuffer;
 	size_t writeBufferIndex;
@@ -108,6 +109,7 @@ static void i2c_dev_isr(void)
 		// Everythin was sent, nothing to read, so stop
 		else {
 			LPC_I2C->CONSET = kCONSET_STO;
+			global_dev->status = STATUS_OK;
 			semaphore_signal(&global_dev->done);
 		}
 		LPC_I2C->CONCLR = kCONCLR_SIC;
@@ -142,6 +144,7 @@ static void i2c_dev_isr(void)
 	
 	case 0x58:
 		global_dev->readBuffer[global_dev->readBufferIndex++] = LPC_I2C->DAT;
+		global_dev->status = STATUS_OK;
 		semaphore_signal(&global_dev->done);
 		LPC_I2C->CONSET = kCONSET_STO;
 		LPC_I2C->CONCLR = kCONCLR_SIC;
@@ -154,6 +157,7 @@ static void i2c_dev_isr(void)
 		// Set stop flag
 		LPC_I2C->CONSET = kCONSET_STO;
 		LPC_I2C->CONCLR = kCONCLR_SIC;
+		global_dev->status = STATUS_ERR(0);
 		semaphore_signal(&global_dev->done);
 		log(LOG_LEVEL_INFO, "Stop %x %x", global_dev->writeBuffer[0], global_dev->writeBuffer[1]);
 		break;
@@ -161,6 +165,7 @@ static void i2c_dev_isr(void)
 		log(LOG_LEVEL_ERROR, "Unhandled I2C state: %x %u", global_dev->writeBuffer[0], state);
 		LPC_I2C->CONSET = kCONSET_STO;
 		LPC_I2C->CONCLR = kCONCLR_SIC;
+		global_dev->status = STATUS_ERR(0);
 		semaphore_signal(&global_dev->done);
 	}
 }
@@ -204,7 +209,7 @@ i2c_dev_t i2c_dev_create()
 	return dev;
 }
 
-bool i2c_dev_transfer(i2c_dev_t dev, i2c_addr_t addr, const uint8_t* writeBuffer, size_t writeBufferLength, uint8_t* readBuffer, size_t readBufferLength)
+status_t i2c_dev_transfer(i2c_dev_t dev, i2c_addr_t addr, const uint8_t* writeBuffer, size_t writeBufferLength, uint8_t* readBuffer, size_t readBufferLength)
 {
 	semaphore_wait(&dev->lock);
 	// Configure transfer
@@ -219,6 +224,7 @@ bool i2c_dev_transfer(i2c_dev_t dev, i2c_addr_t addr, const uint8_t* writeBuffer
 
 	// Wait for transfer to complete
 	semaphore_wait(&dev->done);
+	status_t status = dev->status;
 	semaphore_signal(&dev->lock);
-	return true;
+	return status;
 }

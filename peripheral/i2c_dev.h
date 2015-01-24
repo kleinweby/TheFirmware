@@ -27,8 +27,9 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <runtime.h>
 
 typedef struct i2c_dev* i2c_dev_t;
 typedef uint8_t i2c_addr_t;
 
-bool i2c_dev_transfer(i2c_dev_t dev, i2c_addr_t addr, const uint8_t* writeBuffer, size_t writeBufferLength, uint8_t* readBuffer, size_t readBufferLength);
+status_t i2c_dev_transfer(i2c_dev_t dev, i2c_addr_t addr, const uint8_t* writeBuffer, size_t writeBufferLength, uint8_t* readBuffer, size_t readBufferLength);
