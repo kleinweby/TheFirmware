@@ -29,7 +29,7 @@
 
 #include <stdint.h>
 #include <stdarg.h>
-#include <config.h>
+#include <firmware_config.h>
 
 typedef enum {
 	THREAD_STATE_UNKOWN  = 0,

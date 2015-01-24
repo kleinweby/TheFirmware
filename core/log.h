@@ -25,7 +25,7 @@
 #pragma once
 
 #include <stdarg.h>
-#include <config.h>
+#include <firmware_config.h>
 
 typedef enum {
 	LOG_LEVEL_DEBUG = 0,
