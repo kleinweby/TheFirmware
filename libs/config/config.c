@@ -26,7 +26,7 @@
 #include <log.h>
 #include <string.h>
 #include <scheduler.h>
-#include <crc/crc8_maxim.c>
+#include <crc/crc8_maxim.h>
 
 eeprom_t config_eeprom;
 struct config_t config;
