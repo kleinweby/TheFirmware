@@ -26,6 +26,7 @@
 
 #include <malloc.h>
 #include <log.h>
+#include <crc/crc8_maxim.h>
 
 static const uint8_t kSHT2xAddress = 0x80;
 static const uint8_t kSHT2xTrigTMeasureHold = 0xE3;
@@ -35,7 +36,6 @@ static const uint8_t kSHT2xReadSerialNumber2[] = {0xFC, 0xC9};
 static const uint8_t kSHT2xReadConfig = 0xE6;
 static const uint8_t kSHT2xWriteConfig = 0xE7;
 static const uint8_t kSHT2xSoftReset = 0xFE;
-static const uint16_t kSHT2xCRCPolynomial = 0x131;
 
 struct sht2x {
 	i2c_dev_t i2c;
@@ -45,18 +45,7 @@ struct sht2x {
 
 static bool check_crc(uint8_t* data, size_t length, uint8_t checksum)
 {
-	uint8_t crc = 0;
-
-	for (size_t n = 0; n < length; n++) {
-		crc ^= data[n];
-
-		for (uint8_t i = 8; i > 0; i--) {
-			if (crc & 0x80)
-				crc = (crc << 1) ^ kSHT2xCRCPolynomial;
-			else
-				crc <<= 1;
-		}
-	}
+	uint8_t crc = crc8_maxim(data, length);
 
 	return crc == checksum;
 }
@@ -80,7 +69,7 @@ int32_t sht2x_measure_temperature(sht2x_t dev)
 {
 	uint8_t buf[3];
 
-	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xTrigTMeasureHold, 1, buf, 3)) {
+	if (i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xTrigTMeasureHold, 1, buf, 3) != STATUS_OK) {
 		return -1;
 	}
 
@@ -97,7 +86,7 @@ int32_t sht2x_measure_humidity(sht2x_t dev)
 {
 	uint8_t buf[3];
 
-	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xTrigRHMeasureHold, 1, buf, 3)) {
+	if (i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xTrigRHMeasureHold, 1, buf, 3) != STATUS_OK) {
 		return -1;
 	}
 
@@ -114,13 +103,13 @@ uint64_t sht2x_read_serial_number(sht2x_t dev)
 {
 	uint8_t buf1[8];
 
-	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, kSHT2xReadSerialNumber1, 2, buf1, 8)) {
+	if (i2c_dev_transfer(dev->i2c, kSHT2xAddress, kSHT2xReadSerialNumber1, 2, buf1, 8) != STATUS_OK) {
 		return -1;
 	}
 
 	uint8_t buf2[6];
 
-	if (!i2c_dev_transfer(dev->i2c, kSHT2xAddress, kSHT2xReadSerialNumber2, 2, buf2, 6)) {
+	if (i2c_dev_transfer(dev->i2c, kSHT2xAddress, kSHT2xReadSerialNumber2, 2, buf2, 6) != STATUS_OK) {
 		return -1;
 	}
 
