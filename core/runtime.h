@@ -76,4 +76,5 @@ typedef uint32_t status_t;
 
 #define STATUS_OK 0
 #define STATUS_ERR(x) (((x) << 1) | 1)
+#define STATUS_NOT_SUPPORTED STATUS_ERR(1)
 
