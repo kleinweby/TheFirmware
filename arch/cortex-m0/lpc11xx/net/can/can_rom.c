@@ -276,6 +276,9 @@ void can_reset(can_speed_t speed)
 
 status_t can_send(const can_frame_t frame, can_flags_t flags)
 {
+	if (scheduler_in_isr())
+		flags |= CAN_FLAG_NOWAIT;
+
 	semaphore_wait(&can.send_lock);
 
 	can_rom_msg_t send;
