@@ -23,9 +23,57 @@
 //
 
 #include<mcp9800.h>
+#include<malloc.h>
 
-typedef struct mcp9800* mcp9800_t;
+struct mcp9800 {
+	i2c_dev_t i2c;
 
-mcp9800_t mcp9800_create(i2c_dev_t i2c);
+	uint8_t config;
+};
+
+static const uint8_t kMCP9800Address = 0x90;
+static const uint8_t kMCP9800ReadConfigCMD = 0x1;
+static const uint8_t kMCP9800WriteConfigCMD = 0x1;
+
+mcp9800_t mcp9800_create(i2c_dev_t i2c)
+{
+	mcp9800_t dev = malloc_raw(sizeof(struct mcp9800));
+
+	if (!dev) {
+		return NULL;
+	}
+
+	dev->i2c = i2c;
+	dev->config = 0;
+
+	return dev;
+}
+
+status_t mcp9800_read_config(mcp9800_t dev)
+{
+	uint8_t config;
+
+	if (i2c_dev_transfer(dev->i2c, kMCP9800Address, &kMCP9800ReadConfigCMD, 1, &config, 1) != STATUS_OK) {
+		return STATUS_ERR(0);
+	}
+
+	dev->config = config;
+
+	return STATUS_OK;
+}
+
+status_t mcp9800_write_config(mcp9800_t dev)
+{
+	uint8_t buf[2] = {
+		kMCP9800WriteConfigCMD,
+		dev->config,
+	};
+
+	if (i2c_dev_transfer(dev->i2c, kMCP9800Address, buf, 2, NULL, 0) != STATUS_OK) {
+		return STATUS_ERR(0);
+	}
+
+	return STATUS_OK;
+}
 
 uint16_t mcp9800_read_temperature(mcp9800_t dev);
