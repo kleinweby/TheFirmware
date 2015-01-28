@@ -39,92 +39,27 @@ typedef struct {
 } list_t;
 
 
-static inline bool list_is_empty(const list_t* list)
-{
-	return list->head == NULL;
-}
+bool list_is_empty(const list_t* list);
 
-static inline list_entry_t* list_next(const list_t* list, list_entry_t* entry)
-{
-	list_entry_t* next = entry->next;
+list_entry_t* list_next(const list_t* list, list_entry_t* entry);
 
-	if (next == list->head)
-		return NULL;
+void list_insert_before(list_entry_t* entry, list_entry_t* new);
 
-	return next;
-}
+void list_delete(list_t* list, list_entry_t* entry);
 
-static inline void list_insert_before(list_entry_t* entry, list_entry_t* new)
-{
-	new->prev = entry->prev;
-	entry->prev->next = new;
-	entry->prev = new;
-	new->next = entry;
-}
+void list_append(list_t* list, list_entry_t* entry);
 
-static inline void list_delete(list_t* list, list_entry_t* entry)
-{
-	if (entry->next == NULL || entry->prev == NULL)
-		return;
+void list_lrotate(list_t* list);
 
-	entry->prev->next = entry->next;
-	entry->next->prev = entry->prev;
+void list_rrotate(list_t* list);
 
-	if (list->head == entry) {
-		list->head = list_next(list, entry);
-	}
+list_entry_t* list_first(list_t* list);
 
-	entry->next = entry->prev = NULL;
-}
+list_entry_t* list_last(list_t* list);
 
-static inline void list_append(list_t* list, list_entry_t* entry)
-{
-	list_delete(list, entry);
+void list_init(list_t* list);
 
-	if (list->head) {
-		list_insert_before(list->head, entry);
-	}
-	else {
-		entry->next = entry->prev = entry;
-		list->head = entry;
-	}
-}
-
-static inline void list_lrotate(list_t* list)
-{
-	if (!list_is_empty(list))
-		list->head = list->head->next;
-}
-
-static inline void list_rrotate(list_t* list)
-{
-	if (!list_is_empty(list))
-		list->head = list->head->prev;
-}
-
-static inline list_entry_t* list_first(list_t* list)
-{
-	return list->head;
-}
-
-static inline list_entry_t* list_last(list_t* list)
-{
-	if (list_is_empty(list))
-		return NULL;
-
-	return list->head->prev;
-}
-
-static inline void list_init(list_t* list)
-{
-	list->head = NULL;
-}
-
-static inline void list_entry_init(list_entry_t* entry)
-{
-	entry->next = NULL;
-	entry->prev = NULL;
-}
+void list_entry_init(list_entry_t* entry);
 
 #define LIST_ENTRY_INIT {.next = NULL, .prev = NULL}
 

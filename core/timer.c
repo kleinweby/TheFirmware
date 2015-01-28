@@ -34,6 +34,33 @@
 
 static void timer_managedhandler(timer_t timer, millitime_t elapsed_time);
 
+void timer_set(timer_t timer, millitime_t time)
+{
+  assert(time > 0, "Setting a timers time to a negative ammount makes no sense");
+
+  timer->ops->set(timer, time);
+}
+
+millitime_t timer_get(timer_t timer)
+{
+  return timer->ops->get(timer);
+}
+
+millitime_t timer_remaining(timer_t timer)
+{
+  return timer->ops->remaining(timer);
+}
+
+void timer_enable(timer_t timer)
+{
+  timer->ops->enable(timer);
+}
+
+void timer_disable(timer_t timer)
+{
+  timer->ops->disable(timer);
+}
+
 void timer_set_handler(timer_t timer, timer_handler_t handler)
 {
   assert(timer->handler != timer_managedhandler, "Attempt to change timer handler while it is beeing managed");
