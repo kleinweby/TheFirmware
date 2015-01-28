@@ -25,7 +25,6 @@
 #include <config/config.h>
 #include <console.h>
 #include <string.h>
-#include <can_node.h>
 
 static void config_cmd_help()
 {
@@ -40,8 +39,9 @@ static void config_cmd_help()
 static void config_cmd_can_help()
 {
 	printf("config can:\r\n");
-	printf("  node_id - CAN node id\r\n");
-	printf("  speed   - interface speed\r\n");
+	printf("  node_id         - CAN node id\r\n");
+	printf("  speed           - interface speed\r\n");
+	printf("  sensor_interval - Interval for sensor reports (seconds)\r\n");
 }
 
 int config_cmd(int argc, const char** argv)
@@ -66,6 +66,7 @@ int config_cmd(int argc, const char** argv)
 		if (argc < 3) {
 			printf("can node_id = %x\r\n", config.can.node_id);
 			printf("can speed = %d\r\n", config.can.speed);
+			printf("can sensor_interval = %ds\r\n", config.can.sensor_interval/1000);
 			return 0;
 		}
 
@@ -90,6 +91,17 @@ int config_cmd(int argc, const char** argv)
 			}
 
 			printf("can speed = %d\r\n", config.can.speed);
+		}
+		else if (strcmp(argv[2], "sensor_interval") == 0) {
+			if (argc == 4) {
+				config.can.sensor_interval = strtol(argv[3], NULL, 0) * 1000;
+			}
+			else if (argc != 3) {
+				config_cmd_can_help();
+				return -1;
+			}
+
+			printf("can sensor_interval = %ds\r\n", config.can.sensor_interval/1000);
 		}
 		else {
 			config_cmd_can_help();

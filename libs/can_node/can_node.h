@@ -35,3 +35,5 @@ status_t can_node_init(can_node_id_t node_id, can_speed_t speed);
 bool can_node_valid_id(can_node_id_t id);
 
 status_t can_node_send(can_node_topic_t topic, can_node_id_t to, uint8_t len, const uint8_t* data);
+
+void can_node_loop();

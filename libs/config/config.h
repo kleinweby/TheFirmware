@@ -24,8 +24,9 @@
 
 #pragma once
 
-#include <can_node.h>
+#include <can_node/can_node.h>
 #include <eeprom.h>
+#include <timer.h>
 
 struct config_t {
 	uint32_t sn;
@@ -33,6 +34,7 @@ struct config_t {
 	struct {
 		can_node_id_t node_id;
 		can_speed_t speed;
+		millitime_t sensor_interval;
 	} can;
 };
 

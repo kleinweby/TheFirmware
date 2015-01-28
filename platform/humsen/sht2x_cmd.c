@@ -67,8 +67,19 @@ int sht2x_cmd(int argc, const char** argv)
 		}
 
 		while(repeatCount > 0) {
-			uint32_t t = sht2x_measure_temperature(sht21);
-			uint32_t rh = sht2x_measure_humidity(sht21);
+			int32_t t;
+
+			if (sensor_get_temp((sensor_t)sht21, &t) != STATUS_OK) {
+				printf("Reading t faild\r\n");
+				continue;
+			}
+
+			int32_t rh;
+
+			if (sensor_get_humidity((sensor_t)sht21, &rh) != STATUS_OK) {
+				printf("Reading rh faild\r\n");
+				continue;
+			}
 			printf("Temp: %d.%03d ºC RH: %d.%03d %%RH\r\n", t/1000, t % 1000, rh/1000, rh % 1000);
 
 			if (waitDuration) {

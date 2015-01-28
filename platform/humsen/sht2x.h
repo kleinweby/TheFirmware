@@ -25,15 +25,12 @@
 #pragma once
 
 #include <peripheral/i2c_dev.h>
+#include <sensor.h>
 
+// Is fully compatible to sensor_t
 typedef struct sht2x* sht2x_t;
 
 sht2x_t sht2x_create(i2c_dev_t bus);
-
-// in mili celsius
-int32_t sht2x_measure_temperature(sht2x_t dev);
-// in %RH/1000
-int32_t sht2x_measure_humidity(sht2x_t dev);
 
 uint64_t sht2x_read_serial_number(sht2x_t dev);
 

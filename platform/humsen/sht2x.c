@@ -38,6 +38,7 @@ static const uint8_t kSHT2xWriteConfig = 0xE7;
 static const uint8_t kSHT2xSoftReset = 0xFE;
 
 struct sht2x {
+	struct sensor sensor;
 	i2c_dev_t i2c;
 
 	uint32_t padding;
@@ -50,6 +51,19 @@ static bool check_crc(uint8_t* data, size_t length, uint8_t checksum)
 	return crc == checksum;
 }
 
+static status_t sht2x_get_temp(sensor_t dev, int32_t* result);
+static status_t sht2x_get_humidity(sensor_t dev, int32_t* result);
+static sensor_capabilities_t sht2x_get_capabilities(sensor_t sensor)
+{
+	return SENSOR_CAPABILITY_TEMP | SENSOR_CAPABILITY_HUMIDITY;
+}
+
+static const struct sensor_ops ops = {
+	.get_temp = sht2x_get_temp,
+	.get_humidity = sht2x_get_humidity,
+	.get_capabilities = sht2x_get_capabilities,
+};
+
 // No need for locking the device. We only do one transfer which in itself
 // is already atomic, so we don't need to ensure that ourself
 sht2x_t sht2x_create(i2c_dev_t bus)
@@ -60,13 +74,16 @@ sht2x_t sht2x_create(i2c_dev_t bus)
 		return NULL;
 	}
 
+	list_entry_init(&dev->sensor.list_entry);
+	dev->sensor.ops = &ops;
 	dev->i2c = bus;
 
 	return dev;
 }
 
-int32_t sht2x_measure_temperature(sht2x_t dev)
+status_t sht2x_get_temp(sensor_t _dev, int32_t* result)
 {
+	sht2x_t dev = (sht2x_t)_dev;
 	uint8_t buf[3];
 
 	if (i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xTrigTMeasureHold, 1, buf, 3) != STATUS_OK) {
@@ -77,13 +94,20 @@ int32_t sht2x_measure_temperature(sht2x_t dev)
 
 	raw &= ~0x3;
 
-	log(LOG_LEVEL_DEBUG, "[SHT2x] t raw=%x (%02X%02X), crc=%x (%s)", raw, buf[0], buf[1], buf[2], check_crc(buf, 2, buf[2]) ? "good" : "fail");
+	if (!check_crc(buf, 2, buf[2])) {
+		return STATUS_ERR(0);
+	}
 
-	return ((21965 * raw) >> 13) - 46850;
+	// log(LOG_LEVEL_DEBUG, "[SHT2x] t raw=%x (%02X%02X), crc=%x (%s)", raw, buf[0], buf[1], buf[2],  ? "good" : "fail");
+
+	*result = ((21965 * raw) >> 13) - 46850;
+
+	return STATUS_OK;
 }
 
-int32_t sht2x_measure_humidity(sht2x_t dev)
+status_t sht2x_get_humidity(sensor_t _dev, int32_t* result)
 {
+	sht2x_t dev = (sht2x_t)_dev;
 	uint8_t buf[3];
 
 	if (i2c_dev_transfer(dev->i2c, kSHT2xAddress, &kSHT2xTrigRHMeasureHold, 1, buf, 3) != STATUS_OK) {
@@ -94,9 +118,14 @@ int32_t sht2x_measure_humidity(sht2x_t dev)
 
 	raw &= ~0x3;
 
-	log(LOG_LEVEL_DEBUG, "[SHT2x] rh raw=%x (%02X%02X), crc=%x (%s)", raw, buf[0], buf[1], buf[2], check_crc(buf, 2, buf[2]) ? "good" : "fail");
+	if (!check_crc(buf, 2, buf[2]))
+		return STATUS_ERR(0);
 
-	return ((15625 * raw) >> 13) - 6000;
+	// log(LOG_LEVEL_DEBUG, "[SHT2x] rh raw=%x (%02X%02X), crc=%x (%s)", raw, buf[0], buf[1], buf[2],  ? "good" : "fail");
+
+	*result = ((15625 * raw) >> 13) - 6000;
+
+	return STATUS_OK;
 }
 
 uint64_t sht2x_read_serial_number(sht2x_t dev)

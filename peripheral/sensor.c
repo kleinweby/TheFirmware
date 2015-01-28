@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2013, Christian Speich
+// Copyright (c) 2014, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -22,72 +22,51 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
+#include "sensor.h"
 
-#include <arch.h>
-#include <irq.h>
-
-#include <stdint.h>
-
-#include <test.h>
-#include <log.h>
-#include <printk.h>
-#include <malloc.h>
-#include <thread.h>
-#include <scheduler.h>
-#include <string.h>
-#include <systick.h>
-#include <console.h>
-
-__attribute__( ( always_inline ) ) static inline uint32_t __get_PSP(void)
+sensor_capabilities_t sensor_get_capabilities(sensor_t sensor)
 {
-  register uint32_t result;
+	assert(sensor->ops->get_capabilities != NULL, "get_capabilities is requried");
 
-  __asm volatile ("MRS %0, psp\n"  : "=r" (result) );
-  return(result);
+	return sensor->ops->get_capabilities(sensor);
 }
 
-void error()
+status_t sensor_get_temp(sensor_t sensor, int32_t* result)
 {
-	volatile uint32_t* stack = (uint32_t*)__get_PSP();
-	uint32_t eip = stack[-1];
-	#pragma unused(eip)
-	assert(false, "some error");
+	if (sensor->ops->get_temp == NULL)
+		return STATUS_NOT_SUPPORTED;
+
+	return sensor->ops->get_temp(sensor, result);
 }
 
-extern void platform_main(void) __attribute__ ((noreturn));
-
-void bootstrap()
+status_t sensor_get_humidity(sensor_t sensor, int32_t* result)
 {
-	scheduler_enter_isr();
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
+	if (sensor->ops->get_humidity == NULL)
+		return STATUS_NOT_SUPPORTED;
 
-	irq_init();
-	printk_init(57600);
-	irq_register(IRQ_HARDFAULT, error);
+	return sensor->ops->get_humidity(sensor, result);
+}
 
-	log(LOG_LEVEL_INFO, "Starting up TheFirmware...");
+struct {
+	list_t list;
+} sensors;
 
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
+void sensors_init()
+{
+	list_init(&sensors.list);
+}
 
-	thread_init();
-	scheduler_init();
-	scheduler_leave_isr();
+void sensors_register(sensor_t sensor)
+{
+	list_append(&sensors.list, &sensor->list_entry);
+}
 
-	size_t free_mem = get_free_size();
-
-	log(LOG_LEVEL_INFO, "Bootstrap complete. (%u free)", free_mem);
-
-	test_do(TEST_IN_MAIN_TASK);
-
-	staticfs_init();
-	// vfs_dump(debug_serial);
-
-	console_spawn(debug_serial);
-
-	platform_main();
-	thread_block();
-	for (;;);
+void sensors_for_each(bool (*f)(sensor_t sensor, void* context), void* context)
+{
+	sensor_t sensor;
+	list_foreach_contained(sensor, &sensors.list, struct sensor, list_entry) {
+		if (!f(sensor, context)) {
+			break;
+		}
+	}
 }

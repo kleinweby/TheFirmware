@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2013, Christian Speich
+// Copyright (c) 2014, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -22,72 +22,37 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
-
-#include <arch.h>
-#include <irq.h>
-
-#include <stdint.h>
-
-#include <test.h>
+#include <config/config.h>
+#include <can_node/can_node.h>
+#include <24xx64.h>
+#include <peripheral/i2c_dev.h>
 #include <log.h>
-#include <printk.h>
-#include <malloc.h>
-#include <thread.h>
 #include <scheduler.h>
-#include <string.h>
-#include <systick.h>
-#include <console.h>
+#include <sht2x.h>
 
-__attribute__( ( always_inline ) ) static inline uint32_t __get_PSP(void)
+i2c_dev_t i2c_dev;
+sht2x_t sht2x;
+
+void platform_main(void) 
 {
-  register uint32_t result;
+	i2c_dev = i2c_dev_create();
+	eeprom_t config_eeprom = mcp24xx64_create(i2c_dev);
+	config_init(config_eeprom);
+	config_load();
 
-  __asm volatile ("MRS %0, psp\n"  : "=r" (result) );
-  return(result);
-}
+	sht2x = sht2x_create(i2c_dev);
+	sensors_register((sensor_t)sht2x);
 
-void error()
-{
-	volatile uint32_t* stack = (uint32_t*)__get_PSP();
-	uint32_t eip = stack[-1];
-	#pragma unused(eip)
-	assert(false, "some error");
-}
+	if (can_node_valid_id(config.can.node_id) && config.can.node_id != 0x0) {
+		can_node_init(config.can.node_id, config.can.speed);
 
-extern void platform_main(void) __attribute__ ((noreturn));
+		for(;;)
+			can_node_loop();
+	}
+	else {
+		log(LOG_LEVEL_WARN, "No can node id set, not enabling can.");
+	}
 
-void bootstrap()
-{
-	scheduler_enter_isr();
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
-
-	irq_init();
-	printk_init(57600);
-	irq_register(IRQ_HARDFAULT, error);
-
-	log(LOG_LEVEL_INFO, "Starting up TheFirmware...");
-
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
-
-	thread_init();
-	scheduler_init();
-	scheduler_leave_isr();
-
-	size_t free_mem = get_free_size();
-
-	log(LOG_LEVEL_INFO, "Bootstrap complete. (%u free)", free_mem);
-
-	test_do(TEST_IN_MAIN_TASK);
-
-	staticfs_init();
-	// vfs_dump(debug_serial);
-
-	console_spawn(debug_serial);
-
-	platform_main();
-	thread_block();
-	for (;;);
+	for (;;)
+		thread_block();
 }

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2013, Christian Speich
+// Copyright (c) 2014, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -22,72 +22,35 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "bootstrap.h"
+#pragma once
 
-#include <arch.h>
-#include <irq.h>
+#include <runtime.h>
+#include <list.h>
 
-#include <stdint.h>
+typedef ENUM(uint32_t, sensor_capabilities_t) {
+	SENSOR_CAPABILITY_TEMP = (1 << 0),
+	SENSOR_CAPABILITY_HUMIDITY = (1 << 1),
+};
 
-#include <test.h>
-#include <log.h>
-#include <printk.h>
-#include <malloc.h>
-#include <thread.h>
-#include <scheduler.h>
-#include <string.h>
-#include <systick.h>
-#include <console.h>
+typedef struct sensor* sensor_t;
 
-__attribute__( ( always_inline ) ) static inline uint32_t __get_PSP(void)
-{
-  register uint32_t result;
+struct sensor_ops {
+	sensor_capabilities_t (*get_capabilities)(sensor_t sensor);
+	// in mili celsius
+	status_t (*get_temp)(sensor_t sensor, int32_t* result);
+	// in %RH * 1000
+	status_t (*get_humidity)(sensor_t sensor, int32_t* result);
+};
 
-  __asm volatile ("MRS %0, psp\n"  : "=r" (result) );
-  return(result);
-}
+struct sensor {
+	list_entry_t list_entry;
+	const struct sensor_ops* ops;
+};
 
-void error()
-{
-	volatile uint32_t* stack = (uint32_t*)__get_PSP();
-	uint32_t eip = stack[-1];
-	#pragma unused(eip)
-	assert(false, "some error");
-}
+sensor_capabilities_t sensor_get_capabilities(sensor_t sensor);
+status_t sensor_get_temp(sensor_t sensor, int32_t* result);
+status_t sensor_get_humidity(sensor_t sensor, int32_t* result);
 
-extern void platform_main(void) __attribute__ ((noreturn));
-
-void bootstrap()
-{
-	scheduler_enter_isr();
-	arch_early_init();
-	test_do(TEST_AFTER_ARCH_EARLY_INIT);
-
-	irq_init();
-	printk_init(57600);
-	irq_register(IRQ_HARDFAULT, error);
-
-	log(LOG_LEVEL_INFO, "Starting up TheFirmware...");
-
-	arch_late_init();
-	test_do(TEST_AFTER_ARCH_LATE_INIT);
-
-	thread_init();
-	scheduler_init();
-	scheduler_leave_isr();
-
-	size_t free_mem = get_free_size();
-
-	log(LOG_LEVEL_INFO, "Bootstrap complete. (%u free)", free_mem);
-
-	test_do(TEST_IN_MAIN_TASK);
-
-	staticfs_init();
-	// vfs_dump(debug_serial);
-
-	console_spawn(debug_serial);
-
-	platform_main();
-	thread_block();
-	for (;;);
-}
+void sensors_init();
+void sensors_register(sensor_t sensor);
+void sensors_for_each(bool (*f)(sensor_t sensor, void* context), void* context);
