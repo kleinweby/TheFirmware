@@ -47,10 +47,10 @@ struct sensor {
 	const struct sensor_ops* ops;
 };
 
-sensor_capabilities_t sensor_get_capabilities(sensor_t sensor);
-status_t sensor_get_temp(sensor_t sensor, int32_t* result);
-status_t sensor_get_humidity(sensor_t sensor, int32_t* result);
+sensor_capabilities_t sensor_get_capabilities(sensor_t sensor) NONNULL();
+status_t sensor_get_temp(sensor_t sensor, int32_t* result) NONNULL();
+status_t sensor_get_humidity(sensor_t sensor, int32_t* result) NONNULL();
 
 void sensors_init();
-void sensors_register(sensor_t sensor);
-void sensors_for_each(bool (*f)(sensor_t sensor, void* context), void* context);
+void sensors_register(sensor_t sensor) NONNULL();
+void sensors_for_each(bool (*f)(sensor_t sensor, void* context), void* context) NONNULL(1);
