@@ -44,12 +44,12 @@ void scheduler_init();
 stack_t schedule(stack_t stack);
 
 /// Lock access to the scheduler
-static inline void scheduler_lock() {
+static ALWAYS_INLINE void scheduler_lock() {
   arch_disable_irqs();
 }
 
 /// Unlock access to the scheduler
-static inline void scheduler_unlock() {
+static ALWAYS_INLINE void scheduler_unlock() {
   arch_enable_irqs();
 }
 
@@ -64,15 +64,15 @@ extern uint8_t _in_isr_count;
 // This is used to determine if must use busy waiting, as we can't block the current
 // thread.
 //
-static inline bool scheduler_in_isr() {
+static ALWAYS_INLINE bool scheduler_in_isr() {
 	return _in_isr_count > 0;
 }
 
-static inline void scheduler_enter_isr() {
+static ALWAYS_INLINE void scheduler_enter_isr() {
 	_in_isr_count++;
 }
 
-static inline void scheduler_leave_isr() {
+static ALWAYS_INLINE void scheduler_leave_isr() {
 	_in_isr_count--;
 }
 

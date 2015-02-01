@@ -29,6 +29,7 @@
 #include "stdbool.h"
 
 #define NO_RETURN  __attribute__ ((noreturn))
+#define ALWAYS_INLINE __attribute__((always_inline))
 
 /// Handles Assertions by stopping/restarting the cpu
 ///

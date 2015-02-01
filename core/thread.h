@@ -80,13 +80,13 @@ size_t thread_stack_utilisation(thread_t thread);
 
 #endif
 
-static inline void thread_set_stack(thread_t thread, stack_t stack)
+static ALWAYS_INLINE void thread_set_stack(thread_t thread, stack_t stack)
 {
 	assert(thread->stack_protector < stack, "Stack overflow while setting the stack");
 	thread->stack = stack;
 }
 
-static inline stack_t thread_get_stack(const thread_t thread)
+static ALWAYS_INLINE stack_t thread_get_stack(const thread_t thread)
 {
 	return thread->stack;
 }

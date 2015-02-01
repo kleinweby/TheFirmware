@@ -33,12 +33,12 @@ struct eeprom {
 	status_t (*write)(eeprom_t dev, uint16_t address, uint8_t* buffer, size_t bufferLength);
 };
 
-static inline status_t eeprom_read(eeprom_t dev, uint16_t address, uint8_t* buffer, size_t bufferLength)
+static ALWAYS_INLINE status_t eeprom_read(eeprom_t dev, uint16_t address, uint8_t* buffer, size_t bufferLength)
 {
 	return dev->read(dev, address, buffer, bufferLength);
 }
 
-static inline status_t eeprom_write(eeprom_t dev, uint16_t address, uint8_t* buffer, size_t bufferLength)
+static ALWAYS_INLINE status_t eeprom_write(eeprom_t dev, uint16_t address, uint8_t* buffer, size_t bufferLength)
 {
 	return dev->write(dev, address, buffer, bufferLength);
 }

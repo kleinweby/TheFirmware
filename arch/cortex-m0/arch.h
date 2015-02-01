@@ -25,17 +25,18 @@
 #pragma once
 
 #include <stdint.h>
+#include <runtime.h>
 
 typedef uint32_t* stack_t;
 
 #include_next <arch.h>
 
-static inline void arch_enable_irqs()
+static ALWAYS_INLINE void arch_enable_irqs()
 {
   __asm volatile ("cpsie i");
 }
 
-static inline void arch_disable_irqs()
+static ALWAYS_INLINE void arch_disable_irqs()
 {
   __asm volatile ("cpsid i");
 }
