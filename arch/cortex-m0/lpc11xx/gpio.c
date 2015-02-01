@@ -60,9 +60,14 @@ void gpio_set_pull(pin_t pin, gpio_pull_t pull)
 {
 	volatile uint32_t* conf = NULL;
 
-	if (pin == PIN(2, 7)) {
-		conf = &LPC_IOCON->PIO2_7;
-	}
+	size_t offset = pin_get_number(pin);
+
+	if (offset >= 4)
+		offset += 4;
+	if (offset >= 6 * 4)
+		offset += 4;
+
+	conf = OFFSET_PTR(LPC_IOCON, offset);
 
 	switch(pull) {
 	case GPIO_PULL_NONE:

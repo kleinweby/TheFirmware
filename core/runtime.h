@@ -56,7 +56,7 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
 
 #define NONNULL(...) __attribute__((nonnull (__VA_ARGS__)))
 
-#define OFFSET_PTR(ptr, offset) ((void*)((uintptr_t)ptr - offset))
+#define OFFSET_PTR(ptr, offset) ((void*)((uintptr_t)ptr + offset))
 
 #define WEAK __attribute__ ((weak))
 #define ALIAS(f) __attribute__ ((alias (#f)))
