@@ -41,7 +41,6 @@ SECTIONS
     .text : ALIGN(4)
     {
          *(.text*)
-        *(.rodata .rodata.*)
         . = ALIGN(4);
 
         /* C++ constructors etc */
@@ -84,6 +83,11 @@ SECTIONS
         KEEP(*(.CLICommands))
 
         PROVIDE_HIDDEN(_CLICommandsLength = . - _CLICommands);
+    } > MFlash16
+
+    .rodata : ALIGN(4) {
+                *(.rodata .rodata.*)
+
     } > MFlash16
 
 

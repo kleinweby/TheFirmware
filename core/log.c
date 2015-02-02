@@ -43,6 +43,17 @@
 #define COLOR_GRAY ""
 #endif
 
+static const log_level_t min_log_level = LOG_LEVEL_DEBUG;
+
+void _log(const char* file, int line, log_level_t log_level, const char* message, ...) {
+	if (log_level >= min_log_level) {
+		va_list args;
+		va_start(args, message);
+		_logv(file, line, log_level, message, args);
+		va_end(args);
+	}
+}
+
 void _logv(const char* file, int line, log_level_t log_level, const char* message, va_list args)
 {
 	const char* level_str;
