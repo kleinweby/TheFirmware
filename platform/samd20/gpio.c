@@ -26,7 +26,7 @@
 #include <runtime.h>
 #include <stddef.h>
 
-static const void* kGPIORegBase = 0x41004400;
+static const void* kGPIORegBase = (void*)0x41004400;
 
 static const uint8_t kGPIORegDirClr = 0x04;
 static const uint8_t kGPIORegDirSet = 0x08;

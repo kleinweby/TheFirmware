@@ -247,7 +247,7 @@ void arch_early_init()
 
 static void arch_init_idle_thread(fw_init_level_t level)
 {
-  thread_struct_init(&idle_thread, "idle", 68, idle_stack);
+  thread_struct_init(&idle_thread, "idle", 68, (stack_t)idle_stack);
   thread_set_function(&idle_thread, arch_idle_thread, 0);
   scheduler_set_idle_thread(&idle_thread);
 }
