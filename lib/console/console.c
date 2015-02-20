@@ -158,6 +158,18 @@ void console_main(struct console* console) {
 	}
 }
 
+static int console_help_cmd(int argc, const char** argv)
+{
+  printf("Known commands:\r\n");
+  for (const struct console_cmd* c = console_cmds_begin; c != console_cmds_end; c++) {
+    printf("  - %s\r\n", c->name);
+  }
+
+  return 0;
+}
+
+CONSOLE_CMD(help, console_help_cmd);
+
 size_t printf(const char* format, ...)
 {
   va_list args;
