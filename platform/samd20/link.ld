@@ -85,6 +85,13 @@ SECTIONS
         KEEP(*(.fw_init))
 
         PROVIDE_HIDDEN(_fw_init_end = .);
+
+        PROVIDE_HIDDEN(_console_cmds_begin = .);
+
+        KEEP(*(SORT(.console_cmds.*)))
+        KEEP(*(.console_cmds))
+
+        PROVIDE_HIDDEN(_console_cmds_end = .);
     } > MFlash
 
 
