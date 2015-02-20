@@ -24,7 +24,7 @@
 
 #include <scheduler.h>
 #include <thread.h>
-#include <systick.h>
+#include <arch/systick.h>
 
 static struct {
   thread_t current_thread;

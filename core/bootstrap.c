@@ -25,18 +25,18 @@
 #include "bootstrap.h"
 
 #include <arch.h>
-#include <irq.h>
+#include <platform/irq.h>
 
 #include <stdint.h>
 
 #include <test.h>
 #include <log.h>
-#include <printk.h>
+#include <platform/printk.h>
 #include <malloc.h>
 #include <thread.h>
 #include <scheduler.h>
 #include <string.h>
-#include <systick.h>
+#include <arch/systick.h>
 #include <console.h>
 
 __attribute__( ( always_inline ) ) static inline uint32_t __get_PSP(void)
@@ -69,10 +69,10 @@ void bootstrap()
 
 	log(LOG_LEVEL_INFO, "Starting up TheFirmware...");
 
-	arch_late_init();
+	arch_init();
 	test_do(TEST_AFTER_ARCH_LATE_INIT);
 
-	thread_init();
+	// thread_init();
 	scheduler_init();
 	scheduler_leave_isr();
 
@@ -85,9 +85,9 @@ void bootstrap()
 	staticfs_init();
 	// vfs_dump(debug_serial);
 
-	console_spawn(debug_serial);
+	// console_spawn(debug_serial);
 
-	platform_main();
+	// platform_main();
 	thread_block();
 	for (;;);
 }

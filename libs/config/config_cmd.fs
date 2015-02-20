@@ -1,1 +1,0 @@
-/bin/config: func config_cmd

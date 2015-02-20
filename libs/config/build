@@ -1,2 +1,0 @@
-file '*.c'
-var :gen_fs, path('config_cmd.fs')
