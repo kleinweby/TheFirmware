@@ -23,10 +23,41 @@
 //
 
 #include <platform/gpio.h>
+#include <runtime.h>
+#include <stddef.h>
+
+static const void* kGPIORegBase = 0x41004400;
+
+static const uint8_t kGPIORegDirClr = 0x04;
+static const uint8_t kGPIORegDirSet = 0x08;
+static const uint8_t kGPIORegDataOutput = 0x10;
+static const uint8_t kGPIORegDataClr = 0x14;
+static const uint8_t kGPIORegDataSet = 0x18;
+
+
+static ALWAYS_INLINE uint32_t* gpio_reg(pin_t pin, uint8_t reg_offset)
+{
+	uint8_t port = pin >> 24;
+
+	return OFFSET_PTR(kGPIORegBase, 0x80 * port + reg_offset);
+}
+
+static ALWAYS_INLINE uint8_t pin_get_bit(pin_t pin)
+{
+	return pin & 0x1F;
+}
 
 void gpio_set_direction(pin_t pin, gpio_direction_t direction)
 {
-	assert(false, "Stub");
+	if (direction == GPIO_DIRECTION_IN) {
+		*gpio_reg(pin, kGPIORegDirClr) = (1 << pin_get_bit(pin));
+	}
+	else if (direction == GPIO_DIRECTION_OUT) {
+		*gpio_reg(pin, kGPIORegDirSet) = (1 << pin_get_bit(pin));
+	}
+	else {
+		assert(false, "Invalid GPIO direction");
+	}
 }
 
 void gpio_set_pull(pin_t pin, gpio_pull_t pull)
@@ -36,7 +67,12 @@ void gpio_set_pull(pin_t pin, gpio_pull_t pull)
 
 void gpio_set(pin_t pin, bool on)
 {
-	assert(false, "Stub");
+	if (on) {
+		*gpio_reg(pin, kGPIORegDataSet) = (1 << pin_get_bit(pin));
+	}
+	else {
+		*gpio_reg(pin, kGPIORegDataClr) = (1 << pin_get_bit(pin));
+	}
 }
 
 bool gpio_get(pin_t pin)

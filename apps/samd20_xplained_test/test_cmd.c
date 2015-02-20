@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2013, Christian Speich
+// Copyright (c) 2014, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -22,13 +22,28 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
+#include <console.h>
+#include <platform/gpio.h>
+#include <string.h>
 
-#include <stdint.h>
+static const pin_t kLEDPin = PIN(PORTA, 14);
 
-typedef uint32_t pin_t;
+static int test_cmd(int argc, const char** argv)
+{
+	if (argc == 3) {
+		if (strcmp(argv[1], "led") == 0) {
+			gpio_set_direction(kLEDPin, GPIO_DIRECTION_OUT);
 
-#define PORTA 0
-#define PORTB 1
+			if (strcmp(argv[2], "on") == 0) {
+				gpio_set(kLEDPin, false);
+			}
+			else if (strcmp(argv[2], "off") == 0) {
+				gpio_set(kLEDPin, true);
+			}
+		}
+	}
 
-#define PIN(port, pin) ((pin_t)(((port) << 24) | (pin) << 0))
+	return 0;
+}
+
+CONSOLE_CMD(samd20, test_cmd);
