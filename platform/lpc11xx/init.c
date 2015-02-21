@@ -24,12 +24,14 @@
 
 #include <platform/printk.h>
 #include <platform.h>
+#include <log.h>
 #include "i2c.h"
 
 i2c_dev_t* i2c_dev;
 
 void platform_early_init() {
 	printk_init(57600);
+	log_set_file(debug_serial);
 }
 
 void platform_init()
