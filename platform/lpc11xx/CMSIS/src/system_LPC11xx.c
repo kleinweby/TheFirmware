@@ -211,7 +211,7 @@
 /*----------------------------------------------------------------------------
   Define clocks
  *----------------------------------------------------------------------------*/
-#define __XTAL            (16000000UL)    /* Oscillator frequency             */
+#define __XTAL            (XTAL)    /* Oscillator frequency             */
 #define __SYS_OSC_CLK     (    __XTAL)    /* Main oscillator frequency        */
 #define __IRC_OSC_CLK     (12000000UL)    /* Internal RC oscillator frequency */
 
