@@ -29,6 +29,7 @@
 #include <log.h>
 #include <console.h>
 #include <platform/printk.h>
+#include <platform/irq.h>
 #include <fw/init.h>
 
 void firmware_main()
@@ -38,6 +39,7 @@ void firmware_main()
 
 	thread_early_init();
 	arch_early_init();
+	irq_init();
 
 	platform_early_init();
 
