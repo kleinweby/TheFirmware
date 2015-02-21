@@ -33,7 +33,7 @@ tid_t next_tid;
 
 static const uint32_t kStackProtector = 0xBADBEEF;
 
-void thread_init()
+void thread_early_init()
 {
 	list_init(thread_list);
 	next_tid = 1;
@@ -46,12 +46,21 @@ thread_t thread_create(const char* name, size_t stack_size, stack_t stack)
 	if (!thread)
 		return NULL;
 
+	thread_struct_init(thread, name, stack_size, stack);
+
+	return thread;
+}
+
+void thread_struct_init(thread_t thread, const char* name, size_t stack_size, stack_t stack)
+{
+	memset(thread, 0, sizeof(struct thread));
+
 	thread->state = THREAD_STATE_STOPPED;
 	thread->name = name;
 	thread->tid = next_tid++;
 	thread->stack_protector = NULL;
 
-	if (stack_size > 0) {
+	if (stack == NULL && stack_size > 0) {
 		uint8_t* stack = malloc_raw(stack_size + sizeof(kStackProtector));
 		thread->stack = (stack_t)&stack[stack_size + sizeof(kStackProtector) - 4];
 		thread->stack_protector = (stack_t)stack;
@@ -62,14 +71,15 @@ thread_t thread_create(const char* name, size_t stack_size, stack_t stack)
 		thread_stack_utilisation_reset(thread);
 #endif
 	}
+	else {
+		thread->stack = stack;
+	}
 
 	list_entry_init(&thread->thread_list_entry);
 	list_append(thread_list, &thread->thread_list_entry);
 
 	scheduler_thread_data_init(thread);
 	log(LOG_LEVEL_DEBUG, "created thread tid=%d, name=%s, stack %p", thread->tid, name, thread->stack);
-
-	return thread;
 }
 
 void thread_set_function(thread_t thread, entry_func func, uint8_t argc, ...)

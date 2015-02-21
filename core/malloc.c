@@ -104,7 +104,7 @@ void free_raw(void* _ptr, size_t size)
 	}
 	// Free block is before current head
 	else if (free_head > ptr) {
-		if ((int)free_head + size == (int)ptr) {
+		if ((size_t)free_head + size == (size_t)ptr) {
 			ptr->size += free_head->size;
 			ptr->next = free_head->next;
 		}
@@ -117,7 +117,7 @@ void free_raw(void* _ptr, size_t size)
 
 	for (struct free_header* block = free_head; block != NULL; block = block->next) {
 		if (block < ptr || block->next == NULL) {
-			if ((int)block + block->size == (int)ptr) {
+			if ((size_t)block + block->size == (size_t)ptr) {
 				block->size += ptr->size;
 				ptr = block;
 			}
@@ -126,7 +126,7 @@ void free_raw(void* _ptr, size_t size)
 				block->next = ptr;
 			}
 
-			if (ptr->next && (int)ptr + ptr->size == (int)ptr->next) {
+			if (ptr->next && (size_t)ptr + ptr->size == (size_t)ptr->next) {
 				ptr->size += ptr->next->size;
 				ptr->next = ptr->next->next;
 			}

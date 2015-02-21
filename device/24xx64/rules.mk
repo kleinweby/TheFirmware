@@ -1,0 +1,14 @@
+LOCAL_DIR := $(GET_LOCAL_DIR)
+
+MODULE := $(LOCAL_DIR)
+
+MODULE_SRCS := \
+	$(LOCAL_DIR)/24xx64.c
+
+GLOBAL_INCLUDES += \
+	$(LOCAL_DIR)/include
+
+GLOBAL_DEFINES += \
+	HAVE_24XX64=1
+
+include make/module.mk

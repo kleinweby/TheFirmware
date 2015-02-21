@@ -14,3 +14,5 @@ build.ninja
 tools/simulator/simulator
 toolchain/nanopb
 *.sublime-*
+build-*/
+local.mk
