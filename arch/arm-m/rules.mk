@@ -34,4 +34,13 @@ ifneq ($(HANDLED_CORE),true)
 $(error $(LOCAL_DIR)/rules.mk doesnt have logic for arm core $(ARM_CPU))
 endif
 
+GENERATED += \
+	$(BUILDDIR)/system-onesegment.ld \
+	$(BUILDDIR)/system-twosegment.ld
+
+$(BUILDDIR)/system-twosegment.ld: $(LOCAL_DIR)/system-twosegment.ld $(wildcard arch/*.ld)
+	@echo generating $@
+	@$(MKDIR)
+	$(NOECHO)sed "s/%ROMBASE%/$(ROMBASE)/;s/%ROMSIZE%/$(ROMSIZE)/;s/%MEMBASE%/$(MEMBASE)/;s/%MEMSIZE%/$(MEMSIZE)/" < $< > $@
+
 include make/module.mk

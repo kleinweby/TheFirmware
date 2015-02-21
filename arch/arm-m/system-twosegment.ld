@@ -1,14 +1,13 @@
-/* SAMD20J18 */
 MEMORY
 {
   /* Define each memory region */
-  MFlash (rx) : ORIGIN = 0x0, LENGTH = 0x40000 /* 32k */
-  RamLoc (rwx) : ORIGIN = 0x20000000, LENGTH = 0x8000 /* 32k */
+  MFlash (rx) : ORIGIN = %ROMBASE%, LENGTH = %ROMSIZE% /* 32k */
+  RamLoc (rwx) : ORIGIN = %MEMBASE%, LENGTH = %MEMSIZE% /* ORIGIN = 0x10000000, LENGTH = 0x2000 /* 8k */
 
 }
   /* Define a symbol for the top of each memory region */
-  __top_MFlash = 0x0 + 0x40000;
-  __top_RamLoc = 0x20000000 + 0x8000;
+  __top_MFlash = %ROMBASE% + %ROMSIZE%;
+  __top_RamLoc = %MEMBASE% + %MEMSIZE%;
 
 SECTIONS
 {
@@ -42,7 +41,6 @@ SECTIONS
     .text : ALIGN(4)
     {
          *(.text*)
-        *(.rodata .rodata.*)
         . = ALIGN(4);
 
         /* C++ constructors etc */
@@ -77,8 +75,7 @@ SECTIONS
     } > MFlash
 
 
-    /* Support for staticly declaring logging drivers */
-    .text : ALIGN(4) {
+    .rodata : ALIGN(4) {
         PROVIDE_HIDDEN(_fw_init_begin = .);
 
         KEEP(*(SORT(._fw_init.*)))
@@ -92,6 +89,11 @@ SECTIONS
         KEEP(*(.console_cmds))
 
         PROVIDE_HIDDEN(_console_cmds_end = .);
+    } > MFlash
+
+    .rodata : ALIGN(4) {
+                *(.rodata .rodata.*)
+
     } > MFlash
 
 

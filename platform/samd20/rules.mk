@@ -3,6 +3,10 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 ARCH := arm-m
 ARM_CPU := cortex-m0
 ARM_M_NUMBER_OF_IRQS := 39
+ROMBASE = 0x0
+ROMSIZE = 0x40000
+MEMBASE = 0x20000000
+MEMSIZE = 0x8000
 
 MODULE := $(LOCAL_DIR)
 
@@ -22,7 +26,7 @@ GLOBAL_DEFINES += \
 	__SAMD20J18__=1 \
 	DONT_USE_CMSIS_INIT=1
 
-LINKER_SCRIPT := \
-	$(LOCAL_DIR)/link.ld
+LINKER_SCRIPT += \
+	$(BUILDDIR)/system-twosegment.ld
 
 include make/module.mk
