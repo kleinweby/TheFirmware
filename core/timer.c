@@ -32,6 +32,8 @@
 #include <scheduler.h>
 #include <log.h>
 
+timer_t default_timer;
+
 static void timer_managedhandler(timer_t timer, millitime_t elapsed_time);
 
 void timer_set(timer_t timer, millitime_t time)

@@ -31,6 +31,7 @@
 #include <scheduler.h>
 #include <firmware_config.h>
 #include <fw/init.h>
+#include <arch/systick.h>
 
 #include <stdint.h>
 
@@ -243,6 +244,8 @@ void arch_early_init()
     : "r"(&isr_stack[STACK_SIZE_ISR - 1])
     :
   );
+
+  default_timer = systick_get_timer();
 }
 
 __attribute__( ( always_inline ) ) static inline uint32_t __get_PSP(void)

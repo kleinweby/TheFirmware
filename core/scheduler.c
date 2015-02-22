@@ -24,7 +24,6 @@
 
 #include <scheduler.h>
 #include <thread.h>
-#include <arch/systick.h>
 
 static struct {
   thread_t current_thread;
@@ -86,7 +85,7 @@ static void delay_handler(timer_t timer, void* context)
 void delay(millitime_t time)
 {
   scheduler_lock();
-  timer_managed_schedule(systick_get_timer(), time, false, delay_handler, scheduler_current_thread());
+  timer_managed_schedule(default_timer, time, false, delay_handler, scheduler_current_thread());
   thread_block();
   scheduler_unlock();
 }

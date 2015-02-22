@@ -89,6 +89,9 @@ void timer_disable(timer_t timer);
 void timer_set_handler(timer_t timer, timer_handler_t handler);
 timer_handler_t timer_get_handler(timer_t timer);
 
+// A default managed timer
+extern timer_t default_timer;
+
 /// Schedules a call to timer_handler after a specified timeout.
 ///
 /// Puts the timer in the managed mode if not already.
