@@ -70,8 +70,12 @@ void _assert_handler(const char* function, const char* file, uint32_t line, cons
   (type *)( (char *)__mptr - offsetof(type,member) );}) : NULL)
 
 #define STR(s) #s
+#define _CONCAT(a, b) a##b
+#define CONCAT(a, b) _CONCAT(a,b)
 #define GEN_SECTION_NAME(ns, name) ".text.gen."#ns"."#name
 #define GEN_SECTION_ATTR(ns, name) __attribute__ ((section (GEN_SECTION_NAME(ns, name))))
+
+typedef uint32_t off_t;
 
 typedef uint32_t status_t;
 

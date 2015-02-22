@@ -28,9 +28,6 @@
 #include <stddef.h>
 #include <runtime.h>
 
-// TODO: move to appropiated header
-typedef uint32_t off_t;
-
 typedef struct file* file_t;
 
 struct file_operations;

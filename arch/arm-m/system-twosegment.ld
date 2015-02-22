@@ -89,6 +89,13 @@ SECTIONS
         KEEP(*(.console_cmds))
 
         PROVIDE_HIDDEN(_console_cmds_end = .);
+
+        PROVIDE_HIDDEN(_config_val_decls_begin = .);
+
+        KEEP(*(SORT(.config_val_desc.*)))
+        KEEP(*(.config_val_desc))
+
+        PROVIDE_HIDDEN(_config_val_decls_end = .);
     } > MFlash
 
     .rodata : ALIGN(4) {

@@ -26,106 +26,162 @@
 #include <console.h>
 #include <string.h>
 
-static void config_cmd_help()
+CONFIG_VAL_DESC(sn, sn, kConfigValTypeUInt32, 0, NULL, NULL);
+
+LINKER_SYMBOL(config_val_decls_begin, struct config_val_desc*);
+LINKER_SYMBOL(config_val_decls_end, struct config_val_desc*);
+
+static status_t config_cmd_set_from_str(const struct config_val_desc* d, const char* str)
 {
-	printf("config:\r\n");
-	printf("  sn   - Serial Number\r\n");
-	printf("  can  - CAN related settings\r\n");
-	printf("\r\n");
-	printf("  load - Load settings from eeprom\r\n");
-	printf("  save - Write settings to eeprom\r\n");
+	switch(d->type) {
+		case kConfigValTypeUInt8:
+		{
+			uint8_t* dest = OFFSET_PTR(&config, d->offset);
+
+			uint8_t val = strtol(str, NULL, 0);
+
+			if (d->set_cb) {
+				status_t (*set_cb)(uint8_t*, uint8_t) = d->set_cb;
+				return set_cb(dest, val);
+			}
+			else {
+				*dest = val;
+
+				return STATUS_OK;
+			}
+		}
+		case kConfigValTypeUInt16:
+		{
+			uint16_t* dest = OFFSET_PTR(&config, d->offset);
+
+			uint16_t val = strtol(str, NULL, 0);
+
+			if (d->set_cb) {
+				status_t (*set_cb)(uint16_t*, uint16_t) = d->set_cb;
+				return set_cb(dest, val);
+			}
+			else {
+				*dest = val;
+
+				return STATUS_OK;
+			}
+		}
+		case kConfigValTypeUInt32:
+		{
+			uint32_t* dest = OFFSET_PTR(&config, d->offset);
+
+			uint32_t val = strtol(str, NULL, 0);
+
+			if (d->set_cb) {
+				status_t (*set_cb)(uint32_t*, uint32_t) = d->set_cb;
+				return set_cb(dest, val);
+			}
+			else {
+				*dest = val;
+
+				return STATUS_OK;
+			}
+		}
+	}
+
+	return STATUS_ERR(0);
 }
 
-static void config_cmd_can_help()
+static void config_cmd_val_print(const struct config_val_desc* d)
 {
-	printf("config can:\r\n");
-	printf("  node_id         - CAN node id\r\n");
-	printf("  speed           - interface speed\r\n");
-	printf("  sensor_interval - Interval for sensor reports (seconds)\r\n");
+	printf("%s = ", d->name);
+
+	const char* fmt = "%d";
+
+	if (d->flags & kConfigValFlagConsoleHex) {
+		fmt = "%x";
+	}
+
+	switch(d->type) {
+		case kConfigValTypeUInt8:
+		{
+			uint8_t* val = OFFSET_PTR(&config, d->offset);
+
+			if (d->get_cb) {
+				uint8_t (*get_cb)(uint8_t) = d->get_cb;
+				printf(fmt, get_cb(*val));
+			}
+			else {
+				printf(fmt, *val);
+			}
+			break;
+		}
+		case kConfigValTypeUInt16:
+		{
+			uint16_t* val = OFFSET_PTR(&config, d->offset);
+
+			if (d->get_cb) {
+				uint16_t (*get_cb)(uint16_t) = d->get_cb;
+				printf(fmt, get_cb(*val));
+			}
+			else {
+				printf(fmt, *val);
+			}
+			break;
+		}
+		case kConfigValTypeUInt32:
+		{
+			uint32_t* val = OFFSET_PTR(&config, d->offset);
+
+			if (d->get_cb) {
+				uint32_t (*get_cb)(uint32_t) = d->get_cb;
+				printf(fmt, get_cb(*val));
+			}
+			else {
+				printf(fmt, *val);
+			}
+			break;
+		}
+	}
+
+	printf("\r\n");
 }
 
 int config_cmd(int argc, const char** argv)
 {
 	if (argc < 2) {
-		config_cmd_help();
-		return -1;
+		for (const struct config_val_desc* d = config_val_decls_begin; d < config_val_decls_end; d++) {
+			config_cmd_val_print(d);
+		}
+
+		return 0;
 	}
 
-	if (strcmp(argv[1], "sn") == 0) {
-		if (argc == 3) {
-			config.sn = strtol(argv[2], NULL, 0);
-		}
-		else if (argc != 2) {
-			config_cmd_can_help();
-			return -1;
-		}
-
-		printf("sn = %d\r\n", config.sn);
-	}
-	else if (strcmp(argv[1], "can") == 0) {
-		if (argc < 3) {
-			printf("can node_id = %x\r\n", config.can_node.node_id);
-			printf("can speed = %d\r\n", config.can_node.speed);
-			printf("can sensor_interval = %ds\r\n", config.can_node.sensor_interval/1000);
-			return 0;
-		}
-
-		if (strcmp(argv[2], "node_id") == 0) {
-			if (argc == 4) {
-				config.can_node.node_id = strtol(argv[3], NULL, 0);
-			}
-			else if (argc != 3) {
-				config_cmd_can_help();
-				return -1;
-			}
-
-			printf("can node_id = %x\r\n", config.can_node.node_id);
-		}
-		else if (strcmp(argv[2], "speed") == 0) {
-			if (argc == 4) {
-				config.can_node.speed = strtol(argv[3], NULL, 0);
-			}
-			else if (argc != 3) {
-				config_cmd_can_help();
-				return -1;
-			}
-
-			printf("can speed = %d\r\n", config.can_node.speed);
-		}
-		else if (strcmp(argv[2], "sensor_interval") == 0) {
-			if (argc == 4) {
-				config.can_node.sensor_interval = strtol(argv[3], NULL, 0) * 1000;
-			}
-			else if (argc != 3) {
-				config_cmd_can_help();
-				return -1;
-			}
-
-			printf("can sensor_interval = %ds\r\n", config.can_node.sensor_interval/1000);
-		}
-		else {
-			config_cmd_can_help();
-			return -1;
-		}
-	}
-	else if (strcmp(argv[1], "load") == 0) {
-		if (argc == 3 && strcmp(argv[2], "defaults") == 0) {
-			config_load_defaults();
-			printf("Loaded defaults\r\n");
-		}
-		else {
-			config_load();
-			printf("Config loaded\r\n");
-		}
-	}
-	else if (strcmp(argv[1], "save") == 0) {
+	if (strcmp("save", argv[1]) == 0) {
 		config_save();
-		printf("Config saved\r\n");
+		return 0;
 	}
-	else {
-		config_cmd_help();
+	else if (strcmp("load", argv[1]) == 0) {
+		config_load();
+		return 0;
+	}
+
+	const struct config_val_desc* desc = NULL;
+
+	for (const struct config_val_desc* d = config_val_decls_begin; d < config_val_decls_end; d++) {
+		if (strcmp(d->name, argv[1]) == 0) {
+			desc = d;
+			break;
+		}
+	}
+
+	if (desc == NULL) {
+		printf("unkown config var \r\n");
 		return -1;
 	}
+
+	if (argc == 3) {
+		if (config_cmd_set_from_str(desc, argv[2]) != STATUS_OK) {
+			return -1;
+		}
+	}
+
+	config_cmd_val_print(desc);
 
 	return 0;
 }
