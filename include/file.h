@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2013, Christian Speich
+// Copyright (c) 2015, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -24,36 +24,28 @@
 
 #pragma once
 
-#include <stdarg.h>
-#include <firmware_config.h>
-#include <file.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <runtime.h>
 
-typedef enum {
-	LOG_LEVEL_DEBUG = 0,
-	LOG_LEVEL_VERBOSE = 1,
-	LOG_LEVEL_INFO = 2,
-	LOG_LEVEL_WARN = 3,
-	LOG_LEVEL_ERROR = 4,
-} log_level_t;
+// TODO: move to appropiated header
+typedef uint32_t off_t;
 
-#ifndef HAVE_LOG
-#define LOG_UNAVAIABLE __attribute__((unavailable("requires compiling with log support")))
-#else
-#define LOG_UNAVAIABLE
-#endif
+typedef struct file* file_t;
 
-void log_set_file(file_t f) LOG_UNAVAIABLE;
+struct file_operations;
 
-void _logv(const char* file, int line, log_level_t log_level, const char* message, va_list args) LOG_UNAVAIABLE;
+struct file {
+  off_t pos;
+  const struct file_operations* ops;
+};
 
-void _log(const char* file, int line, log_level_t log_level, const char* message, ...) LOG_UNAVAIABLE;
+struct file_operations {
+  int (*read)(file_t file, void* buf, size_t nbytes);
+  int (*write)(file_t file, const void* buf, size_t nbytes);
+  int (*flush)(file_t file);
+};
 
-#ifdef HAVE_LOG
-#if LOG_SOURCE_LOCATION
-#define log(log_level, message, ...) _log(__FILE__, __LINE__, log_level, message, ##__VA_ARGS__ )
-#else
-#define log(log_level, message, ...) _log(NULL, 0, log_level, message, ##__VA_ARGS__ )
-#endif //LOG_SOURCE_LOCATION
-#else
-#define log(log_level, message, ...)
-#endif // HAVE_LOG
+int read(file_t file, void* buf, size_t nbytes);
+int write(file_t file, const void* buf, size_t nbytes);
+int flush(file_t file);

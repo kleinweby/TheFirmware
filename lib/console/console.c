@@ -28,7 +28,6 @@
 #include <thread.h>
 #include <firmware_config.h>
 #include <string.h>
-#include <vfs.h>
 
 struct console {
   file_t file;

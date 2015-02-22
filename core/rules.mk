@@ -3,7 +3,6 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS := \
-	$(LOCAL_DIR)/bootstrap.c \
 	$(LOCAL_DIR)/list.c \
 	$(LOCAL_DIR)/malloc.c \
 	$(LOCAL_DIR)/runtime.c \
@@ -12,6 +11,7 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/string.c \
 	$(LOCAL_DIR)/test.c \
 	$(LOCAL_DIR)/thread.c \
-	$(LOCAL_DIR)/timer.c
+	$(LOCAL_DIR)/timer.c \
+	$(LOCAL_DIR)/file.c 
 
 include make/module.mk

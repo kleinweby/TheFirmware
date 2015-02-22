@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2013, Christian Speich
+// Copyright (c) 2015, Christian Speich
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -22,38 +22,34 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#pragma once
-
-#include <stdarg.h>
-#include <firmware_config.h>
 #include <file.h>
 
-typedef enum {
-	LOG_LEVEL_DEBUG = 0,
-	LOG_LEVEL_VERBOSE = 1,
-	LOG_LEVEL_INFO = 2,
-	LOG_LEVEL_WARN = 3,
-	LOG_LEVEL_ERROR = 4,
-} log_level_t;
+static const int ERR_NOT_SUPPORTED = -1;
 
-#ifndef HAVE_LOG
-#define LOG_UNAVAIABLE __attribute__((unavailable("requires compiling with log support")))
-#else
-#define LOG_UNAVAIABLE
-#endif
+int read(file_t file, void* buf, size_t nbytes)
+{
+  if (file->ops->read) {
+    return file->ops->read(file, buf, nbytes);
+  }
 
-void log_set_file(file_t f) LOG_UNAVAIABLE;
+  return ERR_NOT_SUPPORTED;
+}
 
-void _logv(const char* file, int line, log_level_t log_level, const char* message, va_list args) LOG_UNAVAIABLE;
+int write(file_t file, const void* buf, size_t nbytes)
+{
+  if (file->ops->write) {
+    return file->ops->write(file, buf, nbytes);
+  }
 
-void _log(const char* file, int line, log_level_t log_level, const char* message, ...) LOG_UNAVAIABLE;
+  return ERR_NOT_SUPPORTED;
+}
 
-#ifdef HAVE_LOG
-#if LOG_SOURCE_LOCATION
-#define log(log_level, message, ...) _log(__FILE__, __LINE__, log_level, message, ##__VA_ARGS__ )
-#else
-#define log(log_level, message, ...) _log(NULL, 0, log_level, message, ##__VA_ARGS__ )
-#endif //LOG_SOURCE_LOCATION
-#else
-#define log(log_level, message, ...)
-#endif // HAVE_LOG
+int flush(file_t file)
+{
+  if (file->ops->flush) {
+    return file->ops->flush(file);
+  }
+
+  // not an error, if unsupported by the backend
+  return 0;
+}

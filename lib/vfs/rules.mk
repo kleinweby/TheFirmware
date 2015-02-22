@@ -8,4 +8,7 @@ MODULE_SRCS := \
 GLOBAL_DEFINES += \
 	HAVE_VFS=1
 
+GLOBAL_INCLUDES += \
+	$(LOCAL_DIR)/include
+
 include make/module.mk

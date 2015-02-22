@@ -25,7 +25,7 @@
 #pragma once
 
 #include <stdarg.h>
-#include <vfs.h>
+#include <file.h>
 #include <runtime.h>
 
 #ifndef HAVE_PRINTF

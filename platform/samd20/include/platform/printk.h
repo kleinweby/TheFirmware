@@ -25,7 +25,7 @@
 #pragma once
 
 #include "stdint.h"
-#include <vfs.h>
+#include <file.h>
 
 extern file_t debug_serial;
 

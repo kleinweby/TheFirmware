@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include <vfs.h>
+#include <file.h>
 
 #ifndef HAVE_CONSOLE
 #define CONSOLE_UNAVAIABLE __attribute__((unavailable("requires compiling with console support")))

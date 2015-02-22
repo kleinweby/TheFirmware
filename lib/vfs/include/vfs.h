@@ -34,28 +34,6 @@
 #define VFS_UNAVAIABLE
 #endif
 
-// TODO: move to appropiated header
-typedef uint32_t off_t;
-
-typedef struct file* file_t;
-
-struct file_operations;
-
-struct file {
-  off_t pos;
-  const struct file_operations* ops;
-};
-
-struct file_operations {
-  int (*read)(file_t file, void* buf, size_t nbytes);
-  int (*write)(file_t file, const void* buf, size_t nbytes);
-  int (*flush)(file_t file);
-};
-
-int read(file_t file, void* buf, size_t nbytes) VFS_UNAVAIABLE;
-int write(file_t file, const void* buf, size_t nbytes) VFS_UNAVAIABLE;
-int flush(file_t file) VFS_UNAVAIABLE;
-
 typedef ENUM(uint8_t, vnode_kind_t) {
   VNODE_KIND_REG,
   VNODE_KIND_DIR,

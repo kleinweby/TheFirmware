@@ -32,34 +32,6 @@ vnode_kind_t vnode_get_kind(vnode_t vnode)
   return vnode->kind;
 }
 
-int read(file_t file, void* buf, size_t nbytes)
-{
-  if (file->ops->read) {
-    return file->ops->read(file, buf, nbytes);
-  }
-
-  return ERR_NOT_SUPPORTED;
-}
-
-int write(file_t file, const void* buf, size_t nbytes)
-{
-  if (file->ops->write) {
-    return file->ops->write(file, buf, nbytes);
-  }
-
-  return ERR_NOT_SUPPORTED;
-}
-
-int flush(file_t file)
-{
-  if (file->ops->flush) {
-    return file->ops->flush(file);
-  }
-
-  // not an error, if unsupported by the backend
-  return 0;
-}
-
 file_t vnode_open(vnode_t vnode)
 {
   if (vnode->kind != VNODE_KIND_REG)

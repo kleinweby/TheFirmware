@@ -8,8 +8,7 @@ MODULE_DEPS := \
 	target \
 	lib/printf \
 	lib/log \
-	lib/console \
-	lib/vfs
+	lib/console
 
 MODULE_SRCS := \
 	$(LOCAL_DIR)/init.c \
