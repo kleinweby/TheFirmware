@@ -26,127 +26,153 @@
 #include <console.h>
 #include <string.h>
 
-CONFIG_VAL_DESC(sn, sn, kConfigValTypeUInt32, 0, NULL, NULL);
-
 LINKER_SYMBOL(config_val_decls_begin, struct config_val_desc*);
 LINKER_SYMBOL(config_val_decls_end, struct config_val_desc*);
 
-static status_t config_cmd_set_from_str(const struct config_val_desc* d, const char* str)
-{
-	switch(d->type) {
-		case kConfigValTypeUInt8:
-		{
-			uint8_t* dest = OFFSET_PTR(&config, d->offset);
+#define PRINT_IDENT() for (uint8_t i = 0; i < ident; i++) { printf("  "); }
+static void config_cmd_print_tree(const struct config_val_desc* desc, uint8_t ident, void* conf) {
+	PRINT_IDENT();
 
-			uint8_t val = strtol(str, NULL, 0);
-
-			if (d->set_cb) {
-				status_t (*set_cb)(uint8_t*, uint8_t) = d->set_cb;
-				return set_cb(dest, val);
-			}
-			else {
-				*dest = val;
-
-				return STATUS_OK;
-			}
-		}
-		case kConfigValTypeUInt16:
-		{
-			uint16_t* dest = OFFSET_PTR(&config, d->offset);
-
-			uint16_t val = strtol(str, NULL, 0);
-
-			if (d->set_cb) {
-				status_t (*set_cb)(uint16_t*, uint16_t) = d->set_cb;
-				return set_cb(dest, val);
-			}
-			else {
-				*dest = val;
-
-				return STATUS_OK;
-			}
-		}
-		case kConfigValTypeUInt32:
-		{
-			uint32_t* dest = OFFSET_PTR(&config, d->offset);
-
-			uint32_t val = strtol(str, NULL, 0);
-
-			if (d->set_cb) {
-				status_t (*set_cb)(uint32_t*, uint32_t) = d->set_cb;
-				return set_cb(dest, val);
-			}
-			else {
-				*dest = val;
-
-				return STATUS_OK;
-			}
-		}
+	if (desc->name) {
+		printf("%s = ", desc->name);
 	}
-
-	return STATUS_ERR(0);
-}
-
-static void config_cmd_val_print(const struct config_val_desc* d)
-{
-	printf("%s = ", d->name);
+	else {
+		printf("%i = ", desc->idx);
+	}
 
 	const char* fmt = "%d";
 
-	if (d->flags & kConfigValFlagConsoleHex) {
+	if (desc->flags & kConfigValFlagConsoleHex)
 		fmt = "%x";
+
+	if (desc->type == kConfigValTypeStruct) {
+		printf("{\r\n");
+
+		for (const struct config_val_desc* d = desc->subdescs; d->name != NULL; d++) {
+			config_cmd_print_tree(d, ident + 1, OFFSET_PTR(conf, d->offset));
+		}
+
+		PRINT_IDENT();
+		printf("}");
 	}
+	else if (desc->type == kConfigValTypeArray) {
+		printf("[\r\n");
 
-	switch(d->type) {
-		case kConfigValTypeUInt8:
-		{
-			uint8_t* val = OFFSET_PTR(&config, d->offset);
+		ident++;
 
-			if (d->get_cb) {
-				uint8_t (*get_cb)(uint8_t) = d->get_cb;
-				printf(fmt, get_cb(*val));
-			}
-			else {
-				printf(fmt, *val);
-			}
-			break;
+		for (uint8_t i = 0; i < desc->element_count; i++) {
+			struct config_val_desc d = {
+				.name = NULL,
+				.idx = i,
+
+				.offset = i * desc->element_size,
+				.type = kConfigValTypeStruct,
+				.subdescs = desc->subdescs,
+			};
+
+			config_cmd_print_tree(&d, ident + 1, OFFSET_PTR(conf, d.offset));
 		}
-		case kConfigValTypeUInt16:
-		{
-			uint16_t* val = OFFSET_PTR(&config, d->offset);
 
-			if (d->get_cb) {
-				uint16_t (*get_cb)(uint16_t) = d->get_cb;
-				printf(fmt, get_cb(*val));
-			}
-			else {
-				printf(fmt, *val);
-			}
-			break;
-		}
-		case kConfigValTypeUInt32:
-		{
-			uint32_t* val = OFFSET_PTR(&config, d->offset);
-
-			if (d->get_cb) {
-				uint32_t (*get_cb)(uint32_t) = d->get_cb;
-				printf(fmt, get_cb(*val));
-			}
-			else {
-				printf(fmt, *val);
-			}
-			break;
-		}
+		ident--;
+		PRINT_IDENT();
+		printf("]");
+	}
+	else if (desc->type == kConfigValTypeUInt8) {
+		printf(fmt, *(uint8_t*)conf);
+	}
+	else if (desc->type == kConfigValTypeUInt16) {
+		printf(fmt, *(uint16_t*)conf);
+	}
+	else if (desc->type == kConfigValTypeUInt32) {
+		printf(fmt, *(uint32_t*)conf);
+	}
+	else {
+		printf("<unkown>");
 	}
 
 	printf("\r\n");
+}
+
+static void config_cmd_set_get(const struct config_val_desc* desc, const char* remaining, const char* full, const char* arg, void* conf)
+{
+	// We need to decent further
+	if (remaining != NULL) {
+		if (desc->type == kConfigValTypeStruct) {
+			const char* next = strchr(remaining, '.');
+			size_t len = next == NULL ? strlen(remaining) : next - remaining;
+
+			if (next)
+				next++;
+
+			for (const struct config_val_desc* d = desc->subdescs; d->name != NULL; d++) {
+				if (strncmp(d->name, remaining, len) == 0) {
+					config_cmd_set_get(d, next, full, arg, OFFSET_PTR(conf, d->offset));
+					return;
+				}
+			}
+
+			printf("%s is unkown\r\n", remaining);
+		}
+		else if (desc->type == kConfigValTypeArray) {
+			char* next = NULL;
+			uint8_t idx = strtol(remaining, &next, 0);
+
+			if (!(*next != '.' || *next != '\0')) {
+				printf("Expected an int not %s", remaining);
+				return;
+			}
+
+			if (*next == '\0')
+				next = NULL;
+			else
+				next++;
+
+			for (uint8_t i = 0; i < desc->element_count; i++) {
+				if (i == idx) {
+					struct config_val_desc d = {
+						.name = NULL,
+						.idx = i,
+
+						.offset = i * desc->element_size,
+						.type = kConfigValTypeStruct,
+						.subdescs = desc->subdescs,
+					};
+
+					config_cmd_set_get(&d, next, full, arg, OFFSET_PTR(conf, d.offset));
+				}
+			}
+		}
+		else {
+			printf("%s is unkown\r\n", remaining);
+		}
+	}
+	else {
+		if (desc->type == kConfigValTypeUInt8) {
+			if (arg != NULL)
+				*(uint8_t*)conf = strtol(arg, NULL, 0);
+		}
+		else if (desc->type == kConfigValTypeUInt16) {
+			if (arg != NULL)
+				*(uint16_t*)conf = strtol(arg, NULL, 0);
+		}
+		else if (desc->type == kConfigValTypeUInt32) {
+			if (arg != NULL)
+				*(uint32_t*)conf = strtol(arg, NULL, 0);
+		}
+		else {
+			if (arg != NULL)
+				printf("%s is not a settable type\r\n", full);
+		}
+
+		config_cmd_print_tree(desc, 0, conf);
+	}
 }
 
 int config_cmd(int argc, const char** argv)
 {
 	if (argc < 2) {
 		for (const struct config_val_desc* d = config_val_decls_begin; d < config_val_decls_end; d++) {
-			config_cmd_val_print(d);
+			config_cmd_print_tree(d, 0, OFFSET_PTR(&config, d->offset));
 		}
 
 		return 0;
@@ -163,25 +189,27 @@ int config_cmd(int argc, const char** argv)
 
 	const struct config_val_desc* desc = NULL;
 
+	const char* next = strchr(argv[1], '.');
+	size_t len = next == NULL ? strlen(argv[1]) : next - argv[1];
+
+	if (next)
+		next++;
+
 	for (const struct config_val_desc* d = config_val_decls_begin; d < config_val_decls_end; d++) {
-		if (strcmp(d->name, argv[1]) == 0) {
+		if (strncmp(d->name, argv[1], len) == 0) {
 			desc = d;
 			break;
 		}
 	}
 
 	if (desc == NULL) {
-		printf("unkown config var \r\n");
+		printf("%s is unkown\r\n", argv[1]);
 		return -1;
 	}
 
-	if (argc == 3) {
-		if (config_cmd_set_from_str(desc, argv[2]) != STATUS_OK) {
-			return -1;
-		}
-	}
+	config_cmd_set_get(desc, next, argv[1], argc == 3 ? argv[2] : NULL, OFFSET_PTR(&config, desc->offset));
 
-	config_cmd_val_print(desc);
+	// config_cmd_val_print(desc);
 
 	return 0;
 }

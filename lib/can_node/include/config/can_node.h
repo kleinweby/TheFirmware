@@ -27,10 +27,22 @@
 #include <can_node.h>
 #include <runtime.h>
 
+struct can_node_output_src_config {
+	can_node_id_t node_id;
+	uint8_t sensor_type;
+	uint8_t sensor_idx;
+	int32_t off_value;
+	int32_t on_value;
+};
+
 struct can_node_config {
-		can_node_id_t node_id;
-		can_speed_t speed;
-		millitime_t sensor_interval;
+	can_node_id_t node_id;
+	can_speed_t speed;
+	millitime_t sensor_interval;
+
+#if CAN_NODE_NUM_OUTPUT > 0
+	struct can_node_output_src_config output_src_configs[CAN_NODE_NUM_OUTPUT_SOURCE * CAN_NODE_NUM_OUTPUT];
+#endif
 };
 
 static ALWAYS_INLINE void can_node_config_defaults(struct can_node_config* conf)
@@ -38,4 +50,12 @@ static ALWAYS_INLINE void can_node_config_defaults(struct can_node_config* conf)
 	conf->node_id = 0;
 	conf->speed = 125000;
 	conf->sensor_interval = 30;
+
+#if CAN_NODE_NUM_OUTPUT > 0
+	conf->output_src_configs[0].node_id = 0x2D1;
+	conf->output_src_configs[0].sensor_type = 0x1; // HUM
+	conf->output_src_configs[0].sensor_idx = 0;
+	conf->output_src_configs[0].off_value = 45000;
+	conf->output_src_configs[0].on_value = 55000;
+#endif
 }

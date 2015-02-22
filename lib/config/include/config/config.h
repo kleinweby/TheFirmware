@@ -37,7 +37,7 @@ struct config_t {
 #if HAVE_CAN_NODE
 	struct can_node_config can_node;
 #endif
-};
+} __attribute__((packed));
 
 extern eeprom_t config_eeprom;
 void config_init(eeprom_t eeprom);
@@ -51,6 +51,8 @@ extern struct config_t config;
 // CONFIG_VAL_DESC(can.node_id, can_node.node_id, kConfigTypeUInt8, READONLY | LOCKED)
 
 typedef ENUM(uint8_t, config_val_type_t) {
+	kConfigValTypeStruct,
+	kConfigValTypeArray,
 	kConfigValTypeUInt8,
 	kConfigValTypeUInt16,
 	kConfigValTypeUInt32,
@@ -63,25 +65,35 @@ typedef ENUM(uint32_t, config_val_flags_t) {
 
 struct config_val_desc {
 	const char* name;
-	off_t offset;
-	config_val_type_t type;
-	config_val_flags_t flags;
+	uint8_t idx;
 
-	// Those callbacks are used when interfacing with config commands (via uart, can etc.)
-	// NOTICE: Especially the get_cb is not used when loading the config from eeprom
-	// Real signature is status_t (*cb)(TYPE* dest, TYPE new_val)
-	void* set_cb;
-	// Real signature is TYPE (*cb)(TYPE val)
-	void* get_cb;
+	off_t offset;
+	config_val_type_t type; // Array
+	union {
+		config_val_flags_t flags;
+		struct {
+			uint8_t element_size;
+			uint8_t element_count;
+		};
+	};
+
+	const struct config_val_desc* subdescs; 
 };
 
+// struct config_val_desc {
+// 	const char* name;
+// 	off_t offset;
+// 	config_val_type_t type;
+// 	config_val_flags_t flags;
+
+// 	// Those callbacks are used when interfacing with config commands (via uart, can etc.)
+// 	// NOTICE: Especially the get_cb is not used when loading the config from eeprom
+// 	// Real signature is status_t (*cb)(TYPE* dest, TYPE new_val)
+// 	void* set_cb;
+// 	// Real signature is TYPE (*cb)(TYPE val)
+// 	void* get_cb;
+// };
+
 // TODO: the var name may not be unique :/ better idea?
-#define CONFIG_VAL_DESC(_name, _member, _type, _flags, _set_cb, _get_cb) \
-	const struct config_val_desc CONCAT(CONCAT(__config_val_desc, __LINE__), __COUNTER__) __attribute__ ((section (".config_val_desc." #_name))) = { \
-		.name = #_name, \
-		.offset = offsetof(struct config_t, _member), \
-		.type = _type, \
-		.flags = _flags, \
-		.set_cb = _set_cb, \
-		.get_cb = _get_cb, \
-	}
+#define CONFIG_VAL_ROOT_DESC(_name) \
+	const struct config_val_desc CONCAT(__config_val_desc, _name) __attribute__ ((section (".config_val_desc." #_name)))

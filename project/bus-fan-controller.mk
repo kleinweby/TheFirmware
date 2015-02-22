@@ -2,5 +2,5 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 TARGET := buscontroller
 
-MODULES += \
-	device/sht2x
+CAN_NODE_NUM_OUTPUT := 1
+HAVE_FAN_OUTPUT := 1

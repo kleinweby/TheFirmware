@@ -25,6 +25,7 @@
 #pragma once
 
 #include <net/can.h>
+#include <platform/gpio.h>
 
 typedef uint16_t can_node_id_t;
 typedef uint16_t can_node_topic_t;
@@ -33,6 +34,7 @@ static const can_node_id_t CAN_NODE_BROADCAST_ID = 0x0;
 
 status_t can_node_init(can_node_id_t node_id, can_speed_t speed);
 bool can_node_valid_id(can_node_id_t id);
+status_t can_node_set_output_pin(uint8_t n, pin_t pin);
 
 status_t can_node_send(can_node_topic_t topic, can_node_id_t to, uint8_t len, const uint8_t* data);
 

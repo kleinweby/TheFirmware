@@ -35,12 +35,12 @@ static inline uint8_t pin_get_port(uint32_t pin)
 
 static inline uint8_t pin_get_pin(uint32_t pin)
 {
-	return (pin >> 16) & 0xFF;
+	return (pin >> 8) & 0xFFFF;
 }
 
 static inline uint8_t pin_get_number(uint32_t pin)
 {
-	return pin & 0xFFFF;
+	return pin & 0xFF;
 }
 
 void gpio_set_direction(pin_t pin, gpio_direction_t direction)

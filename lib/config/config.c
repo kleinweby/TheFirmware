@@ -38,7 +38,10 @@ void config_init(eeprom_t eeprom)
 
 void config_load()
 {
-	eeprom_read(config_eeprom, 0x0, (uint8_t*)&config, sizeof(config));
+	if (eeprom_read(config_eeprom, 0x0, (uint8_t*)&config, sizeof(config)) != STATUS_OK) {
+		log(LOG_LEVEL_ERROR, "Reading config faild");
+		return;
+	}
 
 	uint8_t crc_expected = crc8_maxim((uint8_t*)&config, sizeof(config));
 	uint8_t crc_actual;
@@ -68,3 +71,14 @@ void config_save()
 
 	log(LOG_LEVEL_INFO, "Written eeprom (crc=%x)", crc);
 }
+
+CONFIG_VAL_ROOT_DESC(sn) = {
+	.name = "sn",
+	.idx = 0,
+
+	.type = kConfigValTypeUInt32,
+
+	.offset = offsetof(struct config_t, sn),
+	.subdescs = NULL
+};
+

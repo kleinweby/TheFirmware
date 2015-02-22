@@ -23,14 +23,19 @@
 //
 
 #include <platform.h>
+#include <platform/gpio.h>
 #include <dev/eeprom.h>
 #include <device/24xx64.h>
 #include <config/config.h>
-#include <device/sht2x.h>
 #include <sensor.h>
 #include <fw/init.h>
 #include <can_node.h>
 #include <log.h>
+#include <adc.h>
+
+#if WITH_DEVICE_SHT2X
+#include <device/sht2x.h>
+#endif
 
 void target_init()
 {
@@ -38,8 +43,19 @@ void target_init()
 	config_init(config_eeprom);
 	config_load();
 
+#if WITH_DEVICE_SHT2X
 	sht2x_t sht2x = sht2x_create(i2c_dev);
 	sensors_register((sensor_t)sht2x);
+#endif
+
+#if HAVE_FAN_OUTPUT
+	gpio_set_direction(PIN(2,7), GPIO_DIRECTION_OUT);
+	gpio_set(PIN(2,7), false);
+	can_node_set_output_pin(0, PIN(2,7));
+#endif
+
+	adc_t adc = adc_create(0);
+	sensors_register(sensor_from_adc(adc, 16, 1, 3300));
 }
 
 void target_main()

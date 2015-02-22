@@ -17,6 +17,7 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/gpio.c \
 	$(LOCAL_DIR)/printk.c \
 	$(LOCAL_DIR)/i2c.c \
+	$(LOCAL_DIR)/adc.c \
 	$(LOCAL_DIR)/CMSIS/src/core_cm0.c \
 	$(LOCAL_DIR)/CMSIS/src/system_LPC11xx.c 
 
