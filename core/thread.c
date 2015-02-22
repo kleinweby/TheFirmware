@@ -72,7 +72,13 @@ void thread_struct_init(thread_t thread, const char* name, size_t stack_size, st
 #endif
 	}
 	else {
-		thread->stack = stack;
+		// We got a pointer to the beginning of the stack and a size
+		if (stack_size > 0) {
+			thread->stack = OFFSET_PTR(stack, stack_size - 4);
+		}
+		else {
+			thread->stack = stack;
+		}
 	}
 
 	list_entry_init(&thread->thread_list_entry);

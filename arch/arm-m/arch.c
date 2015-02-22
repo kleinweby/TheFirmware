@@ -245,9 +245,27 @@ void arch_early_init()
   );
 }
 
+__attribute__( ( always_inline ) ) static inline uint32_t __get_PSP(void)
+{
+  register uint32_t result;
+
+  __asm volatile ("MRS %0, psp\n"  : "=r" (result) );
+  return(result);
+}
+
+void error()
+{
+  volatile uint32_t* stack = (uint32_t*)__get_PSP();
+  uint32_t eip = stack[-1];
+  #pragma unused(eip)
+  assert(false, "some error");
+}
+
 static void arch_init_idle_thread(fw_init_level_t level)
 {
-  thread_struct_init(&idle_thread, "idle", 68, (stack_t)idle_stack);
+  irq_register(IRQ_HARDFAULT, error);
+
+  thread_struct_init(&idle_thread, "idle", sizeof(idle_stack), (stack_t)idle_stack);
   thread_set_function(&idle_thread, arch_idle_thread, 0);
   scheduler_set_idle_thread(&idle_thread);
 }
