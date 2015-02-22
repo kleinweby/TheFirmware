@@ -25,10 +25,11 @@
 #pragma once
 
 #include <stdint.h>
-#include <gpio.h>
+#include <platform/gpio.h>
 
 typedef struct adc* adc_t;
 
 adc_t adc_create(pin_t pin);
 
 uint32_t adc_read(adc_t adc);
+uint8_t adc_resolution(adc_t adc);

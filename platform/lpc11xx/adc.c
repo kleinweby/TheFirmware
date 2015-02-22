@@ -29,6 +29,7 @@
 
 struct adc {
 	pin_t pin;
+	uint32_t reserved[2];
 };
 
 adc_t adc_create(pin_t pin)
@@ -71,7 +72,12 @@ uint32_t adc_read(adc_t adc)
 	// Vref = 3.3V
 	// returns in milivolts
 	// TODO: this totally does not belong here
-	int human_val = (((val >> 6) & 0x3FF) * 16) * 3300;
+	// int human_val = (((val >> 6) & 0x3FF) * 16) * 3300;
 
-	return human_val / 1000;
+	return ((val >> 6) & 0x3FF);
+}
+
+uint8_t adc_resolution(adc_t adc)
+{
+	return 10;
 }

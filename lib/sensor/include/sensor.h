@@ -26,10 +26,12 @@
 
 #include <runtime.h>
 #include <list.h>
+#include <adc.h>
 
 typedef ENUM(uint32_t, sensor_capabilities_t) {
 	SENSOR_CAPABILITY_TEMP = (1 << 0),
 	SENSOR_CAPABILITY_HUMIDITY = (1 << 1),
+	SENSOR_CAPABILITY_VOLTAGE = (1 << 2),
 };
 
 typedef struct sensor* sensor_t;
@@ -40,6 +42,8 @@ struct sensor_ops {
 	status_t (*get_temp)(sensor_t sensor, int32_t* result);
 	// in %RH * 1000
 	status_t (*get_humidity)(sensor_t sensor, int32_t* result);
+	// in micro volt
+	status_t (*get_voltage)(sensor_t sensor, int32_t* result);
 };
 
 struct sensor {
@@ -50,7 +54,11 @@ struct sensor {
 sensor_capabilities_t sensor_get_capabilities(sensor_t sensor) NONNULL();
 status_t sensor_get_temp(sensor_t sensor, int32_t* result) NONNULL();
 status_t sensor_get_humidity(sensor_t sensor, int32_t* result) NONNULL();
+status_t sensor_get_voltage(sensor_t sensor, int32_t* result) NONNULL();
 
 void sensors_init();
 void sensors_register(sensor_t sensor) NONNULL();
 void sensors_for_each(bool (*f)(sensor_t sensor, void* context), void* context) NONNULL(1);
+
+// Creates a new sensor from an adc using a suplied resitor devidor
+sensor_t sensor_from_adc(adc_t adc, uint32_t mult, uint32_t div, uint32_t ref);

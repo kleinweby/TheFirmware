@@ -23,6 +23,7 @@
 //
 
 #include <sensor.h>
+#include <malloc.h>
 
 sensor_capabilities_t sensor_get_capabilities(sensor_t sensor)
 {
@@ -47,6 +48,14 @@ status_t sensor_get_humidity(sensor_t sensor, int32_t* result)
 	return sensor->ops->get_humidity(sensor, result);
 }
 
+status_t sensor_get_voltage(sensor_t sensor, int32_t* result)
+{
+	if (sensor->ops->get_voltage == NULL)
+		return STATUS_NOT_SUPPORTED;
+
+	return sensor->ops->get_voltage(sensor, result);
+}
+
 struct {
 	list_t list;
 } sensors;
@@ -69,4 +78,47 @@ void sensors_for_each(bool (*f)(sensor_t sensor, void* context), void* context)
 			break;
 		}
 	}
+}
+
+struct adc_sensor {
+	struct sensor sensor;
+	adc_t adc;
+	uint32_t mult;
+	uint32_t div;
+	uint32_t ref;
+};
+
+static sensor_capabilities_t sensor_adc_get_capabilities(sensor_t sensor)
+{
+	return SENSOR_CAPABILITY_VOLTAGE;
+}
+
+static status_t sensor_adc_get_voltage(sensor_t _sensor, int32_t* result)
+{
+	struct adc_sensor* sensor = (struct adc_sensor*)_sensor;
+
+	*result = ((adc_read(sensor->adc) * sensor->mult * sensor->ref) / (sensor->div)) >> adc_resolution(sensor->adc);
+	return STATUS_OK;
+}
+
+static const struct sensor_ops adc_sensor_ops = {
+	.get_capabilities = sensor_adc_get_capabilities,
+	.get_voltage = sensor_adc_get_voltage,
+};
+
+sensor_t sensor_from_adc(adc_t adc, uint32_t mult, uint32_t div, uint32_t ref)
+{
+	struct adc_sensor* sensor = malloc(sizeof(struct adc_sensor));
+
+	if (!sensor) {
+		return NULL;
+	}
+
+	sensor->sensor.ops = &adc_sensor_ops;
+	sensor->adc = adc;
+	sensor->mult = mult;
+	sensor->div = div;
+	sensor->ref = ref;
+
+	return (sensor_t)sensor;
 }
