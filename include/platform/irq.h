@@ -29,8 +29,6 @@
 
 typedef void (*irq_handler_t)(void);
 
-void irq_init();
-
 bool irq_register(uint8_t irq_number, irq_handler_t handler);
 bool irq_unregister(uint8_t irq_number, irq_handler_t handler);
 

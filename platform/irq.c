@@ -37,12 +37,6 @@ static struct {
 	irq_entry_t entries[NUMBER_OF_IRQS];
 } irq = {};
 
-void irq_init()
-{
-	for (uint8_t i = 0; i < NUMBER_OF_IRQS; i++)
-		irq.entries[i].handler = NULL;
-}
-
 bool irq_register(uint8_t irq_number, irq_handler_t handler)
 {
 	if (irq_number >= NUMBER_OF_IRQS || irq.entries[irq_number].handler)

@@ -39,7 +39,6 @@ void firmware_main()
 
 	thread_early_init();
 	arch_early_init();
-	irq_init();
 
 	platform_early_init();
 
