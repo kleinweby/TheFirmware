@@ -36,18 +36,30 @@ struct mcp24xx64 {
 typedef struct mcp24xx64* mcp24xx64_t;
 
 static const uint8_t kMCP24XX64Address = 0xA0;
-static const uint8_t kPageSize = 31;
+static const uint8_t kPageSize = 32;
 
 static status_t mcp24xx64_read(eeprom_t _dev, uint16_t address, uint8_t* buffer, size_t bufferLength)
 {
 	mcp24xx64_t dev = (mcp24xx64_t)_dev;
 
-	uint8_t buf[2] = {
-		(address >> 8) & 0xFF,
-		(address >> 0) & 0xFF,
-	};
+	for (int32_t remainingLength = bufferLength; remainingLength > 0; remainingLength -= kPageSize, address += kPageSize) {
+		size_t length = remainingLength < kPageSize ? remainingLength : kPageSize;
+		uint8_t buf[2];
 
-	return i2c_dev_transfer(dev->i2c, kMCP24XX64Address, buf, 2, buffer, bufferLength);
+		buf[0] = (address >> 8) & 0xFF;
+		buf[1] = (address >> 0) & 0xFF;
+
+		status_t status;
+
+		status = i2c_dev_transfer(dev->i2c, kMCP24XX64Address, buf, 2, buffer, length);
+		
+		if (status != STATUS_OK)
+			return status;
+
+		buffer += length;
+	}
+
+	return STATUS_OK;
 }
 
 static status_t mcp24xx64_write(eeprom_t _dev, uint16_t address, uint8_t* buffer, size_t bufferLength)
@@ -68,6 +80,8 @@ static status_t mcp24xx64_write(eeprom_t _dev, uint16_t address, uint8_t* buffer
 		do {
 			status = i2c_dev_transfer(dev->i2c, kMCP24XX64Address, buf, 2 + length, NULL, 0);
 		} while (status != STATUS_OK);
+
+		buffer += length;
 	}
 
 	return STATUS_OK;
