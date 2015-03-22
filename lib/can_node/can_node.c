@@ -42,6 +42,8 @@ bool can_node_valid_id(can_node_id_t id)
 typedef ENUM(uint32_t, can_node_work_req_t) {
 	kCanNodeWorkReqSensors = (1 << 0),
 	kCanNodeWorkReqOutput = (1 << 1),
+	kCanNodeWorkReqOutputResponse = (1 << 2),
+	kCanNodeWorkReqSaveConfig = (1 << 3),
 };
 
 struct _output_src {
@@ -50,6 +52,7 @@ struct _output_src {
 
 struct _output {
 	bool state;
+	bool manual_state;
 	pin_t pin;
 	struct _output_src srcs[CAN_NODE_NUM_OUTPUT_SOURCE];
 };
@@ -124,7 +127,7 @@ static void can_node_sensor_callback(const can_frame_t frame, void* context)
 	for (uint8_t i = 0; i < CAN_NODE_NUM_OUTPUT; i++) {
 		for (uint8_t j = 0; j < CAN_NODE_NUM_OUTPUT_SOURCE; j++) {
 			struct _output_src* src = &can_node.outputs[i].srcs[j];
-			struct can_node_output_src_config* conf = &config.can_node.output_src_configs[i * CAN_NODE_NUM_OUTPUT + j];
+			struct can_node_output_src_config* conf = &config.can_node.outputs[i].sources[j];
 
 			if (conf->node_id == from) {
 				if (frame.data_length < 6)
@@ -150,6 +153,50 @@ static void can_node_sensor_callback(const can_frame_t frame, void* context)
 		}
 	}
 }
+
+static void can_node_output_callback(const can_frame_t frame, void* context)
+{
+	can_node_id_t to = can_id_extract_to(frame.id);
+
+	if (to != can_node.node_id) {
+		log(LOG_LEVEL_WARN, "Got output callback to an node other than use: %x", to);
+		return;
+	}
+
+	if (frame.data_length != 2) {
+		log(LOG_LEVEL_WARN, "Output frame has wrong length: %d", frame.data_length);
+		return;
+	}
+
+	uint8_t idx = frame.data[0];
+
+	if (idx >= CAN_NODE_NUM_OUTPUT) {
+		log(LOG_LEVEL_WARN, "Output request for unkown output index: %d", idx);
+		return;
+	}
+
+	can_node_output_mode_t new_mode;
+
+	// Manual flag is set
+	// so change output to desired state
+	if (frame.data[1] & (1 << 1)) {
+		new_mode = kCanNodeOutputModeManual;
+		can_node.outputs[idx].manual_state = frame.data[1] & (1 << 0);
+	}
+	// Automatic flag is set, so restore output to automaticlly determined state
+	else {
+		new_mode = kCanNodeOutputModeAuto;
+
+	}
+
+	if (new_mode != config.can_node.outputs[idx].mode) {
+		config.can_node.outputs[idx].mode = new_mode;
+		can_node.reqs |= kCanNodeWorkReqSaveConfig;
+	}
+
+	can_node.reqs |= kCanNodeWorkReqOutput | kCanNodeWorkReqOutputResponse;
+	semaphore_signal(&can_node.sem);
+}
 #endif
 
 status_t can_node_init(can_node_id_t node_id, can_speed_t speed)
@@ -172,8 +219,11 @@ status_t can_node_init(can_node_id_t node_id, can_speed_t speed)
 
 #if CAN_NODE_NUM_OUTPUT > 0
 	can_set_receive_callback(can_id_build(CAN_NODE_BROADCAST_ID, CAN_NODE_BROADCAST_ID, 500),
-							 can_id_build(CAN_NODE_BROADCAST_ID, CAN_NODE_BROADCAST_ID, 0x1FF),
+							 can_id_build(CAN_NODE_BROADCAST_ID, 0x3FF, 0x1FF),
 							 CAN_FRAME_FLAG_EXT, can_node_sensor_callback, NULL);
+	can_set_receive_callback(can_id_build(CAN_NODE_BROADCAST_ID, can_node.node_id, 499),
+							 can_id_build(CAN_NODE_BROADCAST_ID, 0x3FF, 0x1FF),
+							 CAN_FRAME_FLAG_EXT, can_node_output_callback, NULL);
 #endif
 
 	return STATUS_OK;
@@ -299,51 +349,53 @@ void can_node_loop()
 			sensors_for_each(can_node_loop_publish_sensor, &idx);
 		}
 
-		if (reqs & kCanNodeWorkReqOutput) {
-			bool send_output_status = false;
-			uint8_t status[CAN_NODE_NUM_OUTPUT / 8 + 1] = {0};
-
+		if (reqs & (kCanNodeWorkReqOutput|kCanNodeWorkReqOutputResponse)) {
 			for (uint8_t i = 0; i < CAN_NODE_NUM_OUTPUT; i++) {
 				bool state = false;
-				for (uint8_t j = 0; j < CAN_NODE_NUM_OUTPUT_SOURCE; j++) {
-					if (can_node.outputs[i].srcs[j].state) {
-						state = true;
-						break;
+
+				if (config.can_node.outputs[i].mode == kCanNodeOutputModeManual) {
+					state = can_node.outputs[i].manual_state;
+				}
+				else {
+					for (uint8_t j = 0; j < CAN_NODE_NUM_OUTPUT_SOURCE; j++) {
+						if (can_node.outputs[i].srcs[j].state) {
+							state = true;
+							break;
+						}
 					}
 				}
 
 				if (can_node.outputs[i].state != state) {
 					can_node.outputs[i].state = state;
 					gpio_set(can_node.outputs[i].pin, state);
-					send_output_status = true;
 				}
 
-				status[i / 8] |= (state << (7 - (i % 8)));
-			}
+				if (can_node.outputs[i].state != state || reqs & kCanNodeWorkReqOutputResponse) { 
+					uint8_t payload[] = {
+						i, // Index
+						0, // Status
+					};
 
-			can_node_send(499, CAN_NODE_BROADCAST_ID, sizeof(status), status);
+					// Set output on bit
+					if (state)
+						payload[1] |= 1 << 0;
+
+					// Set manual bit
+					if (config.can_node.outputs[i].mode == kCanNodeOutputModeManual)
+						payload[1] |= 1 << 1;
+
+					can_node_send(499, CAN_NODE_BROADCAST_ID, sizeof(payload), payload);
+				}
+			}
+		}
+
+		if (reqs & kCanNodeWorkReqSaveConfig) {
+			config_save();
 		}
 	}
 }
 
-// struct config_val_desc {
-// 	const char* name;
-// 	uint8_t idx;
-
-// 	off_t offset;
-// 	uint8_t type; // Array
-// 	uint8_t element_size;
-
-// 	struct config_val_desc[] subdescs; 
-// };
-
-// can_node_id_t node_id;
-// 	uint8_t sensor_type;
-// 	uint8_t sensor_idx;
-// 	int32_t off_value;
-// 	int32_t on_value;
-
-static const struct config_val_desc can_config_desc_2[] = {
+static const struct config_val_desc can_config_desc_3[] = {
 	{
 		.name = "node_id",
 		.idx = 1,
@@ -393,6 +445,31 @@ static const struct config_val_desc can_config_desc_2[] = {
 	{ .name = NULL }
 };
 
+static const struct config_val_desc can_config_desc_2[] = {
+	{
+		.name = "mode",
+		.idx = 1,
+
+		.offset = offsetof(struct can_node_output_config, mode),
+		.type = kConfigValTypeUInt8,
+		.flags = kConfigValFlagConsoleHex,
+	},
+#if CAN_NODE_NUM_OUTPUT_SOURCE > 0
+	{
+		.name = "sources",
+		.idx = 2,
+
+		.offset = offsetof(struct can_node_output_config, sources),
+		.type = kConfigValTypeArray, // array
+		.element_size = sizeof(struct can_node_output_src_config),
+		.element_count = CAN_NODE_NUM_OUTPUT_SOURCE,
+
+		.subdescs = can_config_desc_3,
+	},
+#endif
+	{ .name = NULL },
+};
+
 static const struct config_val_desc can_config_desc_1[] = {
 	{
 		.name = "node_id",
@@ -424,13 +501,13 @@ static const struct config_val_desc can_config_desc_1[] = {
 	},
 #if CAN_NODE_NUM_OUTPUT > 0
 	{
-		.name = "output_src",
+		.name = "output",
 		.idx = 4,
 
-		.offset = offsetof(struct can_node_config, output_src_configs),
+		.offset = offsetof(struct can_node_config, outputs),
 		.type = kConfigValTypeArray, // array
-		.element_size = sizeof(struct can_node_output_src_config),
-		.element_count = CAN_NODE_NUM_OUTPUT_SOURCE * CAN_NODE_NUM_OUTPUT,
+		.element_size = sizeof(struct can_node_output_config),
+		.element_count = CAN_NODE_NUM_OUTPUT,
 
 		.subdescs = can_config_desc_2,
 	},
@@ -447,20 +524,3 @@ CONFIG_VAL_ROOT_DESC(can) = {
 
 	.subdescs = can_config_desc_1,
 };
-
-// CONFIG_VAL_DESC(can.node_id, can_node.node_id, kConfigValTypeUInt16, kConfigValFlagConsoleHex, NULL, NULL);
-// CONFIG_VAL_DESC(can.speed, can_node.speed, kConfigValTypeUInt32, 0, NULL, NULL);
-
-// static status_t can_sensor_intervall_set_cb(uint32_t* dest, uint32_t val)
-// {
-// 	*dest = val * 1000;
-// 	return STATUS_OK;
-// }
-
-// static uint32_t can_sensor_intervall_get_cb(uint32_t val)
-// {
-// 	return val/1000;
-// }
-
-// CONFIG_VAL_DESC(can.sensor_interval, can_node.sensor_interval, kConfigValTypeUInt32, 0, can_sensor_intervall_set_cb, can_sensor_intervall_get_cb);
-
